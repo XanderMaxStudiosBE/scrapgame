@@ -1,135 +1,77 @@
 # Scrapshift project handoff
 
-Updated: 2026-09-30 (Europe/Brussels). This document combines conversation decisions with a filesystem audit. Future agents should recheck the current checkout.
+Updated: 2026-09-30 (Europe/Brussels). Reinspect the checkout before continuing.
 
-## Verified repository state
+## Current implementation and evidence
 
-The current local repository is `D:\Ai_Cod\scrapgame`. The original conversation used `D:\Ai Cod\New-game`, which no longer exists. Use repository-relative paths in Cloud.
+The Cloud checkout was advanced from `bfad65f` to `dfa6ec9` (`Add Codex Cloud handoff`) before development. Those commits contained only campaign assets and handoff documents. This session added the first Unity project implementation directly in the existing repository; no earlier working gameplay systems were replaced. Campaign source files are unchanged.
 
-At inspection, branch was `main`, latest commit was `bfad65f` (`Initial Scrapshift project`), and the working tree was clean before adding these handoff documents.
+**Implemented, but not yet Unity-verified:**
 
-**There is no implemented game in this checkout.** The tracked content is campaign artwork and documentation only. No `Assets/`, `Packages/`, `ProjectSettings/`, C# gameplay scripts, Unity scenes, prefabs, executable, tests, or CI configuration were found. Earlier assistant descriptions of systems were plans, not evidence of implementation.
+- Unity **6000.3.25f1**, URP **17.3.0**, Test Framework **1.6.0** project scaffold.
+- `Scrapshift → Create or Open Prototype` editor command generates a referenced bootstrap scene, pipeline/renderer, balance asset, and copied logo. The generated yard is constructed at runtime from original primitives. Existing generated assets are reused.
+- Fenced yard, covered corrugated workshop, repeatable scrap supply, manual bench, selling area/bin, and powered wire stripper.
+- CharacterController first-person movement/collision, mouse look, raycast interaction/inspection prompts, carry/drop, and crosshair.
+- Four manual stripping clicks produce a three-unit copper bundle; selling pays €12. Three loads fund a €36 machine. Powered processing takes five seconds and provides collectable output.
+- Editable balance data; one carried bundle; bounded world/station inventory. Station transactions consume once and do not recreate already collected outputs. Capacity reserves room for station outputs.
+- Machine status lamp, rotating roller, bench progress geometry/color, synthesized tool feedback, money/objective HUD, pause/focus handling, and two-click New game.
+- Save data includes money, ownership, carried and dropped bundles/positions, manual progress/output, machine remaining time/output, and player pose. Atomic replacement, backup fallback, unreadable-save protection, and archiving on New game are implemented. Machines do not progress offline.
+- Stable `.meta` files for source assets; generated directories and build outputs ignored.
 
-## What Scrapshift is
+**Actually verified in Cloud:** the engine-independent C# core compiled with Mono 6.12 with warnings treated as errors. **12 scenarios passed / 0 failed**: complete loop, carrying/dropping, invalid inputs, bench exactly-once behavior, machine exactly-once behavior, purchase guards, output capacity, partial state resume, zero/invalid elapsed time, invalid state rejection, overflow protection, and renewable supply. These checks execute the real core sources, not a translated implementation or Unity API stubs.
 
-An indie first-person 3D scrapyard simulator with a retro visual style. The player builds a small, shabby yard into an automated recycling operation.
+**Not verified:** Unity package resolution/import, engine/editor C# compilation, the scene generator, URP presentation, input/collision feel, audio, actual pause/focus behavior, Unity JSON/file persistence tests, and desktop build/playability. Two Unity save-file tests plus the same 12 core cases are supplied, but their Unity run is outstanding. No gameplay footage or playable executable has been produced. Do not describe this as a verified playable build.
 
-Working tagline: **Start with your bare hands. Build a scrapyard that works for you.**
+## Next concrete task
 
-Core loop: acquire scrap -> inspect -> repair or dismantle -> recover materials -> sell -> improve tools, machines, and yard.
+1. Open the repository root in **Unity 6000.3.25f1**, resolve the pinned packages, and fix any import/compiler issues without silently migrating engines/editor versions.
+2. Run **Scrapshift → Create or Open Prototype**, open `Assets/Scrapshift/Generated/Scrapyard.unity`, and run the 14 EditMode cases.
+3. Follow the complete local playtest checklist in `README.md`, including material conservation across quit/reload, capacity pressure, pause/focus, corrupt-save backup, and New game.
+4. Build and run a desktop player. Confirm shader inclusion, readable world signs, and saves. Record real results here.
+5. Commit the verified scene/data/render assets and Unity-generated package lockfile when appropriate. Generated assets are currently ignored deliberately; move them into a tracked directory or explicitly add them with their `.meta` files. Do not lose edited balance or scene work by blindly regenerating them.
+6. Tune presentation and pacing; only then move on to a repairable appliance or conveyors.
 
-Key choice: repair for a higher sale price, dismantle for components, or process into materials for quicker income. Automation should replace familiar manual tasks while preserving useful decisions and hands-on repair work.
+The first loop's source is now present. **Do not scaffold a second game or rebuild these systems from scratch.**
 
-The user considered a video store and scrapyard combination, then selected the scrapyard. A video-rental shop is outside the selected concept. Electronics can still be salvageable objects.
+## How to work here
 
-## Progression and scope
+Read `AGENTS.md` and `README.md`. Use the current checkout and relative project paths. The old Windows workspace paths are historical and must not appear in runtime logic. Cloud currently has no Unity Editor. Mono was extracted outside the checkout using Debian packages verified by APT; it is available in this instance at `/workspace/tooling/mono`.
 
-| Stage | Player activity | Planned upgrades |
-| --- | --- | --- |
-| Manual yard | Carry junk, unscrew parts, sort into bins | Hand tools, trolley, larger workbench |
-| Powered workshop | Feed machines and collect output | Wire stripper, metal cutter, small crusher |
-| Automated yard | Arrange equipment and move batches | Conveyors, magnetic separator, automatic sorting |
-| Industrial operation | Manage material flow, power, storage, larger orders | Linked lines and automatic loading |
+From the repository root:
 
-All stages are design intentions. None is implemented here.
+```sh
+SCRAPSHIFT_MONO_ROOT=/workspace/tooling/mono ./Tests/run-core-tests.sh
+```
 
-The first prototype priority was refined to: walk around a compact yard, collect scrap wire, strip it manually at a workbench, sell copper, buy a powered wire stripper, feed it, collect copper, and sell again. This proves the manual-to-automatic transition.
+With a system Mono installation, run `./Tests/run-core-tests.sh`. The shared cases live in `Assets/Scrapshift/Tests/Editor/CoreScenarios.cs`; the standalone entry point is `Tests/CoreRunner.cs`. Unity-specific persistence tests are in `PrototypeTests.cs`.
 
-Earlier prototype ideas included a fan, radio, and car battery, plus replacing a fan motor and switching the fan on. Treat these as follow-up ideas, not prerequisites for the wire loop. No mechanics for them have been specified or implemented.
+The .NET installer and Unity package host returned HTTP 403 under current Cloud networking; no Unity download/import was attempted successfully. Debian's normal package mirror was accessible. No additional secrets were requested. The code can be developed and core-tested here; Unity verification must currently happen locally.
 
-## Art and atmosphere
+## Structure and constraints
 
-- PS1/late-1990s PC inspiration: chunky low-poly models, low-resolution textures, muted colors, rusty surfaces, fog beyond the fence, warm workbench lighting.
-- Stable rendering and legible menus; subtle dithering/pixelation is optional.
-- Homemade industrial machinery with exposed motors, mismatched panels, and rattling belts.
-- Palette: ivory `#E8DDC4`, rust `#B75935`, olive `#69735B`, charcoal `#202927`.
-- Existing marketing scenes are generated concept illustrations. Their detail level is not a requirement for the game's rendering or assets.
+- `Assets/Scrapshift/Core`: serializable yard state, balance rules, transactional inventory/economy/processing. Pure C#.
+- `Assets/Scrapshift/Runtime`: player, interaction targets, game coordinator/HUD, save store, balance asset type, procedural yard.
+- `Assets/Scrapshift/Editor`: reproducible setup command. Scene references include a URP shader to retain it in builds.
+- `Assets/Scrapshift/Tests/Editor`: core scenario wrapper and persistence tests.
+- `Packages`, `ProjectSettings`: pinned editor/package setup and legacy mouse/keyboard input axes.
+- `Campaign/Scrapshift`: preserved campaign source artwork and documents. The ZIP is an older export, not authoritative for current docs.
 
-## Important technical decisions
+Prototype limitations: one material recipe, a static item-placement model (no throwing/rigidbody piles), immediate inspection through prompts, a minimal IMGUI interface, procedural box geometry, one upgrade, no repairable appliances/conveyors/power network, and no verified engine build yet. A pause delta test proves model timing behavior; it does not prove Unity input/UI behavior. The core partial-resume test is not a serialization round-trip. Both distinctions matter when reporting readiness.
 
-Unity and C# were selected after comparing Godot, Unity, and Unreal. Unity was favored for the larger 3D simulation and code-based collaboration. Unity 6 LTS and the Universal 3D/URP template were proposed. No project was created in this conversation.
+## Product direction
 
-Local inspection found editor executables at `D:\Ai_Cod\Unity\6000.3.25f1\Editor\Unity.exe` and `D:\Ai_Cod\6000.6.3f1\Editor\Unity.exe`. These are workstation-specific and are not evidence that Cloud has Unity. Use 6000.3.25f1 as the initial LTS compatibility target unless later instructions/evidence change it. The game has not been tested with either installation.
+Scrapshift is a single-player, first-person retro 3D scrapyard simulator. Tagline: **Start with your bare hands. Build a scrapyard that works for you.** Acquire scrap → inspect → repair or dismantle → recover materials → sell → improve the yard. The selected concept is the scrapyard; the earlier video-store business was rejected.
 
-Desktop PC, keyboard/mouse, and single-player were proposed as practical prototype defaults. Potential controls: WASD movement, mouse look, E interact, Q drop, left mouse work action, Escape pause. They are not yet implemented and may be refined.
+Progression: manual carrying/stripping/sorting → powered individually fed machines → conveyors/separation/automated sorting → connected industrial material flow. These later stages remain plans. A fan repaired by replacing its motor is a sensible next repair experiment. Radios, car batteries, extra tools, vehicles, larger yards, power, and orders are not implemented commitments.
 
-Planned architecture separates player interaction, item definitions, carryable objects, recipes, processing stations/machines, economy, progression, save/load, and UI. Editable values should control prices, yields, costs, and processing times.
+Art: chunky late-1990s geometry, coarse surfaces, rust, muted olive, charcoal, aged ivory, fog and warm workshop light. Campaign illustrations are mood references, not gameplay screenshots or an exact runtime target. Keep UI legible. Desktop keyboard/mouse is a prototype target, not a release-platform promise.
 
-For scale, simulate physical scrap near useful interactions; represent bulk/distant processing efficiently. Avoid endless active rigidbodies and expensive updates on every machine every frame.
+## Preserved campaign context
 
-## Existing files and assets
+The creator confirmed Antwerp, Belgium and euro funding for game production. The working title has not been cleared. No production budget, funding target, reward commitments, release date, or final platform list has been agreed.
 
-| Path | Purpose |
-| --- | --- |
-| `Campaign/Scrapshift/assets/scrapshift-logo.png` | Verified transparent logo, 2022 x 778 |
-| `Campaign/Scrapshift/assets/scrapshift-kickstarter-cover.png` | Campaign cover concept art, 1672 x 941 |
-| `Campaign/Scrapshift/assets/scrapshift-social-square.png` | Coming-to-Kickstarter poster, 1254 x 1254 |
-| `Campaign/Scrapshift/assets/scrapshift-progression.png` | Salvage/upgrade/automate concept graphic, 1536 x 1024 |
-| `Campaign/Scrapshift/assets/section-*.png` | Seven upload-ready section headers, each 1600 x 220 |
-| `Campaign/Scrapshift/assets/section-*.svg` | Editable versions of those section headers |
-| `Campaign/Scrapshift/preview.html` | Local gallery of the visual kit |
-| `Campaign/Scrapshift/README.md` | Art direction, usage, and campaign ordering |
-| `Campaign/Scrapshift/asset-manifest.json` | Asset names, dimensions, file sizes |
-| `Campaign/Scrapshift/generation-prompts.md` | Original built-in image-generation prompts |
-| `Campaign/Scrapshift/campaign-story-draft.md` | Draft pitch, planned systems, development stage, AI use, and risks |
-| `Campaign/Scrapshift-Kickstarter-Kit.zip` | Earlier visual-kit export; not the authoritative source for current docs |
-| `AGENTS.md` | Persistent agent instructions |
-| `CLOUD_TASK_PROMPT.md` | Paste-ready continuation prompt |
+Historical private draft URL: https://www.kickstarter.com/projects/775234141/1027128765/edit/basics?ref=pbuild_dashboard
 
-Section titles: The Game; Hands to Automation; Development Plan; Rewards; About the Creator; Budget; Risks and Challenges.
+The earlier browser session observed title, pitch, cover, Antwerp location, story and risks saved, with AI involvement selected. Final detailed AI-use/source explanations were entered but not confirmed saved. Browser state was not re-audited during development. No campaign publishing, review submission, agreements, identity/payment work, or new commitments are authorized by this game task.
 
-The four main illustrations were made using the built-in image-generation tool. Section graphics were drawn as native SVG and PNG. No runtime 3D models, textures, animations, audio, or finished trailer have been created.
-
-## Most recent work
-
-Before the Cloud move, we were preparing the private Kickstarter draft in the Codex browser. Draft editor: `https://www.kickstarter.com/projects/775234141/1027128765/edit/basics?ref=pbuild_dashboard`.
-
-Creator account displayed as MaxStudios Games. The user confirmed Antwerp, Belgium, euro currency, and that crowdfunding should fund game production.
-
-Observed browser progress:
-- Title: `Scrapshift — A Retro Scrapyard Simulator`.
-- Subtitle: `Salvage, repair and recycle in a retro 3D scrapyard. Start by hand and build your way toward an automated operation.`
-- Existing category: Games / Video Games.
-- Cover uploaded and Antwerp location entered; Save was activated and the subsequent story page was reached.
-- Campaign story and risks were entered and saved. The story clearly described concept/early pre-production.
-- AI involvement was selected Yes, and the generated-content option was selected.
-- Detailed AI-use and source/consent explanations were entered last, **but no subsequent Save confirmation was observed for these final fields**. Recheck if future authorized campaign work resumes.
-
-No launch, review submission, funding goal, rewards, payment details, or release dates were completed. Live website state is external to the repository and was not re-audited during this handoff.
-
-Then the user requested a Cloud development prompt; one was provided in chat. The current task creates durable repository handoff documents and a more complete prompt.
-
-## Systems currently being worked on
-
-No gameplay implementation or running development process was found. The active work was campaign preparation and now handoff documentation. Player controls, processing, economy, machine upgrades, and persistence are pending work for the Cloud agent.
-
-## Unfinished features
-
-Everything in the playable prototype remains to be built: Unity project, yard scene, movement/look, interaction prompts, carrying/inspection, wire stripping, copper outputs, selling, money, repeatable scrap acquisition, machine purchasing/processing, UI, pause, save/load, and feedback.
-
-Later scope: appliance repairs, additional tools and processors, conveyors, sorting, yard layout/expansion, power, storage, larger orders, automatic loading, and possibly vehicles. Vehicles were an engine-selection consideration, not a firm design commitment.
-
-Campaign gaps: production budget, funding target, reward tiers/prices, schedule, creator biography, gameplay screenshots/trailer, audience-building plan, title availability check, and any final AI-asset policy for the shipped game.
-
-## Known bugs, issues, and validation limits
-
-- There are no known runtime bugs because there is no runtime implementation to test.
-- The historical workspace path is invalid; current checkout is `D:\Ai_Cod\scrapgame`.
-- Browser mouse clicks and file-chooser automation were unreliable during campaign setup. Keyboard activation worked for saving and navigating; the cover ultimately appeared uploaded. These are observed browser-session issues, not game bugs.
-- Final AI explanation fields may be unsaved, as noted above.
-- No editor import, compilation, build, gameplay test, or save/load test has been run.
-- The title has not been cleared for existing uses. No crowdfunding costs or dates have been agreed.
-- Concept art must stay identified as illustration. It cannot substitute for actual gameplay footage.
-
-## Continue development
-
-1. Read this file and `AGENTS.md`; inspect the current branch and working tree. Preserve campaign assets and any newer code.
-2. If no Unity project exists, scaffold it in this repository using the chosen Unity/C# and URP baseline. Keep `Campaign/` outside runtime asset imports unless deliberately copying a specific logo.
-3. Create a compact yard and first-person movement/interaction. Make setup reproducible through a committed scene or editor setup command.
-4. Complete manual wire processing, selling, and a repeatable scrap source. Balance a short path to the first machine.
-5. Add purchased powered wire processing with idle/processing/output-ready feedback and no duplication or negative balances.
-6. Add robust persistence and basic UI/pause. Verify consistent save/load of ownership, materials, and processing.
-7. Verify the complete loop and report exactly what was executed. If Cloud cannot run Unity, provide a local editor validation checklist and do not claim editor compilation or gameplay success.
-8. Update this handoff after implementation, replacing plans with verified status. Advance to appliance repair or conveyor automation only once the first loop works.
-
-Do not publish or manage Kickstarter as part of the game implementation task. Do not invent commitments. Cloud will only receive tracked files in the connected repository revision; the user needs to commit and push these new handoff files to make them available there.
+The campaign kit includes the transparent logo, cover, social poster, progression concept image, seven section headers in PNG/SVG, asset manifest, generation prompts, story draft, and HTML gallery. Preserve concept-art labels and AI disclosures. Capture genuine game footage only after Unity validation.

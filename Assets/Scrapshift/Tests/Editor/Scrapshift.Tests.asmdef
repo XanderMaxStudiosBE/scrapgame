@@ -1,0 +1,1 @@
+{"name":"Scrapshift.Tests","references":["Scrapshift.Core","Scrapshift.Runtime"],"includePlatforms":["Editor"],"optionalUnityReferences":["TestAssemblies"]}
