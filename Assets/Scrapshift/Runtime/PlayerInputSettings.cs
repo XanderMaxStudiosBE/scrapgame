@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 
@@ -46,6 +47,10 @@ namespace Scrapshift
     {
         readonly string path;
         readonly KeyCode[] supportedKeys;
+        readonly Dictionary<string, KeyCode> keyCodes = new Dictionary<string, KeyCode>();
+        readonly string[] labelCodes = new string[ControlPreferences.Actions.Length];
+        readonly string[] labelAliases = new string[ControlPreferences.Actions.Length];
+        readonly string[] labels = new string[ControlPreferences.Actions.Length];
         bool awaitingRelease;
         int suppressedFrame;
         public ControlPreferences Preferences { get; private set; }
@@ -59,14 +64,23 @@ namespace Scrapshift
             string notice;
             Preferences = ControlSettingsStore.Read(path, out notice); Notice = notice;
             supportedKeys = new KeyCode[ControlPreferences.SupportedCodes.Length];
-            for (int i = 0; i < supportedKeys.Length; i++) supportedKeys[i] = Parse(ControlPreferences.SupportedCodes[i]);
+            for (int i = 0; i < supportedKeys.Length; i++)
+            {
+                string code = ControlPreferences.SupportedCodes[i];
+                supportedKeys[i] = (KeyCode)Enum.Parse(typeof(KeyCode), code);
+                keyCodes.Add(code, supportedKeys[i]);
+            }
         }
-        static KeyCode Parse(string code) { return (KeyCode)Enum.Parse(typeof(KeyCode), code); }
+        KeyCode Parse(string code) { return keyCodes[code]; }
         public string Label(ControlAction action)
         {
-            string label = ControlPreferences.CodeLabel(Preferences.Binding(action));
-            string alias = Preferences.Alias(action);
-            return alias == null ? label : label + " / " + ControlPreferences.CodeLabel(alias);
+            int index = (int)action;
+            string code = Preferences.Binding(action), alias = Preferences.Alias(action);
+            if (labels[index] != null && labelCodes[index] == code && labelAliases[index] == alias) return labels[index];
+            labelCodes[index] = code; labelAliases[index] = alias;
+            string label = ControlPreferences.CodeLabel(code);
+            labels[index] = alias == null ? label : label + " / " + ControlPreferences.CodeLabel(alias);
+            return labels[index];
         }
         public bool Held(ControlAction action)
         {

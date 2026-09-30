@@ -12,7 +12,12 @@ namespace Scrapshift
             YardGeometry.SurfaceShader = surfaceShader;
             var root = new GameObject("Scrapshift Yard").transform;
             root.SetParent(transform, false);
-            YardProps.Surroundings(root);
+            // Only the stationary ground/fence/workshop/clutter enter this batch.
+            // Stations, item views, bench progress and rollers remain independently mutable.
+            var environment = new GameObject("Stationary environment");
+            environment.transform.SetParent(root, false);
+            YardProps.Surroundings(environment.transform);
+            StaticBatchingUtility.Combine(environment);
             YardProps.Delivery(root, new Vector3(-7, 0, 2));
             var bench = YardProps.Workbench(root, new Vector3(-2.5f, 0, 4));
             YardProps.Buyer(root, new Vector3(2.2f, 0, 4));

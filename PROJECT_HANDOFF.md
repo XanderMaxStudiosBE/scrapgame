@@ -2,6 +2,16 @@
 
 Updated: 2026-09-30 (Europe/Brussels). Reinspect the checkout before continuing.
 
+## Latest continuation: performance and cozy retro direction
+
+The user reports the Settings/visual update works locally, but steady frame rate is low while looking/walking in the Unity Editor. No Profiler capture, hardware specification or standalone-build comparison has been provided. The desired art direction is now explicitly a **cozy retro simulator**; AGENTS.md records this preference.
+
+Targeted source improvements: item/station views refresh on transactions/load/machine completion rather than every frame; bench/roller animation stays frame-based. Cache input KeyCodes and binding labels, reusable HUD styles, and the bench/lamp material instances. Batch only stationary ground/fence/workshop/clutter; dynamic stations/items/feedback stay outside the batch. Material clones are cleaned up on destruction. Named `Scrapshift.SyncViews` and `Scrapshift.Save` Profiler markers support local diagnosis without Deep Profile. Gameplay saves, balancing and package/editor versions are unchanged.
+
+Checks: 23 engine-independent C# scenarios passed after the change; extended the existing Unity control-label test to cover cached labels through arrow-conflict swap and defaults restoration. Unity compilation, static batching, dynamic-view regression checks and actual FPS/frame-time improvement are **unverified here**. The 33-case EditMode suite remains a local check. The README gives a Profiler/Game-view/desktop comparison and explicit interaction/machine completion checks.
+
+Next: verify frame times locally before expanding. Recommended next playable feature is fan repair (inspect/bad motor/replace/test/sell), then varied daily scrap and small customer orders, then a modest storage/yard expansion. Cozy atmosphere should come from warm lighting, soft fog, restrained pixel textures, relaxed pacing and satisfying workshop ambience, preserving readable controls.
+
 ## Current implementation and evidence
 
 The first prototype was pushed to `main` as `2a0f4fe`. The user then ran it in local Unity **6000.3.25f1** and reached the purchased-machine stage. They initially had trouble identifying the machine's feed interaction. That is limited user playtest evidence; comprehensive save/build/test results were not supplied.

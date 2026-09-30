@@ -8,7 +8,7 @@ Read `PROJECT_HANDOFF.md` before starting work. It records the design and verifi
 - Core loop: acquire scrap, inspect it, repair or dismantle it, sell items/materials, and upgrade the yard.
 - Prioritize one complete wire-processing loop: collect wire, strip it manually, sell copper, buy a powered wire stripper, feed it, collect output, and sell again.
 - The earlier video-store concept was rejected in favor of the scrapyard. Do not introduce a video-rental business.
-- Use chunky low-poly assets, coarse textures, rusty industrial surfaces, fog, and warm workshop lighting. Keep controls and UI readable.
+- Aim for a cozy retro simulator: chunky low-poly assets, coarse restrained textures, worn industrial surfaces, soft fog and warm workshop lighting. Favor welcoming colors, satisfying tool/machine sounds and relaxed pacing; keep controls and UI crisp and readable.
 
 ## Technical direction
 

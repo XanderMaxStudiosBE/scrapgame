@@ -26,6 +26,12 @@ namespace Scrapshift.Tests
             StringAssert.Contains("Up arrow", input.Label(ControlAction.MoveForward));
             input.Preferences.SetBinding(ControlAction.ManualWork, "F", false);
             Assert.AreEqual("F", input.Label(ControlAction.ManualWork));
+            input.Preferences.SetBinding(ControlAction.Interact, "UpArrow", true);
+            Assert.AreEqual("E", input.Label(ControlAction.MoveForward));
+            Assert.AreEqual("Up arrow", input.Label(ControlAction.Interact));
+            input.Preferences.RestoreDefaults();
+            StringAssert.Contains("Up arrow", input.Label(ControlAction.MoveForward));
+            Assert.AreEqual("Left mouse", input.Label(ControlAction.ManualWork));
             menu.Open(); Assert.IsTrue(menu.IsOpen);
             Assert.IsTrue(menu.HandleEscape()); Assert.IsFalse(menu.IsOpen);
             Assert.IsFalse(menu.HandleEscape());

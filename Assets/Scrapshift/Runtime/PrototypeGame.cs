@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using Unity.Profiling;
 
 namespace Scrapshift
 {
@@ -14,6 +15,11 @@ namespace Scrapshift
         public Texture2D logo;
         public YardModel Model { get; private set; }
         readonly Dictionary<int, GameObject> itemViews = new Dictionary<int, GameObject>();
+        readonly List<int> removedViews = new List<int>();
+        static readonly ProfilerMarker ViewsMarker = new ProfilerMarker("Scrapshift.SyncViews");
+        static readonly ProfilerMarker SaveMarker = new ProfilerMarker("Scrapshift.Save");
+        Material benchMaterial, lampMaterial;
+        GUIStyle wrappedLabel, controlLegend;
         bool paused, confirmNew, saveBlocked;
         PlayerInputSettings controls;
         SettingsMenu settings;
@@ -30,6 +36,8 @@ namespace Scrapshift
         {
             controls = new PlayerInputSettings(); settings = new SettingsMenu(controls);
             player.controls = controls; benchRestPosition = benchDisplay.localPosition;
+            benchMaterial = benchDisplay.GetComponent<Renderer>().material;
+            lampMaterial = machineLamp.material;
             audioSource = gameObject.AddComponent<AudioSource>();
             feedback = AudioClip.Create("Tool click", 2205, 1, 22050, false);
             var samples = new float[2205];
@@ -70,7 +78,9 @@ namespace Scrapshift
             if (paused || settings.IsOpen) return;
             bool inputReady = controls.GameplayReady;
             if (inputReady) player.Step();
+            bool machineWasRunning = Model.State.machineRemaining > 0;
             Model.Tick(Time.deltaTime);
+            if (machineWasRunning && Model.State.machineRemaining == 0) SyncViews();
             target = null;
             if (Physics.Raycast(player.view.transform.position, player.view.transform.forward, out RaycastHit hit, 3.2f, ~(1 << 2)))
                 target = hit.collider.GetComponentInParent<InteractionTarget>();
@@ -81,11 +91,12 @@ namespace Scrapshift
                 if (Model.WorkBench())
                 {
                     nextStroke = Time.time + .22f; workPulseUntil = Time.time + .18f;
-                    Beep(1.25f); Tell(Model.State.benchOutput > 0 ? "Insulation removed. Collect the copper." : "Stripping stroke " + Model.State.benchStrokes + "/" + Model.Rules.manualStrokes); Save();
+                    Beep(1.25f); Tell(Model.State.benchOutput > 0 ? "Insulation removed. Collect the copper." : "Stripping stroke " + Model.State.benchStrokes + "/" + Model.Rules.manualStrokes); SyncViews(); Save();
                 }
                 else Tell(CurrentHint().text);
             }
-            SyncViews();
+            // Inventory presentation changes only on transactions/load/completion. Carried objects follow the camera by parenting.
+            benchDisplay.localPosition = benchRestPosition + (Time.time < workPulseUntil ? Vector3.up * .025f : Vector3.zero);
             if (Model.State.machineRemaining > 0)
             {
                 rotor.Rotate(0, 0, 240 * Time.deltaTime, Space.Self);
@@ -139,31 +150,35 @@ namespace Scrapshift
         void Tell(string text) { message = text; messageUntil = Time.unscaledTime + 5; }
         void SyncViews()
         {
-            var removed = new List<int>();
-            foreach (var pair in itemViews) if (Model.Find(pair.Key) == null) { Destroy(pair.Value); removed.Add(pair.Key); }
-            foreach (int id in removed) itemViews.Remove(id);
-            foreach (var item in Model.State.items)
+            using (ViewsMarker.Auto())
             {
-                if (!itemViews.TryGetValue(item.id, out GameObject view))
+                removedViews.Clear();
+                foreach (var pair in itemViews) if (Model.Find(pair.Key) == null) { Destroy(pair.Value); removedViews.Add(pair.Key); }
+                foreach (int id in removedViews) itemViews.Remove(id);
+                foreach (var item in Model.State.items)
                 {
-                    view = YardGeometry.Bundle(item.kind, transform);
-                    var interaction = view.AddComponent<InteractionTarget>(); interaction.kind = TargetKind.LooseItem; interaction.itemId = item.id;
-                    itemViews.Add(item.id, view);
+                    if (!itemViews.TryGetValue(item.id, out GameObject view))
+                    {
+                        view = YardGeometry.Bundle(item.kind, transform);
+                        var interaction = view.AddComponent<InteractionTarget>(); interaction.kind = TargetKind.LooseItem; interaction.itemId = item.id;
+                        itemViews.Add(item.id, view);
+                    }
+                    bool held = item.id == Model.State.carriedId;
+                    Transform owner = held ? player.view.transform : transform;
+                    if (view.transform.parent != owner) view.transform.SetParent(owner, false);
+                    view.transform.localPosition = held ? new Vector3(.4f, -.35f, .85f) : new Vector3(item.x, item.y, item.z);
+                    view.transform.localRotation = Quaternion.Euler(0, 0, held ? -15 : 0);
+                    foreach (var collider in view.GetComponentsInChildren<Collider>()) collider.enabled = !held;
                 }
-                bool held = item.id == Model.State.carriedId;
-                view.transform.SetParent(held ? player.view.transform : transform, false);
-                view.transform.localPosition = held ? new Vector3(.4f, -.35f, .85f) : new Vector3(item.x, item.y, item.z);
-                view.transform.localRotation = Quaternion.Euler(0, 0, held ? -15 : 0);
-                foreach (var collider in view.GetComponentsInChildren<Collider>()) collider.enabled = !held;
+                benchDisplay.gameObject.SetActive(Model.State.benchLoaded || Model.State.benchOutput > 0);
+                float progress = Model.State.benchLoaded ? (float)Model.State.benchStrokes / Model.Rules.manualStrokes : 1;
+                benchDisplay.localScale = new Vector3(.75f, .12f + .15f * progress, .35f);
+                benchMaterial.color = Model.State.benchOutput > 0 ? YardGeometry.Copper : Color.Lerp(YardGeometry.Charcoal, YardGeometry.Copper, progress);
+                benchDisplay.localPosition = benchRestPosition + (Time.time < workPulseUntil ? Vector3.up * .025f : Vector3.zero);
+                machineDisplay.gameObject.SetActive(Model.State.machineOutput > 0);
+                if (feedDisplay != null) feedDisplay.gameObject.SetActive(Model.State.machineRemaining > 0);
+                lampMaterial.color = !Model.State.machineOwned ? Color.gray : Model.State.machineRemaining > 0 ? YardGeometry.Rust : Model.State.machineOutput > 0 ? Color.green : YardGeometry.Ivory;
             }
-            benchDisplay.gameObject.SetActive(Model.State.benchLoaded || Model.State.benchOutput > 0);
-            float progress = Model.State.benchLoaded ? (float)Model.State.benchStrokes / Model.Rules.manualStrokes : 1;
-            benchDisplay.localScale = new Vector3(.75f, .12f + .15f * progress, .35f);
-            benchDisplay.GetComponent<Renderer>().material.color = Model.State.benchOutput > 0 ? YardGeometry.Copper : Color.Lerp(YardGeometry.Charcoal, YardGeometry.Copper, progress);
-            benchDisplay.localPosition = benchRestPosition + (Time.time < workPulseUntil ? Vector3.up * .025f : Vector3.zero);
-            machineDisplay.gameObject.SetActive(Model.State.machineOutput > 0);
-            if (feedDisplay != null) feedDisplay.gameObject.SetActive(Model.State.machineRemaining > 0);
-            machineLamp.material.color = !Model.State.machineOwned ? Color.gray : Model.State.machineRemaining > 0 ? YardGeometry.Rust : Model.State.machineOutput > 0 ? Color.green : YardGeometry.Ivory;
         }
         void CapturePlayer()
         {
@@ -173,10 +188,13 @@ namespace Scrapshift
         }
         void Save()
         {
-            if (Model == null || saveBlocked) return;
-            CapturePlayer();
-            try { SaveStore.Write(SavePath, Model.State); }
-            catch (Exception ex) { Tell("SAVE FAILED: " + ex.Message); Debug.LogWarning(ex); }
+            using (SaveMarker.Auto())
+            {
+                if (Model == null || saveBlocked) return;
+                CapturePlayer();
+                try { SaveStore.Write(SavePath, Model.State); }
+                catch (Exception ex) { Tell("SAVE FAILED: " + ex.Message); Debug.LogWarning(ex); }
+            }
         }
         void NewGame()
         {
@@ -192,7 +210,7 @@ namespace Scrapshift
             SyncViews(); Save(); confirmNew = false; SetPaused(false); Tell("New yard. Take wire from the delivery crate.");
         }
         void OnApplicationQuit() { Save(); }
-        void OnDestroy() { Time.timeScale = 1; Cursor.lockState = CursorLockMode.None; Cursor.visible = true; if (feedback != null) Destroy(feedback); }
+        void OnDestroy() { Time.timeScale = 1; Cursor.lockState = CursorLockMode.None; Cursor.visible = true; if (feedback != null) Destroy(feedback); if (benchMaterial != null) Destroy(benchMaterial); if (lampMaterial != null) Destroy(lampMaterial); }
 
         StationHint CurrentHint()
         {
@@ -214,21 +232,26 @@ namespace Scrapshift
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1));
             float width = Screen.width / scale, height = Screen.height / scale;
             GUI.skin.label.fontSize = 18; GUI.skin.button.fontSize = 18; GUI.skin.box.fontSize = 18;
+            if (wrappedLabel == null)
+            {
+                wrappedLabel = new GUIStyle(GUI.skin.label) { wordWrap = true };
+                controlLegend = new GUIStyle(wrappedLabel) { fontSize = 15 };
+            }
             GUI.color = YardGeometry.Ivory;
             if (settings.IsOpen) { settings.Draw(width, height); return; }
             GUI.Box(new Rect(20, 20, Mathf.Min(width - 40, 490), 140), "");
             GUI.Label(new Rect(35, 28, 440, 30), "SCRAPSHIFT   /   €" + Model.State.money);
             string objective = YardGuidance.Objective(Model, controls.Label(ControlAction.Interact), controls.Label(ControlAction.ManualWork), controls.Label(ControlAction.Drop));
-            GUI.Label(new Rect(35, 64, Mathf.Min(width - 70, 455), 85), objective, new GUIStyle(GUI.skin.label) { wordWrap = true });
+            GUI.Label(new Rect(35, 64, Mathf.Min(width - 70, 455), 85), objective, wrappedLabel);
             string held = Model.Carried == null ? "Hands empty" : "Carrying " + Model.Carried.kind + " ×" + Model.Carried.quantity + "   /   " + controls.Label(ControlAction.Drop) + ": drop";
             GUI.Label(new Rect(25, height - 144, width - 50, 28), held);
             var hint = CurrentHint();
-            GUI.Label(new Rect(25, height - 108, width - 50, 55), hint.text, new GUIStyle(GUI.skin.label) { wordWrap = true });
-            GUI.Label(new Rect(25, height - 53, width - 50, 48), ControlHints(), new GUIStyle(GUI.skin.label) { wordWrap = true, fontSize = 15 });
+            GUI.Label(new Rect(25, height - 108, width - 50, 55), hint.text, wrappedLabel);
+            GUI.Label(new Rect(25, height - 53, width - 50, 48), ControlHints(), controlLegend);
             GUI.color = hint.canUse ? new Color(.65f, 1f, .55f) : YardGeometry.Ivory;
             GUI.Label(new Rect(width / 2 - 5, height / 2 - 15, 20, 30), "+");
             GUI.color = YardGeometry.Ivory;
-            if (Time.unscaledTime < messageUntil) GUI.Label(new Rect(25, 172, width - 50, 85), message, new GUIStyle(GUI.skin.label) { wordWrap = true });
+            if (Time.unscaledTime < messageUntil) GUI.Label(new Rect(25, 172, width - 50, 85), message, wrappedLabel);
             if (!paused) return;
             GUI.Box(new Rect(width / 2 - 235, height / 2 - 190, 470, 420), "PAUSED");
             if (logo != null) GUI.DrawTexture(new Rect(width / 2 - 140, height / 2 - 155, 280, 85), logo, ScaleMode.ScaleToFit);

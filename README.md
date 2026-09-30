@@ -132,6 +132,23 @@ Paths above are under `Assets/Scrapshift/`. No Unity Editor is installed in Clou
 2. Tune movement, station spacing, feedback, and pacing from a full manual-to-automatic playthrough.
 3. Add one repairable appliance (for example a fan/motor) before expanding to conveyors or larger yards.
 
+## Performance and the next cozy-retro milestone
+
+The user reports steady low frame rate while walking/looking **inside the Unity Editor**. This performance pass removes per-frame inventory-view rebuilding, collider-array discovery and transform reparenting; views refresh on gameplay transactions, loading and machine completion. Bench/machine animation remains frame-driven. Input KeyCode parsing/binding labels, HUD styles and the two changing material instances are cached. Stationary ground/fence/workshop/clutter are runtime static-batched separately from interactive stations and moving parts. Savings need to be measured locally; no FPS improvement has been verified in Cloud.
+
+For a useful comparison:
+
+1. Maximize the Game view on Play; turn off Game-view Gizmos. Compare with the ordinary Editor layout, which can add Scene-view and Inspector overhead.
+2. Open **Window → Analysis → Profiler**, record around 10 seconds walking the same route with the same loose bundles, and inspect CPU Timeline/GC Alloc and Rendering batches. Named `Scrapshift.SyncViews` and `Scrapshift.Save` markers identify view rebuilding and durable save writes without enabling Deep Profile. Leave Deep Profile off for the baseline because it adds overhead.
+3. Compare a desktop player (Development Build with Autoconnect Profiler when profiling) at the same resolution. Use frame time: 16.7 ms is 60 FPS; 33.3 ms is 30 FPS. Check CPU versus GPU before choosing shadow/resolution changes.
+4. Verify pickup/drop/carry/sell, each manual stroke, machine completion/output/lamp, pause and Settings. These are the state changes which now trigger view refresh. Check rebind/restore immediately updates labels. Confirm static-batched surroundings while rollers, lamp, carried items and bench output remain independent.
+
+Save writes still flush synchronously for durability. If freezes happen specifically on interaction/autosave, inspect the `Save` call separately; this pass targets continuous frame overhead. If the GPU dominates, follow up with measured shadow/render-quality presets; lighting quality has not been lowered speculatively.
+
+Recommended next scope after performance verification: **repair one broken fan** (inspect → identify failed motor → replace → switch on → sell). Then add varied daily scrap deliveries and small customer orders, followed by a modest yard/storage expansion. Add conveyors after these choices and the existing loop feel satisfying.
+
+Cozy retro direction: muted earthy colors with warm ivory accents, soft afternoon light/fog, chunky silhouettes, subtle coarse textures and readable UI. Add gentle yard ambience, a quiet optional workshop radio, satisfying clicks/whirs, useful personal workshop clutter and forgiving progression. Use a consistent restrained visual language; aggressive vertex wobble, strong dithering and heavy effects are optional experiments and must not hurt clarity or comfort.
+
 ## Original textures and contributions
 
 Seven tracked 64×64 tileable PNGs and URP materials cover rusted paint, dark industrial metal, corrugated metal, weathered wood, gravel, copper and wire insulation. They were created procedurally with deterministic authoring code, not downloaded or derived from campaign artwork. Imports use Point/Repeat. Custom box and twelve-sided cylinder UVs target one repeat per metre (64 texels/m) to avoid stretched primitive textures. See `Assets/Scrapshift/Art/Textures/README.md` and `generate_textures.py` for palette, import settings and regeneration details.
