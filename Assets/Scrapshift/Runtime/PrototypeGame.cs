@@ -9,12 +9,16 @@ namespace Scrapshift
     {
         public PrototypeBalance balance;
         public FirstPersonController player;
-        public Transform benchDisplay, machineDisplay, rotor;
+        public Transform benchDisplay, machineDisplay, rotor, additionalRoller, feedDisplay;
         public Renderer machineLamp;
         public Texture2D logo;
         public YardModel Model { get; private set; }
         readonly Dictionary<int, GameObject> itemViews = new Dictionary<int, GameObject>();
         bool paused, confirmNew, saveBlocked;
+        PlayerInputSettings controls;
+        SettingsMenu settings;
+        Vector3 benchRestPosition;
+        float workPulseUntil;
         string message;
         float messageUntil, nextStroke, nextAutosave;
         InteractionTarget target;
@@ -24,6 +28,8 @@ namespace Scrapshift
 
         void Start()
         {
+            controls = new PlayerInputSettings(); settings = new SettingsMenu(controls);
+            player.controls = controls; benchRestPosition = benchDisplay.localPosition;
             audioSource = gameObject.AddComponent<AudioSource>();
             feedback = AudioClip.Create("Tool click", 2205, 1, 22050, false);
             var samples = new float[2205];
@@ -41,32 +47,58 @@ namespace Scrapshift
         void SetPaused(bool value)
         {
             paused = value; Time.timeScale = value ? 0 : 1;
+            if (!value && settings != null) settings.Close();
+            if (controls != null) controls.SuppressUntilRelease();
             Cursor.lockState = value ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = value;
         }
-        void OnApplicationFocus(bool focused) { if (!focused && Model != null) { SetPaused(true); Save(); } }
+        void OnApplicationFocus(bool focused)
+        {
+            if (!focused && Model != null) { settings.Close(); SetPaused(true); Save(); }
+        }
         void Update()
         {
             if (Model == null) return;
-            if (Input.GetKeyDown(KeyCode.Escape)) { SetPaused(!paused); confirmNew = false; if (paused) Save(); }
-            if (paused) return;
-            player.Step();
+            // Escape is permanently reserved for cancellation/back. Never process gameplay on a menu transition frame.
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                if (settings.IsOpen) settings.HandleEscape();
+                else { SetPaused(!paused); confirmNew = false; if (paused) Save(); }
+                return;
+            }
+            if (settings.IsOpen) settings.UpdateCapture();
+            if (paused || settings.IsOpen) return;
+            bool inputReady = controls.GameplayReady;
+            if (inputReady) player.Step();
             Model.Tick(Time.deltaTime);
             target = null;
             if (Physics.Raycast(player.view.transform.position, player.view.transform.forward, out RaycastHit hit, 3.2f, ~(1 << 2)))
                 target = hit.collider.GetComponentInParent<InteractionTarget>();
-            if (Input.GetKeyDown(KeyCode.Q)) Drop();
-            if (target != null && Input.GetKeyDown(KeyCode.E)) Interact();
-            if (target != null && target.kind == TargetKind.Bench && Input.GetMouseButtonDown(0) && Time.time >= nextStroke)
+            if (inputReady && controls.Pressed(ControlAction.Drop)) Drop();
+            if (inputReady && target != null && controls.Pressed(ControlAction.Interact)) Interact();
+            if (inputReady && target != null && target.kind == TargetKind.Bench && controls.Pressed(ControlAction.ManualWork) && Time.time >= nextStroke)
             {
-                if (Model.WorkBench()) { nextStroke = Time.time + .22f; Beep(); Save(); }
+                if (Model.WorkBench())
+                {
+                    nextStroke = Time.time + .22f; workPulseUntil = Time.time + .18f;
+                    Beep(1.25f); Tell(Model.State.benchOutput > 0 ? "Insulation removed. Collect the copper." : "Stripping stroke " + Model.State.benchStrokes + "/" + Model.Rules.manualStrokes); Save();
+                }
+                else Tell(CurrentHint().text);
             }
             SyncViews();
-            if (Model.State.machineRemaining > 0) rotor.Rotate(0, 0, 240 * Time.deltaTime, Space.Self);
+            if (Model.State.machineRemaining > 0)
+            {
+                rotor.Rotate(0, 0, 240 * Time.deltaTime, Space.Self);
+                if (additionalRoller != null) additionalRoller.Rotate(0, 0, -240 * Time.deltaTime, Space.Self);
+            }
             if (Time.unscaledTime >= nextAutosave) { Save(); nextAutosave = Time.unscaledTime + 15; }
         }
         void Interact()
         {
+            var before = CurrentHint();
+            if (!before.canUse) { Tell(before.text); return; }
+            int oldMoney = Model.State.money;
+            bool ownedBefore = Model.State.machineOwned;
             bool changed = false;
             switch (target.kind)
             {
@@ -79,8 +111,15 @@ namespace Scrapshift
                     changed = !Model.State.machineOwned ? Model.BuyMachine() :
                         Model.State.machineOutput > 0 ? Model.CollectMachine() : Model.FeedMachine(); break;
             }
-            if (changed) { Beep(); SyncViews(); Save(); }
-            else Tell("Action unavailable. Check your hands, station status, or balance.");
+            if (changed)
+            {
+                if (Model.State.money > oldMoney) { Tell("Sold copper • +€" + (Model.State.money - oldMoney)); Beep(1.6f); }
+                else if (!ownedBefore && Model.State.machineOwned) { Tell("Powered stripper installed • -€" + Model.Rules.machinePrice + ". Feed wire into the front opening."); Beep(.8f); }
+                else if (target.kind == TargetKind.Machine && Model.State.machineRemaining > 0) { Tell("Wire accepted. Rollers are stripping; collect copper from the output tray when ready."); Beep(.9f); }
+                else { Tell(YardGuidance.Objective(Model, controls.Label(ControlAction.Interact), controls.Label(ControlAction.ManualWork), controls.Label(ControlAction.Drop))); Beep(); }
+                SyncViews(); Save();
+            }
+            else Tell(CurrentHint().text);
         }
         void Drop()
         {
@@ -96,7 +135,7 @@ namespace Scrapshift
             else point.y = .3f;
             if (Model.Drop(point.x, point.y, point.z)) { SyncViews(); Save(); }
         }
-        void Beep() { audioSource.PlayOneShot(feedback); }
+        void Beep(float pitch = 1f) { audioSource.pitch = pitch; audioSource.PlayOneShot(feedback); }
         void Tell(string text) { message = text; messageUntil = Time.unscaledTime + 5; }
         void SyncViews()
         {
@@ -121,7 +160,9 @@ namespace Scrapshift
             float progress = Model.State.benchLoaded ? (float)Model.State.benchStrokes / Model.Rules.manualStrokes : 1;
             benchDisplay.localScale = new Vector3(.75f, .12f + .15f * progress, .35f);
             benchDisplay.GetComponent<Renderer>().material.color = Model.State.benchOutput > 0 ? YardGeometry.Copper : Color.Lerp(YardGeometry.Charcoal, YardGeometry.Copper, progress);
+            benchDisplay.localPosition = benchRestPosition + (Time.time < workPulseUntil ? Vector3.up * .025f : Vector3.zero);
             machineDisplay.gameObject.SetActive(Model.State.machineOutput > 0);
+            if (feedDisplay != null) feedDisplay.gameObject.SetActive(Model.State.machineRemaining > 0);
             machineLamp.material.color = !Model.State.machineOwned ? Color.gray : Model.State.machineRemaining > 0 ? YardGeometry.Rust : Model.State.machineOutput > 0 ? Color.green : YardGeometry.Ivory;
         }
         void CapturePlayer()
@@ -153,21 +194,18 @@ namespace Scrapshift
         void OnApplicationQuit() { Save(); }
         void OnDestroy() { Time.timeScale = 1; Cursor.lockState = CursorLockMode.None; Cursor.visible = true; if (feedback != null) Destroy(feedback); }
 
-        string Prompt()
+        StationHint CurrentHint()
         {
-            if (target == null) return "Look at a station or bundle within reach";
-            var s = Model.State;
-            switch (target.kind)
-            {
-                case TargetKind.Supply: return "DELIVERY • E: take wire (free, renewable)";
-                case TargetKind.Sell: return "SELLING • E: sell carried copper (€" + Model.Rules.copperUnitPrice + " per unit)";
-                case TargetKind.LooseItem:
-                    var item = Model.Find(target.itemId);
-                    return item == null ? "" : "E: pick up • " + item.kind + " ×" + item.quantity + (item.kind == MaterialKind.Copper ? " • €" + item.quantity * Model.Rules.copperUnitPrice : " • strip to recover copper");
-                case TargetKind.Bench: return s.benchOutput > 0 ? "BENCH • E: collect copper ×" + s.benchOutput : s.benchLoaded ? "BENCH • click LMB to strip: " + s.benchStrokes + "/" + Model.Rules.manualStrokes : "BENCH • E: place carried wire";
-                case TargetKind.Machine: return !s.machineOwned ? "POWERED STRIPPER • E: buy for €" + Model.Rules.machinePrice : s.machineRemaining > 0 ? "STRIPPING • " + s.machineRemaining.ToString("0.0") + " seconds" : s.machineOutput > 0 ? "OUTPUT READY • E: collect copper ×" + s.machineOutput : "IDLE • E: feed carried wire";
-                default: return "";
-            }
+            return target == null ? new StationHint(false, "Aim at a station or bundle within 3.2 metres") :
+                YardGuidance.Hint(Model, target.kind, target.itemId, controls.Label(ControlAction.Interact), controls.Label(ControlAction.ManualWork));
+        }
+        string PrimaryLabel(ControlAction action) { return ControlPreferences.CodeLabel(controls.Preferences.Binding(action)); }
+        string ControlHints()
+        {
+            return "Move " + PrimaryLabel(ControlAction.MoveForward) + "/" + PrimaryLabel(ControlAction.MoveBackward) + "/" +
+                PrimaryLabel(ControlAction.MoveLeft) + "/" + PrimaryLabel(ControlAction.MoveRight) + " • Mouse look • " +
+                controls.Label(ControlAction.Interact) + " interact • " + controls.Label(ControlAction.ManualWork) + " strip • " +
+                controls.Label(ControlAction.Drop) + " drop • Esc pause";
         }
         void OnGUI()
         {
@@ -177,24 +215,29 @@ namespace Scrapshift
             float width = Screen.width / scale, height = Screen.height / scale;
             GUI.skin.label.fontSize = 18; GUI.skin.button.fontSize = 18; GUI.skin.box.fontSize = 18;
             GUI.color = YardGeometry.Ivory;
-            GUI.Box(new Rect(20, 20, 460, 125), "");
+            if (settings.IsOpen) { settings.Draw(width, height); return; }
+            GUI.Box(new Rect(20, 20, Mathf.Min(width - 40, 490), 140), "");
             GUI.Label(new Rect(35, 28, 440, 30), "SCRAPSHIFT   /   €" + Model.State.money);
-            string objective = !Model.State.machineOwned ? "Strip and sell copper. Save €" + Model.Rules.machinePrice + " for a powered stripper." : "Feed the stripper, collect copper, sell. Your yard works.";
-            GUI.Label(new Rect(35, 64, 425, 65), objective, new GUIStyle(GUI.skin.label) { wordWrap = true });
-            string held = Model.Carried == null ? "Hands empty" : "Carrying " + Model.Carried.kind + " ×" + Model.Carried.quantity + "   /   Q: drop";
-            GUI.Label(new Rect(25, height - 125, width - 50, 28), held);
-            GUI.Label(new Rect(25, height - 92, width - 50, 30), Prompt());
-            GUI.Label(new Rect(25, height - 48, width - 50, 30), "WASD move   •   Mouse look   •   E interact   •   LMB strip   •   Q drop   •   Esc pause");
+            string objective = YardGuidance.Objective(Model, controls.Label(ControlAction.Interact), controls.Label(ControlAction.ManualWork), controls.Label(ControlAction.Drop));
+            GUI.Label(new Rect(35, 64, Mathf.Min(width - 70, 455), 85), objective, new GUIStyle(GUI.skin.label) { wordWrap = true });
+            string held = Model.Carried == null ? "Hands empty" : "Carrying " + Model.Carried.kind + " ×" + Model.Carried.quantity + "   /   " + controls.Label(ControlAction.Drop) + ": drop";
+            GUI.Label(new Rect(25, height - 144, width - 50, 28), held);
+            var hint = CurrentHint();
+            GUI.Label(new Rect(25, height - 108, width - 50, 55), hint.text, new GUIStyle(GUI.skin.label) { wordWrap = true });
+            GUI.Label(new Rect(25, height - 53, width - 50, 48), ControlHints(), new GUIStyle(GUI.skin.label) { wordWrap = true, fontSize = 15 });
+            GUI.color = hint.canUse ? new Color(.65f, 1f, .55f) : YardGeometry.Ivory;
             GUI.Label(new Rect(width / 2 - 5, height / 2 - 15, 20, 30), "+");
-            if (Time.unscaledTime < messageUntil) GUI.Label(new Rect(25, 155, width - 50, 85), message, new GUIStyle(GUI.skin.label) { wordWrap = true });
+            GUI.color = YardGeometry.Ivory;
+            if (Time.unscaledTime < messageUntil) GUI.Label(new Rect(25, 172, width - 50, 85), message, new GUIStyle(GUI.skin.label) { wordWrap = true });
             if (!paused) return;
-            GUI.Box(new Rect(width / 2 - 235, height / 2 - 190, 470, 360), "PAUSED");
+            GUI.Box(new Rect(width / 2 - 235, height / 2 - 190, 470, 420), "PAUSED");
             if (logo != null) GUI.DrawTexture(new Rect(width / 2 - 140, height / 2 - 155, 280, 85), logo, ScaleMode.ScaleToFit);
             if (GUI.Button(new Rect(width / 2 - 180, height / 2 - 50, 360, 40), "Resume")) SetPaused(false);
             if (GUI.Button(new Rect(width / 2 - 180, height / 2, 360, 40), "Save yard")) { Save(); }
-            if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 50, 360, 40), confirmNew ? "Confirm: reset yard (old save archived)" : "New game"))
+            if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 50, 360, 40), "Settings")) { confirmNew = false; messageUntil = 0; settings.Open(); }
+            if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 100, 360, 40), confirmNew ? "Confirm: reset yard (old save archived)" : "New game"))
             { if (confirmNew) NewGame(); else confirmNew = true; }
-            if (saveBlocked) GUI.Label(new Rect(width / 2 - 215, height / 2 + 105, 430, 55), "Saving blocked to protect unreadable data.\nChoose New game to archive it and restart.");
+            if (saveBlocked) GUI.Label(new Rect(width / 2 - 215, height / 2 + 150, 430, 65), "Saving blocked to protect unreadable data.\nChoose New game to archive it and restart.");
         }
     }
 }

@@ -5,12 +5,26 @@ class CoreRunner
     static int Main()
     {
         int failed = 0;
+        int total = 0;
         foreach (var name in CoreScenarios.Names)
         {
+            total++;
             try { CoreScenarios.Run(name); Console.WriteLine("PASS " + name); }
             catch (Exception ex) { failed++; Console.WriteLine("FAIL " + name + ": " + ex.Message); }
         }
-        Console.WriteLine((CoreScenarios.Names.Length - failed) + " passed, " + failed + " failed");
+        foreach (var name in ControlScenarios.Names)
+        {
+            total++;
+            try { ControlScenarios.Run(name); Console.WriteLine("PASS " + name); }
+            catch (Exception ex) { failed++; Console.WriteLine("FAIL " + name + ": " + ex.Message); }
+        }
+        foreach (var name in GuidanceScenarios.Names)
+        {
+            total++;
+            try { GuidanceScenarios.Run(name); Console.WriteLine("PASS " + name); }
+            catch (Exception ex) { failed++; Console.WriteLine("FAIL " + name + ": " + ex.Message); }
+        }
+        Console.WriteLine((total - failed) + " passed, " + failed + " failed");
         return failed == 0 ? 0 : 1;
     }
 }

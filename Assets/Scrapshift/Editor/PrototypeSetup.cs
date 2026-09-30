@@ -18,10 +18,17 @@ namespace Scrapshift
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             Generate();
         }
+        [MenuItem("Scrapshift/Update Existing Prototype Visuals")]
+        public static void UpdateExistingVisuals()
+        {
+            RetroMaterialSetup.EnsureMaterials();
+            Debug.Log("Tracked materials ready. Existing YardBootstrap scenes use the updated props and Settings automatically on next Play; scene and balance edits were preserved.");
+        }
         // Batch entry point: -executeMethod Scrapshift.PrototypeSetup.Generate
         public static void Generate()
         {
             Directory.CreateDirectory(Folder); AssetDatabase.Refresh();
+            RetroMaterialSetup.EnsureMaterials();
             var balance = AssetDatabase.LoadAssetAtPath<PrototypeBalance>(Folder + "/Balance.asset");
             if (balance == null)
             {
@@ -61,7 +68,7 @@ namespace Scrapshift
             if (!scenes.Exists(scene => scene.path == ScenePath)) scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
             EditorBuildSettings.scenes = scenes.ToArray();
             AssetDatabase.SaveAssets();
-            Debug.Log("Scrapshift prototype ready. Open Generated/Scrapyard and press Play. Balance.asset controls prices and processing.");
+            Debug.Log("Scrapshift prototype ready (existing bootstrap scenes receive updated runtime props without scene replacement). Open Generated/Scrapyard and press Play. Balance.asset controls prices and processing.");
         }
     }
 }

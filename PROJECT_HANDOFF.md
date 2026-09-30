@@ -4,34 +4,49 @@ Updated: 2026-09-30 (Europe/Brussels). Reinspect the checkout before continuing.
 
 ## Current implementation and evidence
 
-The Cloud checkout was advanced from `bfad65f` to `dfa6ec9` (`Add Codex Cloud handoff`) before development. Those commits contained only campaign assets and handoff documents. This session added the first Unity project implementation directly in the existing repository; no earlier working gameplay systems were replaced. Campaign source files are unchanged.
+The first prototype was pushed to `main` as `2a0f4fe`. The user then ran it in local Unity **6000.3.25f1** and reached the purchased-machine stage. They initially had trouble identifying the machine's feed interaction. That is limited user playtest evidence; comprehensive save/build/test results were not supplied.
 
-**Implemented, but not yet Unity-verified:**
+This continuation implements the requested **Settings/rebindable controls** and the explicitly confirmed uploaded **visual-clarity milestone**. It preserves the existing game and campaign assets, editor/package pins, balance asset data, material/economy transactions, station anchors and version-1 gameplay saves.
 
-- Unity **6000.3.25f1**, URP **17.3.0**, Test Framework **1.6.0** project scaffold.
-- `Scrapshift → Create or Open Prototype` editor command generates a referenced bootstrap scene, pipeline/renderer, balance asset, and copied logo. The generated yard is constructed at runtime from original primitives. Existing generated assets are reused.
-- Fenced yard, covered corrugated workshop, repeatable scrap supply, manual bench, selling area/bin, and powered wire stripper.
-- CharacterController first-person movement/collision, mouse look, raycast interaction/inspection prompts, carry/drop, and crosshair.
-- Four manual stripping clicks produce a three-unit copper bundle; selling pays €12. Three loads fund a €36 machine. Powered processing takes five seconds and provides collectable output.
-- Editable balance data; one carried bundle; bounded world/station inventory. Station transactions consume once and do not recreate already collected outputs. Capacity reserves room for station outputs.
-- Machine status lamp, rotating roller, bench progress geometry/color, synthesized tool feedback, money/objective HUD, pause/focus handling, and two-click New game.
-- Save data includes money, ownership, carried and dropped bundles/positions, manual progress/output, machine remaining time/output, and player pose. Atomic replacement, backup fallback, unreadable-save protection, and archiving on New game are implemented. Machines do not progress offline.
-- Stable `.meta` files for source assets; generated directories and build outputs ignored.
+### Added this session
 
-**Actually verified in Cloud:** the engine-independent C# core compiled with Mono 6.12 with warnings treated as errors. **12 scenarios passed / 0 failed**: complete loop, carrying/dropping, invalid inputs, bench exactly-once behavior, machine exactly-once behavior, purchase guards, output capacity, partial state resume, zero/invalid elapsed time, invalid state rejection, overflow protection, and renewable supply. These checks execute the real core sources, not a translated implementation or Unity API stubs.
+- Pause → Settings/Controls with seven rebindable actions, keyboard and mouse capture, cancellation, explicit conflict swap/cancel, defaults, sensitivity and invert-Y.
+- Central engine-independent binding preferences and rebind state machine; legacy Unity input adapter. Default WASD/arrows, E, Q, left mouse and fixed Escape preserved. No input backend migration.
+- Separate `controls-v1.json` with atomic writes/backup. Changes apply immediately; New game and yard loading leave preferences intact. Invalid settings recover backup/defaults with notice.
+- Capture excludes the selection click and consumes captured UI events through release. Pause/menu/capture suppress gameplay; resume requires full key/button release and a fresh input. Escape always cancels or backs out.
+- Current bindings in HUD prompts, contextual objectives, control legend and carried-item hints. Opening Settings clears old transient tutorial text so rebinds do not leave stale key labels.
+- Seven original procedural tileable 64×64 PNGs, tracked reusable URP Lit materials, stable metadata, Resources-backed shader references and an import validator. Point/Repeat textures; metre-based box/cylinder UVs.
+- Recognizable wire-filled delivery crate, table/work tools, copper buyer/scale/bin, gravel/fence/workshop props and powered stripper with input opening, counter-rotating rollers, exposed motor, output tray, status lamp, input/output displays and key-free labels.
+- Contextual availability/error reasons, range guidance and usable-target crosshair color. Objectives derive from current state, including dropped bundles and machine-owned saves.
+- Sale/purchase/feed confirmations; manual progress/pulse, rotating machine parts and distinct restrained sound tones.
+- Non-destructive **Update Existing Prototype Visuals** command. Existing `YardBootstrap` scenes receive runtime improvements on next Play without replacing scene/balance assets. New props preserve original station collider footprints; the workshop remains open and extra clutter is collision-free to protect old dropped-item access.
 
-**Not verified:** Unity package resolution/import, engine/editor C# compilation, the scene generator, URP presentation, input/collision feel, audio, actual pause/focus behavior, Unity JSON/file persistence tests, and desktop build/playability. Two Unity save-file tests plus the same 12 core cases are supplied, but their Unity run is outstanding. No gameplay footage or playable executable has been produced. Do not describe this as a verified playable build.
+### Verification
+
+**Executed in Cloud:** real core C# compiled with Mono 6.12, warnings as errors; **23 scenarios passed / 0 failed** (12 existing gameplay, 7 control preferences/rebinding, 4 guidance). Core checks cover the complete wire economy, conservation/guards, partial station resumption, renewable supply, invalid state/time/overflow, binding defaults/cancel/conflicts/aliases/restore/validation/labels, all station hint states, custom key text, save-state objectives, and presentation read-only behavior.
+
+The Settings agent also checked 10,000 deterministic rebind/cancel/restore operations and confirmed all 108 supported codes against Unity's official `6000.3` KeyCode enum. Asset checks confirmed PNG dimensions, matching tile edges, importer flags, material texture/shader references, metadata uniqueness and outward cylinder winding. These are source/asset checks, not Unity rendering evidence.
+
+**Not executed in this Cloud:** Unity import/compilation, real menu/input capture, release gate timing with hardware, engine pause/cursor behavior, JSON settings/game saves, render/readability/collider feel, generated scene update, desktop build and shader inclusion. Existing user playtest applies to the previous prototype only. **33 EditMode cases** are supplied: the 23 shared scenarios, two existing gameplay persistence cases, four settings/legacy-key/persistence/menu cases and four geometry cases. No test runner or screenshots have been presented as successful Unity verification.
+
+### Agent ownership
+
+- Settings/input agent: preferences, capture/conflict UI, input adapter/persistence, control tests and event-isolation review.
+- Texture agent: seven PNGs/materials, library/import validator, authoring code and texture documentation.
+- Machine agent: stripper geometry and animation/display hooks.
+- Environment agent: yard props, collision-compatibility review/fixes and geometry tests.
+- Main agent: architecture/integration, player action routing, metre-scaled box geometry, prompts/objectives, feedback, scene update path, runner and docs.
 
 ## Next concrete task
 
-1. Open the repository root in **Unity 6000.3.25f1**, resolve the pinned packages, and fix any import/compiler issues without silently migrating engines/editor versions.
-2. Run **Scrapshift → Create or Open Prototype**, open `Assets/Scrapshift/Generated/Scrapyard.unity`, and run the 14 EditMode cases.
-3. Follow the complete local playtest checklist in `README.md`, including material conservation across quit/reload, capacity pressure, pause/focus, corrupt-save backup, and New game.
-4. Build and run a desktop player. Confirm shader inclusion, readable world signs, and saves. Record real results here.
-5. Commit the verified scene/data/render assets and Unity-generated package lockfile when appropriate. Generated assets are currently ignored deliberately; move them into a tracked directory or explicitly add them with their `.meta` files. Do not lose edited balance or scene work by blindly regenerating them.
-6. Tune presentation and pacing; only then move on to a repairable appliance or conveyors.
+1. Pull this update locally and open the existing scene in Unity 6000.3.25f1. Do not delete Generated or reset tuned balance/save files. Allow tracked materials to import; optionally run **Update Existing Prototype Visuals**.
+2. Run all EditMode cases and inspect actual test outcomes. Play the full loop and the expanded Settings/visual checklist in README.
+3. Verify every binding, supported mouse actions, Escape cancellation/back, swap/cancel including arrow aliases, defaults, immediate prompts, sensitivity/invert-Y, persistence across restart and independence from New game/game saves.
+4. Hold actions while resuming/capturing; verify zero input leakage. Pause during machine work; verify no world progress or movement in menus. Check focus loss.
+5. Inspect textured props/UV density, world-label readability, raycast reach/marker resolution, old dropped-item access and update repeatability; build a desktop player and check shader/text/preferences.
+6. Record actual Unity evidence here. Tune spacing/feedback before implementing the proposed fan repair; no fan/conveyor/new recipe expansion was added.
 
-The first loop's source is now present. **Do not scaffold a second game or rebuild these systems from scratch.**
+The wire loop and Settings systems exist. Continue them; do not scaffold a second game.
 
 ## How to work here
 
@@ -43,20 +58,21 @@ From the repository root:
 SCRAPSHIFT_MONO_ROOT=/workspace/tooling/mono ./Tests/run-core-tests.sh
 ```
 
-With a system Mono installation, run `./Tests/run-core-tests.sh`. The shared cases live in `Assets/Scrapshift/Tests/Editor/CoreScenarios.cs`; the standalone entry point is `Tests/CoreRunner.cs`. Unity-specific persistence tests are in `PrototypeTests.cs`.
+With a system Mono installation, run `./Tests/run-core-tests.sh`. The shared cases live in `CoreScenarios.cs`, `ControlScenarios.cs` and `GuidanceScenarios.cs` under `Assets/Scrapshift/Tests/Editor/`; the standalone entry point is `Tests/CoreRunner.cs`. Unity-specific persistence tests are in `PrototypeTests.cs`.
 
 The .NET installer and Unity package host returned HTTP 403 under current Cloud networking; no Unity download/import was attempted successfully. Debian's normal package mirror was accessible. No additional secrets were requested. The code can be developed and core-tested here; Unity verification must currently happen locally.
 
 ## Structure and constraints
 
-- `Assets/Scrapshift/Core`: serializable yard state, balance rules, transactional inventory/economy/processing. Pure C#.
-- `Assets/Scrapshift/Runtime`: player, interaction targets, game coordinator/HUD, save store, balance asset type, procedural yard.
-- `Assets/Scrapshift/Editor`: reproducible setup command. Scene references include a URP shader to retain it in builds.
-- `Assets/Scrapshift/Tests/Editor`: core scenario wrapper and persistence tests.
+- `Assets/Scrapshift/Core`: yard state/rules/transactions, ControlPreferences/ControlRebind and YardGuidance. Pure C#.
+- `Assets/Scrapshift/Runtime`: player/action input, SettingsMenu/preferences store, game coordinator/HUD, save store, balance type, textured low-poly prop builders and material library.
+- `Assets/Scrapshift/Editor`: setup/non-destructive visual update and texture/material validator. Scene and Resources materials reference URP shaders for builds.
+- `Assets/Scrapshift/Tests/Editor`: shared scenario wrappers, game/control persistence, menu/key and geometry tests.
+- `Assets/Scrapshift/Art/Textures`, `Resources/ScrapshiftMaterials`: original PNGs, authoring source and tracked reusable materials.
 - `Packages`, `ProjectSettings`: pinned editor/package setup and legacy mouse/keyboard input axes.
 - `Campaign/Scrapshift`: preserved campaign source artwork and documents. The ZIP is an older export, not authoritative for current docs.
 
-Prototype limitations: one material recipe, a static item-placement model (no throwing/rigidbody piles), immediate inspection through prompts, a minimal IMGUI interface, procedural box geometry, one upgrade, no repairable appliances/conveyors/power network, and no verified engine build yet. A pause delta test proves model timing behavior; it does not prove Unity input/UI behavior. The core partial-resume test is not a serialization round-trip. Both distinctions matter when reporting readiness.
+Prototype limitations: one material recipe, a static item-placement model (no throwing/rigidbody piles), immediate inspection through prompts, a minimal IMGUI interface, low-poly procedural geometry, one upgrade, no repairable appliances/conveyors/power network, and no verified engine build yet. A pause delta test proves model timing behavior; it does not prove Unity input/UI behavior. The core partial-resume test is not a serialization round-trip. Both distinctions matter when reporting readiness.
 
 ## Product direction
 

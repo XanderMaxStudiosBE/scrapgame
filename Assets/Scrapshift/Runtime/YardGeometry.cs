@@ -27,12 +27,43 @@ namespace Scrapshift
             go.GetComponent<Collider>().enabled = collider;
             return go;
         }
+        // Independent face UVs use metres rather than Transform scale, keeping the same texel density on every prop.
+        public static GameObject SurfaceBox(string name, Transform parent, Vector3 position, Vector3 size, RetroSurface surface, bool collider = true)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false); go.transform.localPosition = position;
+            var mesh = new Mesh { name = name + " / metre UVs" };
+            var vertices = new List<Vector3>(); var uv = new List<Vector2>(); var triangles = new List<int>();
+            Vector3 h = size * .5f;
+            AddFace(vertices, uv, triangles, new Vector3(0,0,h.z), Vector3.right, Vector3.up, size.x, size.y);
+            AddFace(vertices, uv, triangles, new Vector3(0,0,-h.z), Vector3.left, Vector3.up, size.x, size.y);
+            AddFace(vertices, uv, triangles, new Vector3(h.x,0,0), Vector3.back, Vector3.up, size.z, size.y);
+            AddFace(vertices, uv, triangles, new Vector3(-h.x,0,0), Vector3.forward, Vector3.up, size.z, size.y);
+            AddFace(vertices, uv, triangles, new Vector3(0,h.y,0), Vector3.right, Vector3.back, size.x, size.z);
+            AddFace(vertices, uv, triangles, new Vector3(0,-h.y,0), Vector3.right, Vector3.forward, size.x, size.z);
+            mesh.SetVertices(vertices); mesh.SetUVs(0, uv); mesh.SetTriangles(triangles, 0); mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<ProceduralMeshOwner>().mesh = mesh;
+            go.AddComponent<MeshRenderer>().sharedMaterial = RetroMaterialLibrary.Get(surface);
+            if (collider) go.AddComponent<BoxCollider>().size = size;
+            return go;
+        }
+        static void AddFace(List<Vector3> vertices, List<Vector2> uv, List<int> triangles, Vector3 centre, Vector3 right, Vector3 up, float width, float height)
+        {
+            int offset = vertices.Count;
+            Vector3 horizontal = right * width * .5f, vertical = up * height * .5f;
+            vertices.Add(centre-horizontal-vertical); vertices.Add(centre+horizontal-vertical);
+            vertices.Add(centre+horizontal+vertical); vertices.Add(centre-horizontal+vertical);
+            uv.Add(Vector2.zero); uv.Add(new Vector2(width, 0)); uv.Add(new Vector2(width, height)); uv.Add(new Vector2(0, height));
+            triangles.Add(offset); triangles.Add(offset+1); triangles.Add(offset+2);
+            triangles.Add(offset); triangles.Add(offset+2); triangles.Add(offset+3);
+        }
         public static GameObject Bundle(MaterialKind kind, Transform parent)
         {
             var root = new GameObject(kind == MaterialKind.Wire ? "Insulated wire bundle" : "Recovered copper bundle");
             root.transform.SetParent(parent, false);
             for (int i = 0; i < 4; i++)
-                Box("Strand", root.transform, new Vector3((i - 1.5f) * .13f, 0, 0), new Vector3(.10f, .17f, .55f), kind == MaterialKind.Wire ? Charcoal : Copper, false);
+                SurfaceBox("Strand", root.transform, new Vector3((i - 1.5f) * .13f, 0, 0), new Vector3(.10f, .17f, .55f), kind == MaterialKind.Wire ? RetroSurface.WireInsulation : RetroSurface.Copper, false);
             var collider = root.AddComponent<BoxCollider>(); collider.size = new Vector3(.55f, .2f, .6f);
             return root;
         }
@@ -41,7 +72,7 @@ namespace Scrapshift
             var sign = new GameObject(text);
             sign.transform.SetParent(parent, false); sign.transform.localPosition = position;
             sign.transform.localRotation = Quaternion.Euler(0, yaw, 0);
-            var mesh = sign.AddComponent<TextMesh>(); mesh.text = text; mesh.fontSize = 60; mesh.characterSize = .075f;
+            var mesh = sign.AddComponent<TextMesh>(); mesh.text = text; mesh.fontSize = 60; mesh.characterSize = .035f;
             mesh.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             sign.GetComponent<MeshRenderer>().sharedMaterial = mesh.font.material;
             mesh.anchor = TextAnchor.MiddleCenter; mesh.alignment = TextAlignment.Center; mesh.color = Ivory;

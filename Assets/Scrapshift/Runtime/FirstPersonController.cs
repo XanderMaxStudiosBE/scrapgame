@@ -7,7 +7,7 @@ namespace Scrapshift
     {
         public Camera view;
         public float speed = 4f;
-        public float sensitivity = 2f;
+        public PlayerInputSettings controls;
         public float Yaw { get; private set; }
         public float Pitch { get; private set; }
         CharacterController controller;
@@ -26,10 +26,13 @@ namespace Scrapshift
         }
         public void Step()
         {
-            Yaw += Input.GetAxisRaw("Mouse X") * sensitivity;
-            Pitch = Mathf.Clamp(Pitch - Input.GetAxisRaw("Mouse Y") * sensitivity, -80, 80);
+            if (controls == null) return;
+            Yaw += Input.GetAxisRaw("Mouse X") * controls.Sensitivity;
+            float mouseY = Input.GetAxisRaw("Mouse Y") * controls.Sensitivity * (controls.InvertY ? -1 : 1);
+            Pitch = Mathf.Clamp(Pitch - mouseY, -80, 80);
             ApplyLook();
-            Vector3 move = transform.right * Input.GetAxisRaw("Horizontal") + transform.forward * Input.GetAxisRaw("Vertical");
+            Vector2 movement = controls.Movement;
+            Vector3 move = transform.right * movement.x + transform.forward * movement.y;
             move = Vector3.ClampMagnitude(move, 1) * speed;
             fallSpeed = controller.isGrounded ? -2f : fallSpeed + Physics.gravity.y * Time.deltaTime;
             move.y = fallSpeed;
