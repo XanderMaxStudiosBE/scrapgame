@@ -32,8 +32,10 @@ namespace Scrapshift
                             (carried != null && carried.kind == MaterialKind.BrokenFan ? use + "place broken desk fan" : "Bring a broken desk fan from appliance salvage."));
                     if (s.fanStage == FanStage.ReadyToTest)
                         return new StationHint(carried == null, "RESTORATION BENCH • " + (carried == null ? use + "power on and test repaired fan" : emptyHands));
+                    if ((s.fanStage == FanStage.Tested || s.fanStage == FanStage.CopperReady) && !m.CanCollectOutput)
+                        return new StationHint(false,"RESTORATION BENCH • " + (carried != null ? emptyHands : CollectionBlocked(m)));
                     if (s.fanStage == FanStage.Tested || s.fanStage == FanStage.CopperReady)
-                        return new StationHint(m.CanCollectOutput, "RESTORATION BENCH • " +
+                        return new StationHint(true, "RESTORATION BENCH • " +
                             (carried == null ? use + (s.fanStage == FanStage.Tested ? "collect tested fan • worth €" + r.fanSalePrice : "collect " + r.fanCopperYield + " copper") : emptyHands));
                     if (s.fanStage == FanStage.Repairing || s.fanStage == FanStage.Dismantling)
                         return new StationHint(carried == null, "RESTORATION BENCH • " + (carried == null ? "[" + work + "] " +
@@ -72,11 +74,11 @@ namespace Scrapshift
                         item.kind + " ×" + item.quantity + (item.kind == MaterialKind.Copper ? " • worth €" + (long)item.quantity * r.copperUnitPrice : " • strip to recover " + r.copperPerWire + " copper");
                     return new StationHint(carried == null, description + " • " + (carried == null ? use + "pick up" : "Hands full. " + emptyHands));
                 case TargetKind.Sell:
-                    if (carried == null) return new StationHint(false, "COPPER BUYER • Carry copper here to sell it.");
+                    if (carried == null) return new StationHint(false, "SCRAP BUYER • Carry copper or a tested fan here to sell it.");
                     if (carried.kind != MaterialKind.Copper && carried.kind != MaterialKind.RestoredFan)
                         return new StationHint(false, "SCRAP BUYER • " + (carried.kind == MaterialKind.BrokenFan ? "Inspect, repair or dismantle this fan at the restoration bench first." : "Wire must be stripped at the bench or machine first."));
                     long value = carried.kind == MaterialKind.Copper ? (long)carried.quantity * r.copperUnitPrice : r.fanSalePrice;
-                    if ((long)s.money + value > int.MaxValue) return new StationHint(false, "COPPER BUYER • Balance limit reached; bundle retained.");
+                    if ((long)s.money + value > int.MaxValue) return new StationHint(false, "SCRAP BUYER • Balance limit reached; item retained.");
                     return new StationHint(true, "SCRAP BUYER • " + use + "sell " + (carried.kind == MaterialKind.RestoredFan ? "tested desk fan" : carried.quantity + " copper") + " for €" + value);
                 case TargetKind.Bench:
                     if (s.benchOutput > 0) return OutputHint(m, "WORKBENCH", s.benchOutput, use, emptyHands);
@@ -84,7 +86,7 @@ namespace Scrapshift
                         return carried == null ? new StationHint(true, "WORKBENCH • [" + work + "] strip wire • " + s.benchStrokes + "/" + m.WireWorkSteps + " strokes") :
                             new StationHint(false, "WORKBENCH • Wire loaded. Empty your hands before stripping.");
                     if (carried == null) return new StationHint(false, "WORKBENCH • Get wire from DELIVERY, then place it here.");
-                    if (carried.kind != MaterialKind.Wire) return new StationHint(false, "WORKBENCH • Copper is already stripped. Take it to the buyer.");
+                    if (carried.kind != MaterialKind.Wire) return new StationHint(false, "WORKBENCH • " + WrongStationMaterial(carried.kind));
                     return new StationHint(true, "WORKBENCH • " + use + "place scrap wire");
                 case TargetKind.Machine:
                     if (!s.machineOwned)
@@ -95,15 +97,25 @@ namespace Scrapshift
                     if (s.machineRemaining > 0) return new StationHint(false, "POWERED STRIPPER • Processing • " + s.machineRemaining.ToString("0.0") + "s left • wait for the output tray");
                     if (s.machineOutput > 0) return OutputHint(m, "OUTPUT TRAY", s.machineOutput, use, emptyHands);
                     if (carried == null) return new StationHint(false, "POWERED STRIPPER • Idle. Take wire from DELIVERY, then feed the front opening.");
-                    if (carried.kind != MaterialKind.Wire) return new StationHint(false, "POWERED STRIPPER • Copper is finished material. Sell it at the buyer.");
+                    if (carried.kind != MaterialKind.Wire) return new StationHint(false, "POWERED STRIPPER • " + WrongStationMaterial(carried.kind));
                     return new StationHint(true, "POWERED STRIPPER • " + use + "feed wire into the front opening");
                 default: return new StationHint(false, "Look at a station within reach.");
             }
         }
+        static string WrongStationMaterial(MaterialKind kind)
+        {
+            if(kind==MaterialKind.BrokenFan)return "Bring this broken fan to the restoration bench.";
+            if(kind==MaterialKind.RestoredFan)return "This fan is tested. Take it to the scrap buyer.";
+            return "Copper is already stripped. Take it to the buyer or customer board.";
+        }
+        static string CollectionBlocked(YardModel m)
+        {
+            return m.State.nextId==int.MaxValue ? "Item limit reached. Output is retained safely; start a new yard only after archiving this save." : "Item storage full. Sell an existing bundle first; output is retained safely.";
+        }
         static StationHint OutputHint(YardModel m, string station, int quantity, string use, string emptyHands)
         {
             if (m.Carried != null) return new StationHint(false, station + " • Copper ready. " + emptyHands);
-            if (!m.CanCollectOutput) return new StationHint(false, station + " • Storage full. Sell an existing copper bundle first.");
+            if (!m.CanCollectOutput) return new StationHint(false, station + " • " + CollectionBlocked(m));
             return new StationHint(true, station + " • " + use + "collect " + quantity + " copper");
         }
         public static string Objective(YardModel m, string interact, string work, string drop)
@@ -123,13 +135,13 @@ namespace Scrapshift
             if (s.benchOutput > 0) return "Collect copper from the WORKBENCH [" + interact + "], then sell it.";
             if (s.machineOutput > 0) return "Collect copper from the STRIPPER output tray [" + interact + "], then sell it.";
             if (s.benchLoaded) return "Strip the loaded wire at the WORKBENCH [" + work + "] • " + s.benchStrokes + "/" + m.WireWorkSteps + ".";
-            if (s.machineRemaining > 0) return "The STRIPPER is working. Wait for copper or use the manual bench.";
             if (s.fanStage == FanStage.ReadyToTest) return "Power on and test your repaired fan at the RESTORATION BENCH [" + interact + "].";
             if (s.fanStage == FanStage.Tested || s.fanStage == FanStage.CopperReady) return "Collect your finished restoration-bench output [" + interact + "].";
             if (s.fanStage == FanStage.Repairing || s.fanStage == FanStage.Dismantling) return "Work on the fan at the RESTORATION BENCH [" + work + "].";
             if (s.fanStage == FanStage.AwaitingInspection || s.fanStage == FanStage.Diagnosed) return "Inspect the RESTORATION BENCH [" + interact + "] and choose repair or salvage.";
             if (s.orderAccepted && m.StoredBundles(MaterialKind.Copper) > 0) return "Take copper from COPPER STORAGE [" + interact + "] for your customer order.";
             if (m.StoredBundles(MaterialKind.Wire) > 0) return "Take wire from WIRE STORAGE [" + interact + "] to process it.";
+            if (s.machineRemaining > 0) return "The STRIPPER is working. Take more wire to the manual bench while you wait.";
             if (s.orderAccepted) return "Strip wire for " + m.CurrentOrder.customer + " • " + s.orderDelivered + "/" + m.CurrentOrder.copper + " copper delivered.";
             if (s.machineOwned && (m.CanBuyUpgrade(YardUpgrade.StorageRack) || m.CanBuyUpgrade(YardUpgrade.HandTools) || m.CanBuyUpgrade(YardUpgrade.MachineTuning)))
                 return "Improve your yard at the YARD DIARY [" + interact + "] • Investments.";

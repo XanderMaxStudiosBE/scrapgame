@@ -6,9 +6,9 @@ namespace Scrapshift
     {
         public readonly Transform wireStock, copperStock, rack;
         public readonly TextMesh orderText;
-        public static readonly Vector3 WirePosition = new Vector3(14, 0, 2);
-        public static readonly Vector3 CopperPosition = new Vector3(14, 0, 7);
-        public static readonly Vector3 OrderPosition = new Vector3(7, 0, 12);
+        public static readonly Vector3 WirePosition = YardBootstrap.StationPosition(YardLandmark.WireStorage);
+        public static readonly Vector3 CopperPosition = YardBootstrap.StationPosition(YardLandmark.CopperStorage);
+        public static readonly Vector3 OrderPosition = YardBootstrap.StationPosition(YardLandmark.Orders);
 
         YardBusinessVisual(Transform wire, Transform copper, TextMesh text, Transform rack)
         { wireStock = wire; copperStock = copper; orderText = text; this.rack = rack; }

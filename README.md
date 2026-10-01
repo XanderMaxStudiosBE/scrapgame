@@ -2,7 +2,7 @@
 
 A first-person scrapyard simulator prototype: collect wire and broken appliances, strip or restore them, sell useful material, fulfil customer orders and improve your yard. The visual direction is worn retro realism inspired by the warmth and readable everyday props of Retro Rewind, using original industrial assets.
 
-**Current Cloud verification:** 61 pure C# scenarios pass, including 20,000 mixed transactions and a twelve-day progression from zero money. Eighteen authored FBX files pass Blender scale/UV/triangle audits. Seven original WAVs pass format/sample checks. **Unity is unavailable here:** the 113 supplied EditMode cases, engine compilation, rendering, audio and actual FPS still need local verification. Blender previews are asset previews, not gameplay screenshots.
+**Current Cloud verification:** 69 pure C# scenarios pass, including 20,000 mixed transactions and a twelve-day progression from zero money. Eighteen authored FBX files pass Blender scale/UV/triangle audits. Seven original WAVs pass format/sample checks. **Unity is unavailable here:** the 122 supplied EditMode cases, engine compilation, rendering, audio and actual FPS still need local verification. Blender previews are asset previews, not gameplay screenshots.
 
 ## Open or update in Unity
 
@@ -33,7 +33,7 @@ Gameplay/look are blocked during all menus and capture. Captured input is consum
 
 ## What to do in the yard
 
-The 96 × 80m yard has a central workshop, western vehicle/appliance salvage, eastern metal sorting, northern loading/storage and southern office/entry district. Pause → **Yard map** shows your position and useful stations. Office, cars, containers, crane and radio are scenery; no driving, crane operation or enterable office is implemented.
+The 96 × 80m yard has a central workshop, western vehicle/appliance salvage, eastern metal sorting, northern loading/storage and southern office/entry district. Pause → **Yard map** shows your position and thirteen numbered destinations. Select a pin or station to track it and resume; **Follow objective** returns to automatic guidance. The HUD shows destination, distance and Ahead/Left/Right/Behind/Nearby relative to your view. Automatic guidance follows carried material, ready/partial work and storage, selecting the nearest renewable wire crate when supply is needed. Bearings guide direction; they do not find a path through obstacles. A selected destination stays tracked until changed or New game and is not saved between sessions. Office, cars, containers, crane and radio are scenery; no driving, crane operation or enterable office is implemented.
 
 ### Wire processing
 
@@ -84,6 +84,8 @@ Under `Application.persistentDataPath` (company `XanderMaxStudiosBE`, product `S
 
 Writes use flushed temporary files and atomic replacement with `.bak` recovery. Old gameplay enum values/version-one saves are retained with additive fields. Corrupt gameplay and backup block saving instead of silently overwriting progress. New game requires a second click and archives old saves. Preferences survive new games; preference failures keep valid defaults or backup values and display a notice. Offline elapsed time does not simulate work; advancing the diary is the explicit overnight operation.
 
+A primary file with missing required fields now correctly tries the backup. If both files are unreadable, saving stays blocked and neither file is overwritten.
+
 Saving occurs after transactions, periodically, on pause/focus loss and normal exit. Pausing freezes gameplay and processing. Saved player positions retain safe expanded-yard coordinates/height rather than reverting to the old small enclosure.
 
 ## Verification
@@ -108,9 +110,11 @@ This Cloud instance has Mono extracted outside the repository:
 SCRAPSHIFT_MONO_ROOT=/workspace/tooling/mono ./Tests/run-core-tests.sh
 ```
 
+The same command also runs three filesystem/recovery checks against the real SaveStore with a narrow serializer adapter after its field checks. They verify missing-field primary recovery, double corruption protection and backup-only loading without modifying files. They do **not** validate Unity JSON; the existing Unity corruption test covers the real serializer.
+
 Core coverage includes inventory/money conservation, exactly-once processing, capacity/output reservations, 100 renewable wire cycles, invalid/overflow/ID guards, rebinding/conflicts/defaults, dynamic guidance, expanded-world positions, storage/partial contracts, repair/salvage/day transactions, upgrade prerequisites/progress, legacy balance migration and presentation validation. Mixed tests reconstruct copied core data; actual JSON round-trips are supplied Unity tests.
 
-In Unity use **Window → General → Test Runner → EditMode → Run All**. There are **113 supplied cases**, all unrun in Cloud, including actual gameplay/preferences JSON and backup recovery, old saves, model/audio imports, geometry/colliders, dynamic station parts and graphics cleanup. A source/syntax/Blender audit does not replace Unity compilation or a player build.
+In Unity use **Window → General → Test Runner → EditMode → Run All**. There are **122 supplied cases**, all unrun in Cloud, including actual gameplay/preferences JSON and backup recovery, old saves, model/audio imports, geometry/colliders, dynamic station parts and graphics cleanup. A source/syntax/Blender audit does not replace Unity compilation or a player build.
 
 Optional batch commands, with `UNITY_EDITOR` set to your installed editor:
 
@@ -130,10 +134,11 @@ Inspect exit status, Console/editor logs and populated test-result XML. An empty
 - Complete wire processing, orders, both fan choices and all investments. Test wrong inputs/full hands, duplicate purchase/collection, partial/surplus delivery, capacity and the explicit fan test.
 - Save/reopen with carried/dropped/stored material, running/output-ready machine, paid partial fan repair, active partial order and upgrades. Confirm old saves and tuned Balance values. Verify archived New game and backups through tests.
 - Check cable/copper tabletop alignment, pliers movement, independent fan feedback, partial-job progress and explicit test status. Pause mid-stroke, resume and verify animation/input isolation; inspect small Game-view HUD fit.
+- Select map pins/sidebar stations, resume with held input and verify the release gate; turn through all directions, arrive nearby and choose Follow objective. Check nearest wire sources, active fan jobs while the stripper runs, storage/customer routes and no save changes from tracking.
 - Check collision and station approach rays in every district; recover dropped old-save items. Inspect authored roller/output/lamp alignment and restored fan rotation.
 - Pause during processing. Open every menu and Settings tab, capture/release keys/buttons, test keyboard/mouse/arrow conflicts and cancellation through Escape/Cancel/Back. Hold controls while resuming; no movement, work, pickup or drop should leak. Check actual-binding HUD/objectives immediately and after restart/default restoration.
 - Switch presets, FOV and grade; reopen Unity Play and confirm the original Editor pipeline/VSync/frame cap is restored. Check sliders, machine-distance falloff, footstep timing, paused loops and continuing ambience. Listen and adjust mixing locally.
-- For lag, enable **Video → Show gameplay FPS**, maximize Game view, close Scene view during play, and compare Laptop with Balanced from the same spot. Capture CPU/GPU Profiler frame times. Compare a standalone desktop player; Editor FPS includes Editor overhead. No FPS gain has been measured in Cloud.
+- For lag, enable **Video → Show gameplay FPS**, maximize Game view, close Scene view during play, and compare Laptop with Balanced from the same spot. Capture CPU/GPU Profiler frame times. Compare a standalone desktop player; Editor FPS includes Editor overhead. Gameplay HUD text/progress now caches on transactions, target/menu changes or ten Hz while playing; paused HUD skips periodic refresh. The Profiler marker `Scrapshift.RefreshHud` identifies this work. No FPS gain has been measured in Cloud.
 - Build a desktop player and repeat complete gameplay, input, audio, shader/text and persistence checks. These remain prototype features until that succeeds.
 
 ## Source and limitations

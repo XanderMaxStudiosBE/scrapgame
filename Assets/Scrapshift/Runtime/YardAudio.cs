@@ -19,7 +19,7 @@ namespace Scrapshift
             this.player=player; this.settings=settings; previousPosition=player.transform.position;
             root=new GameObject("Yard soundscape"); root.transform.SetParent(parent,false);
             effects=Source("Tools and footsteps",Vector3.zero,false);
-            machine=Source("Stripper motor",new Vector3(7,1,2),true);
+            machine=Source("Stripper motor",YardBootstrap.StationPosition(YardLandmark.Machine)+Vector3.up,true);
             fan=Source("Tested fan",FanWorkbenchVisual.Position+Vector3.up*1.5f,true);
             ambience=Source("Outdoor breeze",Vector3.zero,false);
             pickup=Clip("Pickup");stroke=Clip("ToolStroke");sale=Clip("Sale");step=Clip("GravelStep");

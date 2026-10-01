@@ -7,6 +7,11 @@ namespace Scrapshift
         public PrototypeBalance balance;
         public Texture2D logo;
         public Shader surfaceShader;
+        public static Vector3 StationPosition(YardLandmark landmark)
+        {
+            var destination=YardNavigation.Get(landmark);
+            return new Vector3(destination.x,0,destination.z);
+        }
         void Awake()
         {
             YardGeometry.SurfaceShader = surfaceShader;
@@ -18,14 +23,14 @@ namespace Scrapshift
             environment.transform.SetParent(root, false);
             YardProps.Surroundings(environment.transform);
             // The world builder batches each stationary district separately.
-            YardProps.Delivery(root, new Vector3(-7, 0, 2));
-            var bench = YardProps.Workbench(root, new Vector3(-2.5f, 0, 4));
-            YardProps.Buyer(root, new Vector3(2.2f, 0, 4));
-            var stripper = WireStripperVisual.Build(root, new Vector3(7, 0, 2));
-            YardGeometry.MountedSign(root, "WIRE DELIVERY", new Vector3(-7, 0, 2.7f));
-            YardGeometry.MountedSign(root, "STRIPPING BENCH", new Vector3(-2.5f, 0, 4.7f));
-            YardGeometry.MountedSign(root, "SCRAP BUYER", new Vector3(2.2f, 0, 4.7f));
-            YardGeometry.MountedSign(root, "POWERED STRIPPER", new Vector3(7, 0, 2.7f));
+            YardProps.Delivery(root, StationPosition(YardLandmark.Delivery));
+            var bench = YardProps.Workbench(root, StationPosition(YardLandmark.Bench));
+            YardProps.Buyer(root, StationPosition(YardLandmark.Buyer));
+            var stripper = WireStripperVisual.Build(root, StationPosition(YardLandmark.Machine));
+            YardGeometry.MountedSign(root, "WIRE DELIVERY", StationPosition(YardLandmark.Delivery) + Vector3.forward * .7f);
+            YardGeometry.MountedSign(root, "STRIPPING BENCH", StationPosition(YardLandmark.Bench) + Vector3.forward * .7f);
+            YardGeometry.MountedSign(root, "SCRAP BUYER", StationPosition(YardLandmark.Buyer) + Vector3.forward * .7f);
+            YardGeometry.MountedSign(root, "POWERED STRIPPER", StationPosition(YardLandmark.Machine) + Vector3.forward * .7f);
 
             var playerObject = new GameObject("Player"); playerObject.transform.SetParent(root, false); playerObject.layer = 2;
             var controller = playerObject.AddComponent<CharacterController>(); controller.height = 1.8f; controller.radius = .3f; controller.stepOffset = .25f;

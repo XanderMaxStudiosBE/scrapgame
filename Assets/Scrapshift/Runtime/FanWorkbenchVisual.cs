@@ -3,9 +3,9 @@ namespace Scrapshift
 {
     public sealed class FanWorkbenchVisual
     {
-        public static readonly Vector3 Position = new Vector3(-7, 0, 12);
-        public static readonly Vector3 SupplyPosition = new Vector3(-33, 0, -19);
-        public static readonly Vector3 DiaryPosition = new Vector3(6, 0, -27);
+        public static readonly Vector3 Position = YardBootstrap.StationPosition(YardLandmark.FanBench);
+        public static readonly Vector3 SupplyPosition = YardBootstrap.StationPosition(YardLandmark.FanSupply);
+        public static readonly Vector3 DiaryPosition = YardBootstrap.StationPosition(YardLandmark.Diary);
         public readonly Transform display, rotor, copper, supplyStock;
         float pulseAge = .22f;
         public void Pulse() { pulseAge = 0; }
