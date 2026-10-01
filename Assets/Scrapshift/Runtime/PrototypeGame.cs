@@ -19,8 +19,8 @@ namespace Scrapshift
         static readonly ProfilerMarker ViewsMarker = new ProfilerMarker("Scrapshift.SyncViews");
         static readonly ProfilerMarker SaveMarker = new ProfilerMarker("Scrapshift.Save");
         Material benchMaterial, lampMaterial;
-        GUIStyle wrappedLabel, controlLegend;
-        bool paused, confirmNew, saveBlocked;
+        GUIStyle wrappedLabel, controlLegend, mapLabel;
+        bool paused, confirmNew, saveBlocked, mapOpen;
         PlayerInputSettings controls;
         SettingsMenu settings;
         Vector3 benchRestPosition;
@@ -56,6 +56,7 @@ namespace Scrapshift
         {
             paused = value; Time.timeScale = value ? 0 : 1;
             if (!value && settings != null) settings.Close();
+            if (!value) mapOpen = false;
             if (controls != null) controls.SuppressUntilRelease();
             Cursor.lockState = value ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = value;
@@ -70,7 +71,8 @@ namespace Scrapshift
             // Escape is permanently reserved for cancellation/back. Never process gameplay on a menu transition frame.
             if (Input.GetKeyDown(KeyCode.Escape))
             {
-                if (settings.IsOpen) settings.HandleEscape();
+                if (mapOpen) mapOpen = false;
+                else if (settings.IsOpen) settings.HandleEscape();
                 else { SetPaused(!paused); confirmNew = false; if (paused) Save(); }
                 return;
             }
@@ -140,7 +142,7 @@ namespace Scrapshift
             Vector3 point = origin + direction * 1.4f;
             if (Physics.SphereCast(origin, .3f, direction, out RaycastHit wall, 1.4f, ~(1 << 2)))
                 point = origin + direction * Mathf.Max(.1f, wall.distance - .15f);
-            point.x = Mathf.Clamp(point.x, -10.8f, 10.8f); point.z = Mathf.Clamp(point.z, -8.8f, 8.8f);
+            point.x = YardWorldLayout.ClampX(point.x); point.z = YardWorldLayout.ClampZ(point.z);
             if (Physics.Raycast(new Vector3(point.x, origin.y + .5f, point.z), Vector3.down, out RaycastHit floor, 3, ~(1 << 2)))
                 point.y = floor.point.y + .25f;
             else point.y = .3f;
@@ -214,8 +216,11 @@ namespace Scrapshift
 
         StationHint CurrentHint()
         {
-            return target == null ? new StationHint(false, "Aim at a station or bundle within 3.2 metres") :
-                YardGuidance.Hint(Model, target.kind, target.itemId, controls.Label(ControlAction.Interact), controls.Label(ControlAction.ManualWork));
+            if (target == null) return new StationHint(false, "Aim at a station or bundle within 3.2 metres");
+            var hint = YardGuidance.Hint(Model, target.kind, target.itemId, controls.Label(ControlAction.Interact), controls.Label(ControlAction.ManualWork));
+            if (target.kind == TargetKind.Supply && !string.IsNullOrEmpty(target.displayName))
+                return new StationHint(hint.canUse, hint.text.Replace("DELIVERY", target.displayName));
+            return hint;
         }
         string PrimaryLabel(ControlAction action) { return ControlPreferences.CodeLabel(controls.Preferences.Binding(action)); }
         string ControlHints()
@@ -236,11 +241,14 @@ namespace Scrapshift
             {
                 wrappedLabel = new GUIStyle(GUI.skin.label) { wordWrap = true };
                 controlLegend = new GUIStyle(wrappedLabel) { fontSize = 15 };
+                mapLabel = new GUIStyle(controlLegend) { fontSize = 13, alignment = TextAnchor.MiddleCenter };
             }
             GUI.color = YardGeometry.Ivory;
             if (settings.IsOpen) { settings.Draw(width, height); return; }
+            if (mapOpen) { DrawYardMap(width, height); return; }
             GUI.Box(new Rect(20, 20, Mathf.Min(width - 40, 490), 140), "");
             GUI.Label(new Rect(35, 28, 440, 30), "SCRAPSHIFT   /   €" + Model.State.money);
+            GUI.Label(new Rect(25, 162, width - 50, 28), YardWorldLayout.Area(player.transform.position.x, player.transform.position.z));
             string objective = YardGuidance.Objective(Model, controls.Label(ControlAction.Interact), controls.Label(ControlAction.ManualWork), controls.Label(ControlAction.Drop));
             GUI.Label(new Rect(35, 64, Mathf.Min(width - 70, 455), 85), objective, wrappedLabel);
             string held = Model.Carried == null ? "Hands empty" : "Carrying " + Model.Carried.kind + " ×" + Model.Carried.quantity + "   /   " + controls.Label(ControlAction.Drop) + ": drop";
@@ -251,16 +259,51 @@ namespace Scrapshift
             GUI.color = hint.canUse ? new Color(.65f, 1f, .55f) : YardGeometry.Ivory;
             GUI.Label(new Rect(width / 2 - 5, height / 2 - 15, 20, 30), "+");
             GUI.color = YardGeometry.Ivory;
-            if (Time.unscaledTime < messageUntil) GUI.Label(new Rect(25, 172, width - 50, 85), message, wrappedLabel);
+            if (Time.unscaledTime < messageUntil) GUI.Label(new Rect(25, 198, width - 50, 85), message, wrappedLabel);
             if (!paused) return;
-            GUI.Box(new Rect(width / 2 - 235, height / 2 - 190, 470, 420), "PAUSED");
+            GUI.Box(new Rect(width / 2 - 235, height / 2 - 190, 470, 470), "PAUSED");
             if (logo != null) GUI.DrawTexture(new Rect(width / 2 - 140, height / 2 - 155, 280, 85), logo, ScaleMode.ScaleToFit);
             if (GUI.Button(new Rect(width / 2 - 180, height / 2 - 50, 360, 40), "Resume")) SetPaused(false);
             if (GUI.Button(new Rect(width / 2 - 180, height / 2, 360, 40), "Save yard")) { Save(); }
             if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 50, 360, 40), "Settings")) { confirmNew = false; messageUntil = 0; settings.Open(); }
             if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 100, 360, 40), confirmNew ? "Confirm: reset yard (old save archived)" : "New game"))
             { if (confirmNew) NewGame(); else confirmNew = true; }
-            if (saveBlocked) GUI.Label(new Rect(width / 2 - 215, height / 2 + 150, 430, 65), "Saving blocked to protect unreadable data.\nChoose New game to archive it and restart.");
+            if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 150, 360, 40), "Yard map")) { mapOpen = true; confirmNew = false; }
+            if (saveBlocked) GUI.Label(new Rect(width / 2 - 215, height / 2 + 198, 430, 65), "Saving blocked to protect unreadable data.\nChoose New game to archive it and restart.");
+        }
+        void DrawYardMap(float width, float height)
+        {
+            float panelWidth = Mathf.Min(width - 30, 760), panelHeight = Mathf.Min(height - 30, 650);
+            var panel = new Rect((width - panelWidth) / 2, (height - panelHeight) / 2, panelWidth, panelHeight);
+            GUI.Box(panel, "SCRAPSHIFT / YARD MAP");
+            float aspect = YardWorldLayout.HalfWidth / YardWorldLayout.HalfDepth;
+            float mapWidth = Mathf.Min(panel.width - 40, (panel.height - 200) * aspect);
+            var map = new Rect(panel.center.x - mapWidth / 2, panel.y + 45, mapWidth, mapWidth / aspect);
+            GUI.Box(map, "NORTH / LOADING & STORAGE");
+            GUI.color = new Color(.75f, .70f, .55f);
+            GUI.DrawTexture(new Rect(map.center.x - 3, map.y + 25, 6, map.height - 30), Texture2D.whiteTexture);
+            float laneY = map.y + (YardWorldLayout.HalfDepth + 13) / (YardWorldLayout.HalfDepth * 2) * map.height;
+            GUI.DrawTexture(new Rect(map.x + 10, laneY, map.width - 20, 6), Texture2D.whiteTexture);
+            GUI.color = YardGeometry.Ivory;
+            MapLabel(map, -29, 9, "VEHICLE SALVAGE");
+            MapLabel(map, 30, 9, "METAL SORTING");
+            MapLabel(map, 0, 4, "WORKSHOP\nWIRE / BUYER");
+            MapLabel(map, -16, -30, "OFFICE");
+            MapLabel(map, 0, -37, "ENTRY GATE");
+            foreach (var site in YardWorldLayout.SalvageSites) MapLabel(map, site.x, site.z, "WIRE");
+            GUI.color = new Color(.6f, 1, .55f);
+            MapLabel(map, player.transform.position.x, player.transform.position.z, "+ YOU");
+            GUI.color = YardGeometry.Ivory;
+            GUI.Label(new Rect(panel.x + 20, map.yMax + 10, panel.width - 40, 70),
+                "Explore the salvage crates for free wire. Bring it back to the workshop to strip and sell. " +
+                "Pale gravel lanes connect the districts.\nCurrent area: " + YardWorldLayout.Area(player.transform.position.x, player.transform.position.z), controlLegend);
+            if (GUI.Button(new Rect(panel.x + 20, panel.yMax - 55, panel.width - 40, 40), "Back / Escape")) mapOpen = false;
+        }
+        void MapLabel(Rect map, float x, float z, string text)
+        {
+            float px = map.x + (x + YardWorldLayout.HalfWidth) / (YardWorldLayout.HalfWidth * 2) * map.width;
+            float py = map.y + (YardWorldLayout.HalfDepth - z) / (YardWorldLayout.HalfDepth * 2) * map.height;
+            GUI.Label(new Rect(px - 80, py - 20, 160, 40), text, mapLabel);
         }
     }
 }

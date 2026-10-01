@@ -1,6 +1,20 @@
 # Scrapshift project handoff
 
-Updated: 2026-09-30 (Europe/Brussels). Reinspect the checkout before continuing.
+Updated: 2026-10-01 (UTC). Reinspect the checkout before continuing.
+
+## Latest continuation: an explorable scrapyard world
+
+The user explicitly requested a full scrapyard rather than the small test area. Implemented a 96 × 80 metre yard in `ScrapyardWorld`, replacing the original enclosing fences/ground. Kept the existing hub stations and spawn at their old coordinates. Five readable districts: workshop center; nine salvage vehicles and two wire sources west; nine sorting bins, shelter and another source east; six containers, loading dock and stationary gantry north; office exterior and entry gate south. Original roof/drums/clutter are reused via `YardProps.WorkshopSurroundings`. Warm workshop lighting and original coarse materials remain, with a lighter distant fog/sky and blocky tree horizon.
+
+Three renewable remote wire crates reuse Supply/AcquireWire and existing capacity, inventory, recipe and sale guards. `InteractionTarget.displayName` customizes supply prompts without hardcoded keys. No additional recipes, car dismantling/driving, crane operation, enterable office or functional container storage were added. This is an expanded explorable world around the working wire loop, with those props clearly scenery.
+
+`YardWorldLayout` centralizes world bounds, source locations and area labels. Player restore and dropped-item placement now use the larger bounds. Restore retains player height (clamped to safe vertical limits) for the raised dock. Existing version-1 gameplay saves and independent input preferences are unchanged. New pause-menu Yard map shows districts/sources/player position; Back/Escape returns to pause, then Escape resumes. The existing paused early-return/input release gates keep gameplay and machine time stopped throughout.
+
+World geometry uses shared materials and per-district static batching. It introduces no physics simulation, realtime lights or per-frame scenery loops; small decorative parts and distant crowns omit shadows. Larger scenery can still increase GPU/CPU cost: no FPS improvement or Unity rendering result is claimed.
+
+Verification in Cloud: **26 pure C# scenarios passed**, zero failed, warnings treated as errors. New scenarios cover old/new bounds, district identification, and remote wire drop/state restoration/processing without duplicated money or material. Their state test is not JSON serialization. **38 Unity EditMode cases are supplied but unrun here**, including new source-approach/raycast/continuous-lane collision checks and actual JSON save/player restore for expanded coordinates, dock height and remote bundles. No Unity Editor is installed. Local compilation, rendering/static batching, collisions, map/input behavior, old-save compatibility in Play, desktop build and Profiler measurements remain required; use README's expanded-world checklist. Existing bootstrap scenes update on Play without deleting Generated or tuned balance/materials.
+
+Next: verify the new world locally and record frame times, then populate it with useful storage, varied daily deliveries/customer orders and one appliance repair loop. Keep refining the cozy retro mood without multiplying physics objects. The previous performance/Settings work remains intact.
 
 ## Latest continuation: performance and cozy retro direction
 

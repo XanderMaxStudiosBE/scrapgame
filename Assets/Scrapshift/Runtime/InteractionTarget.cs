@@ -6,5 +6,6 @@ namespace Scrapshift
     {
         public TargetKind kind;
         public int itemId;
+        public string displayName;
     }
 }

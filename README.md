@@ -2,7 +2,7 @@
 
 Start with your bare hands. Build a scrapyard that works for you.
 
-A Unity/C# prototype of a compact first-person scrapyard. The user ran the previous version in Unity 6000.3.25f1 and reached the purchased-machine stage. This is limited playtest evidence, not comprehensive verification. This update adds Settings/rebinding, original textures, recognizable stations, contextual prompts and state-based guidance. **This update's Unity compilation, menus, rendering and playability still need local verification.** The engine-independent code passes 23 executable scenarios in Cloud. Campaign illustrations remain concept art, not gameplay captures.
+A Unity/C# prototype of a first-person cozy retro scrapyard, now laid out as a 96 × 80 metre world. The user ran the previous version in Unity 6000.3.25f1 and reached the purchased-machine stage. This is limited playtest evidence, not comprehensive verification. This update adds Settings/rebinding, original textures, recognizable stations, contextual prompts and state-based guidance. **This update's Unity compilation, menus, rendering and playability still need local verification.** The engine-independent code passes 26 executable scenarios in Cloud. Campaign illustrations remain concept art, not gameplay captures.
 
 ## Open locally
 
@@ -63,7 +63,7 @@ Writes use a flushed temporary file and same-volume atomic replacement with a `.
 
 ## Verification
 
-Executed in Cloud: the real pure C# core and shared scenario sources compiled with Mono 6.12, warnings treated as errors; **23 scenarios passed, zero failed** (12 gameplay, 7 controls, 4 contextual guidance). Coverage includes the full manual-to-machine economy loop, carry/drop, invalid inputs, one-time consumption/output/sales, purchase guards, reserved output capacity, partial station resumption, zero/invalid time steps, invalid save-state rejection, overflow protection, and 100 renewable scrap cycles. Control checks cover defaults/arrow aliases, keyboard and mouse rebinding, cancellation, conflict swap/cancel, reserved/unsupported inputs, default restoration, validation and labels. Guidance checks cover each station state, custom control labels, dropped-item/owned-machine objectives and read-only presentation. The partial-resume core test reuses data; it is **not** a serialization test.
+Executed in Cloud: the real pure C# core and shared scenario sources compiled with Mono 6.12, warnings treated as errors; **26 scenarios passed, zero failed** (12 gameplay, 7 controls, 4 contextual guidance, 3 world/inventory checks). Coverage includes the full manual-to-machine economy loop, carry/drop, invalid inputs, one-time consumption/output/sales, purchase guards, reserved output capacity, partial station resumption, zero/invalid time steps, invalid save-state rejection, overflow protection, and 100 renewable scrap cycles. Control checks cover defaults/arrow aliases, keyboard and mouse rebinding, cancellation, conflict swap/cancel, reserved/unsupported inputs, default restoration, validation and labels. Guidance checks cover each station state, custom control labels, dropped-item/owned-machine objectives and read-only presentation. The partial-resume core test reuses data; it is **not** a serialization test.
 
 Repeat on a machine with Mono:
 
@@ -77,7 +77,7 @@ This Cloud instance has an extracted Mono installation outside the repository:
 SCRAPSHIFT_MONO_ROOT=/workspace/tooling/mono ./Tests/run-core-tests.sh
 ```
 
-In Unity, open **Window → General → Test Runner → EditMode → Run All**. The shared 23 scenarios also run there, together with Unity-specific tests for gameplay/control serialization and isolation, backup recovery, supported legacy keys, menu labels/back handling, and generated geometry. **These Unity tests have not been run here.** Review the current runner/test counts rather than assuming an empty or skipped suite is valid.
+In Unity, open **Window → General → Test Runner → EditMode → Run All**. The shared 26 scenarios also run there, together with Unity-specific tests for gameplay/control serialization and isolation, backup recovery, supported legacy keys, menu labels/back handling, and generated geometry. **These Unity tests have not been run here.** Review the current runner/test counts rather than assuming an empty or skipped suite is valid.
 
 Optional batch commands from the repository root, with `UNITY_EDITOR` pointing at the installed editor executable:
 
@@ -130,7 +130,7 @@ Paths above are under `Assets/Scrapshift/`. No Unity Editor is installed in Clou
 
 1. Locally verify this update in Unity 6000.3.25f1, including menus, existing scenes/saves and desktop build; record results and commit verified generated assets/package lockfile when appropriate.
 2. Tune movement, station spacing, feedback, and pacing from a full manual-to-automatic playthrough.
-3. Add one repairable appliance (for example a fan/motor) before expanding to conveyors or larger yards.
+3. Add one repairable appliance (for example a fan/motor) before expanding to conveyors or more processing recipes.
 
 ## Performance and the next cozy-retro milestone
 
@@ -145,7 +145,7 @@ For a useful comparison:
 
 Save writes still flush synchronously for durability. If freezes happen specifically on interaction/autosave, inspect the `Save` call separately; this pass targets continuous frame overhead. If the GPU dominates, follow up with measured shadow/render-quality presets; lighting quality has not been lowered speculatively.
 
-Recommended next scope after performance verification: **repair one broken fan** (inspect → identify failed motor → replace → switch on → sell). Then add varied daily scrap deliveries and small customer orders, followed by a modest yard/storage expansion. Add conveyors after these choices and the existing loop feel satisfying.
+Recommended next scope after performance verification: **repair one broken fan** (inspect → identify failed motor → replace → switch on → sell). Then add varied daily scrap deliveries and small customer orders, then make the expanded yard more useful with storage, deliveries and unlockable work areas. Add conveyors after these choices and the existing loop feel satisfying.
 
 Cozy retro direction: muted earthy colors with warm ivory accents, soft afternoon light/fog, chunky silhouettes, subtle coarse textures and readable UI. Add gentle yard ambience, a quiet optional workshop radio, satisfying clicks/whirs, useful personal workshop clutter and forgiving progression. Use a consistent restrained visual language; aggressive vertex wobble, strong dithering and heavy effects are optional experiments and must not hurt clarity or comfort.
 
@@ -156,3 +156,27 @@ Seven tracked 64×64 tileable PNGs and URP materials cover rusted paint, dark in
 Agent contributions: Settings agent owned preferences/input/capture UI and its tests; texture agent authored the seven PNGs/materials/library/validator; machine agent built the recognizable stripper; environment agent built yard props and geometry tests. Main agent integrated gameplay/input, live prompts/objectives, feedback, metre-scaled boxes, the scene update path, tests and documentation.
 
 See `PROJECT_HANDOFF.md` for continuation status. This prototype adds no Kickstarter funding target, reward, date, or release commitment.
+
+
+## Expanded scrapyard world
+
+Open the existing prototype scene and press Play after pulling: its bootstrap builds the new world automatically. Keep Generated, balance assets, materials and saves. The old 24 × 20 metre enclosure is replaced by a **96 × 80 metre fenced yard** (16 times the ground area), while all four original functional stations and the player spawn retain their coordinates.
+
+- Center: familiar workshop, delivery crate, buyer and powered stripper.
+- West: nine low-poly salvage vehicles in walkable rows, with two renewable wire crates.
+- East: nine metal sorting bins, a sheltered sorting bay and a third renewable wire crate.
+- North: six storage containers, loading platform and stationary gantry landmark.
+- South: entry gate, yard office exterior and stock pallets.
+- Pale lane edges, two-sided district signs, warm lighting, a lighter fog horizon and trees establish the cozy retro setting.
+
+**Escape → Yard map** shows districts, wire sources and your current position. Escape returns to the pause menu; Escape again resumes. Movement, tools and machine progress stay paused on the map. Area names also appear in the HUD. Wire sources share the existing inventory/capacity guards and immediately use rebound interaction prompts. Restore/drop bounds now cover the expanded yard; version-1 save files and separate control preferences are retained, including player height on the loading platform.
+
+Scenery is static, uses shared materials and is batched by district. Small decorative parts and distant tree canopies do not cast shadows. There are no vehicle physics, active scrap piles, per-frame scenery searches or additional realtime lights. Vehicles, office, crane and containers are scenery; they are not driveable, enterable or usable machines/storage yet. Actual FPS is still a local measurement, especially because the world is larger.
+
+Local verification required:
+
+1. Run all EditMode tests (38 supplied cases), including the new district/collision/source reachability and expanded save/restore checks. Cloud ran only the 26 engine-independent scenarios; Unity tests remain unrun.
+2. Walk from the original spawn through all districts, try each wire crate, process/sell its wire, and inspect signs, map, fence boundaries and vehicle/bin collisions. Verify no old fence blocks exploration.
+3. Drop wire or copper in west/east/north areas, save/restart and retrieve it. Save while standing on the loading platform and verify safe height restoration. Load a previous hub save and complete the original manual-to-machine loop.
+4. Pause during stripping-machine processing, open the map, use Back/Escape, enter Settings and resume with held keys. Confirm no movement, action or processing leaks into menus.
+5. Compare Profiler CPU/GPU/frame time at the workshop and facing each populated district, and test a desktop build. Verify regional batching and shader/text rendering. Do not infer a performance improvement from source changes alone.

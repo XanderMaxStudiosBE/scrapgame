@@ -67,7 +67,7 @@ namespace Scrapshift.Tests
         [Test]
         public void OriginalLowPolyDrumMeshesHaveOutwardSideAndCapTriangles()
         {
-            YardProps.Surroundings(root.transform);
+            YardProps.WorkshopSurroundings(root.transform);
             int drums = 0;
             foreach (var filter in root.GetComponentsInChildren<MeshFilter>())
             {

@@ -92,19 +92,11 @@ namespace Scrapshift
 
         public static void Surroundings(Transform parent)
         {
-            Box("Packed gravel yard", parent, new Vector3(0, -.25f, 0), new Vector3(24, .5f, 20), RetroSurface.Gravel);
-            foreach (float z in new[] { -9.5f, 9.5f })
-            {
-                Box("Continuous fence barrier", parent, new Vector3(0, 1.05f, z), new Vector3(24, 2.1f, .16f), RetroSurface.CorrugatedMetal);
-                for (int i = -11; i <= 11; i += 2)
-                    Box("Fence upright", parent, new Vector3(i, 1.2f, z - .13f), new Vector3(.14f, 2.4f, .18f), RetroSurface.RustPaint, false);
-            }
-            foreach (float x in new[] { -11.5f, 11.5f })
-            {
-                Box("Continuous side fence", parent, new Vector3(x, 1.05f, 0), new Vector3(.16f, 2.1f, 19), RetroSurface.CorrugatedMetal);
-                for (int i = -8; i <= 8; i += 2)
-                    Box("Side fence upright", parent, new Vector3(x, 1.2f, i), new Vector3(.18f, 2.4f, .14f), RetroSurface.RustPaint, false);
-            }
+            ScrapyardWorld.Build(parent);
+        }
+
+        public static void WorkshopSurroundings(Transform parent)
+        {
             foreach (float x in new[] { -4.5f, -.5f })
                 Box("Workshop rear pillar", parent, new Vector3(x, 1.6f, 5.2f), new Vector3(.15f, 3.2f, .15f), RetroSurface.DarkMetal);
             var roof = Box("Corrugated workshop roof", parent, new Vector3(-2.5f, 3.18f, 4.2f), new Vector3(4.6f, .12f, 3.2f), RetroSurface.CorrugatedMetal, false);

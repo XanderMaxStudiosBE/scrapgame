@@ -19,7 +19,7 @@ namespace Scrapshift
             controller = GetComponent<CharacterController>();
             controller.enabled = false;
             // Saves cannot strand the player beyond the perimeter.
-            transform.position = new Vector3(Mathf.Clamp(state.playerX, -10, 10), 1.1f, Mathf.Clamp(state.playerZ, -8, 8));
+            transform.position = new Vector3(YardWorldLayout.ClampX(state.playerX), Mathf.Clamp(state.playerY, 1.1f, 8), YardWorldLayout.ClampZ(state.playerZ));
             controller.enabled = true;
             Yaw = state.yaw; Pitch = Mathf.Clamp(state.pitch, -80, 80);
             ApplyLook(); fallSpeed = 0;
