@@ -3,7 +3,8 @@ using System.Collections.Generic;
 
 namespace Scrapshift
 {
-    public enum MaterialKind { Wire, Copper }
+    public enum MaterialKind { Wire, Copper, BrokenFan, RestoredFan }
+    public enum FanStage { Empty, AwaitingInspection, Diagnosed, Repairing, ReadyToTest, Tested, Dismantling, CopperReady }
     public enum StorageSlot { None, Wire, Copper }
 
     [Serializable]
@@ -37,6 +38,9 @@ namespace Scrapshift
         // Additive version-one fields: absent fields in older saves mean empty storage/no order.
         public bool orderAccepted;
         public int orderIndex, orderDelivered;
+        public FanStage fanStage;
+        public int fanStrokes, fansRepaired, fansDismantled;
+        public int dayIndex, fansTakenToday, incomeToday;
     }
 
     [Serializable]
@@ -48,12 +52,17 @@ namespace Scrapshift
         public int manualStrokes = 4;
         public float machineSeconds = 5;
         public int maxBundles = 24;
+        public int fanPartsPrice = 8, fanSalePrice = 42, fanCopperYield = 3;
+        public int fanRepairStrokes = 3, fanDismantleStrokes = 4, fanDailyLimit = 2;
 
         public void Validate()
         {
             if (copperPerWire < 1 || copperPerWire > 100 || copperUnitPrice < 1 || copperUnitPrice > 10000 ||
                 machinePrice < 1 || manualStrokes < 1 || manualStrokes > 100 ||
-                float.IsNaN(machineSeconds) || float.IsInfinity(machineSeconds) || machineSeconds <= 0 || maxBundles < 1 || maxBundles > 100)
+                float.IsNaN(machineSeconds) || float.IsInfinity(machineSeconds) || machineSeconds <= 0 || maxBundles < 1 || maxBundles > 100 ||
+                fanPartsPrice < 1 || fanPartsPrice > 10000 || fanSalePrice < 1 || fanSalePrice > 10000 ||
+                fanCopperYield < 1 || fanCopperYield > 100 || fanRepairStrokes < 1 || fanRepairStrokes > 100 ||
+                fanDismantleStrokes < 1 || fanDismantleStrokes > 100 || fanDailyLimit < 1 || fanDailyLimit > 100)
                 throw new ArgumentException("Invalid prototype balance values.");
         }
     }

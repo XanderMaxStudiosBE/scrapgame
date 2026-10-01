@@ -14,6 +14,7 @@ namespace Scrapshift
         public Renderer machineLamp;
         public Texture2D logo;
         public YardBusinessVisual business;
+        public FanWorkbenchVisual fanWorkbench;
         public YardModel Model { get; private set; }
         readonly Dictionary<int, GameObject> itemViews = new Dictionary<int, GameObject>();
         readonly List<int> removedViews = new List<int>();
@@ -21,7 +22,7 @@ namespace Scrapshift
         static readonly ProfilerMarker SaveMarker = new ProfilerMarker("Scrapshift.Save");
         Material benchMaterial, lampMaterial;
         GUIStyle wrappedLabel, controlLegend, mapLabel;
-        bool paused, confirmNew, saveBlocked, mapOpen, ordersOpen;
+        bool paused, confirmNew, saveBlocked, mapOpen, ordersOpen, repairOpen, dayOpen;
         PlayerInputSettings controls;
         SettingsMenu settings;
         Vector3 benchRestPosition;
@@ -57,7 +58,7 @@ namespace Scrapshift
         {
             paused = value; Time.timeScale = value ? 0 : 1;
             if (!value && settings != null) settings.Close();
-            if (!value) { mapOpen = false; ordersOpen = false; }
+            if (!value) { mapOpen = false; ordersOpen = false; repairOpen = false; dayOpen = false; }
             if (controls != null) controls.SuppressUntilRelease();
             Cursor.lockState = value ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = value;
@@ -72,7 +73,9 @@ namespace Scrapshift
             // Escape is permanently reserved for cancellation/back. Never process gameplay on a menu transition frame.
             if (Input.GetKeyDown(KeyCode.Escape))
             {
-                if (ordersOpen) ordersOpen = false;
+                if (repairOpen) repairOpen = false;
+                else if (dayOpen) dayOpen = false;
+                else if (ordersOpen) ordersOpen = false;
                 else if (mapOpen) mapOpen = false;
                 else if (settings.IsOpen) settings.HandleEscape();
                 else { SetPaused(!paused); confirmNew = false; if (paused) Save(); }
@@ -90,12 +93,18 @@ namespace Scrapshift
                 target = hit.collider.GetComponentInParent<InteractionTarget>();
             if (inputReady && controls.Pressed(ControlAction.Drop)) Drop();
             if (inputReady && target != null && controls.Pressed(ControlAction.Interact)) Interact();
-            if (inputReady && target != null && target.kind == TargetKind.Bench && controls.Pressed(ControlAction.ManualWork) && Time.time >= nextStroke)
+            // A station can open a menu during this frame; stop before any simultaneous tool input.
+            if (paused || settings.IsOpen) return;
+            if (inputReady && target != null && (target.kind == TargetKind.Bench || target.kind == TargetKind.FanBench) && controls.Pressed(ControlAction.ManualWork) && Time.time >= nextStroke)
             {
-                if (Model.WorkBench())
+                if (target.kind == TargetKind.FanBench ? Model.WorkFan() : Model.WorkBench())
                 {
                     nextStroke = Time.time + .22f; workPulseUntil = Time.time + .18f;
-                    Beep(1.25f); Tell(Model.State.benchOutput > 0 ? "Insulation removed. Collect the copper." : "Stripping stroke " + Model.State.benchStrokes + "/" + Model.Rules.manualStrokes); SyncViews(); Save();
+                    Beep(1.25f);
+                    Tell(target.kind == TargetKind.FanBench ?
+                        (Model.State.fanStage == FanStage.ReadyToTest ? "Motor fitted. Power on and test the fan." : Model.State.fanStage == FanStage.CopperReady ? "Fan dismantled. Collect the recovered copper." : "Working on the fan • " + Model.State.fanStrokes + " steps complete") :
+                        Model.State.benchOutput > 0 ? "Insulation removed. Collect the copper." : "Stripping stroke " + Model.State.benchStrokes + "/" + Model.Rules.manualStrokes);
+                    SyncViews(); Save();
                 }
                 else Tell(CurrentHint().text);
             }
@@ -106,6 +115,7 @@ namespace Scrapshift
                 rotor.Rotate(0, 0, 240 * Time.deltaTime, Space.Self);
                 if (additionalRoller != null) additionalRoller.Rotate(0, 0, -240 * Time.deltaTime, Space.Self);
             }
+            if (fanWorkbench != null) fanWorkbench.Step(Model,Time.deltaTime);
             if (Time.unscaledTime >= nextAutosave) { Save(); nextAutosave = Time.unscaledTime + 15; }
         }
         void Interact()
@@ -113,12 +123,21 @@ namespace Scrapshift
             var before = CurrentHint();
             if (!before.canUse) { Tell(before.text); return; }
             int oldMoney = Model.State.money;
+            MaterialKind oldKind = Model.Carried == null ? MaterialKind.Wire : Model.Carried.kind;
             bool ownedBefore = Model.State.machineOwned;
             int oldOrder = Model.State.orderIndex;
             bool orderAcceptedBefore = Model.State.orderAccepted;
             bool changed = false;
             switch (target.kind)
             {
+                case TargetKind.DayBoard: SetPaused(true); dayOpen = true; Save(); return;
+                case TargetKind.FanSupply: changed = Model.AcquireFan(); break;
+                case TargetKind.FanBench:
+                    if (Model.State.fanStage == FanStage.Empty) changed = Model.LoadFan();
+                    else if (Model.State.fanStage == FanStage.ReadyToTest) changed = Model.TestFan();
+                    else if (Model.State.fanStage == FanStage.Tested || Model.State.fanStage == FanStage.CopperReady) changed = Model.CollectFan();
+                    else { SetPaused(true); repairOpen = true; Save(); return; }
+                    break;
                 case TargetKind.WireStorage: changed = Model.Carried == null ? Model.Retrieve(MaterialKind.Wire) : Model.Store(MaterialKind.Wire); break;
                 case TargetKind.CopperStorage: changed = Model.Carried == null ? Model.Retrieve(MaterialKind.Copper) : Model.Store(MaterialKind.Copper); break;
                 case TargetKind.OrderBoard: changed = Model.State.orderAccepted ? Model.DeliverOrder() : Model.AcceptOrder(); break;
@@ -137,7 +156,8 @@ namespace Scrapshift
                 else if (!orderAcceptedBefore && Model.State.orderAccepted) { Tell(Model.CurrentOrder.customer + " order accepted. Deliver " + Model.CurrentOrder.copper + " copper for €" + Model.CurrentOrder.reward + ". No rush."); Beep(); }
                 else if (target.kind == TargetKind.OrderBoard) { Tell("Copper delivered • " + Model.State.orderDelivered + "/" + Model.CurrentOrder.copper + ". The order pays when complete."); Beep(1.2f); }
                 else if (target.kind == TargetKind.WireStorage || target.kind == TargetKind.CopperStorage) { Tell(Model.Carried == null ? "Bundle stored safely. Use this bin with empty hands to retrieve it." : "Bundle retrieved from storage."); Beep(); }
-                else if (Model.State.money > oldMoney) { Tell("Sold copper • +€" + (Model.State.money - oldMoney)); Beep(1.6f); }
+                else if (Model.State.money > oldMoney) { Tell("Sold " + (oldKind == MaterialKind.RestoredFan ? "tested desk fan" : "copper") + " • +€" + (Model.State.money - oldMoney)); Beep(1.6f); }
+                else if (target.kind == TargetKind.FanBench && Model.State.fanStage == FanStage.Tested) { Tell("The fan runs smoothly. Collect it and sell it for €" + Model.Rules.fanSalePrice + "."); Beep(1.4f); }
                 else if (!ownedBefore && Model.State.machineOwned) { Tell("Powered stripper installed • -€" + Model.Rules.machinePrice + ". Feed wire into the front opening."); Beep(.8f); }
                 else if (target.kind == TargetKind.Machine && Model.State.machineRemaining > 0) { Tell("Wire accepted. Rollers are stripping; collect copper from the output tray when ready."); Beep(.9f); }
                 else { Tell(YardGuidance.Objective(Model, controls.Label(ControlAction.Interact), controls.Label(ControlAction.ManualWork), controls.Label(ControlAction.Drop))); Beep(); }
@@ -155,7 +175,7 @@ namespace Scrapshift
                 point = origin + direction * Mathf.Max(.1f, wall.distance - .15f);
             point.x = YardWorldLayout.ClampX(point.x); point.z = YardWorldLayout.ClampZ(point.z);
             if (Physics.Raycast(new Vector3(point.x, origin.y + .5f, point.z), Vector3.down, out RaycastHit floor, 3, ~(1 << 2)))
-                point.y = floor.point.y + .25f;
+                point.y = floor.point.y + ((Model.Carried.kind == MaterialKind.BrokenFan || Model.Carried.kind == MaterialKind.RestoredFan) ? .02f : .12f);
             else point.y = .3f;
             if (Model.Drop(point.x, point.y, point.z)) { SyncViews(); Save(); }
         }
@@ -173,14 +193,15 @@ namespace Scrapshift
                     if (item.storage != StorageSlot.None) continue;
                     if (!itemViews.TryGetValue(item.id, out GameObject view))
                     {
-                        view = YardGeometry.Bundle(item.kind, transform);
+                        view = YardItemVisual.Create(item.kind, transform);
                         var interaction = view.AddComponent<InteractionTarget>(); interaction.kind = TargetKind.LooseItem; interaction.itemId = item.id;
                         itemViews.Add(item.id, view);
                     }
                     bool held = item.id == Model.State.carriedId;
                     Transform owner = held ? player.view.transform : transform;
                     if (view.transform.parent != owner) view.transform.SetParent(owner, false);
-                    view.transform.localPosition = held ? new Vector3(.4f, -.35f, .85f) : new Vector3(item.x, item.y, item.z);
+                    bool appliance = item.kind == MaterialKind.BrokenFan || item.kind == MaterialKind.RestoredFan;
+                    view.transform.localPosition = held ? (appliance ? new Vector3(.55f,-.65f,1.05f) : new Vector3(.4f,-.35f,.85f)) : new Vector3(item.x, item.y, item.z);
                     view.transform.localRotation = Quaternion.Euler(0, 0, held ? -15 : 0);
                     foreach (var collider in view.GetComponentsInChildren<Collider>()) collider.enabled = !held;
                 }
@@ -192,6 +213,7 @@ namespace Scrapshift
                 machineDisplay.gameObject.SetActive(Model.State.machineOutput > 0);
                 if (feedDisplay != null) feedDisplay.gameObject.SetActive(Model.State.machineRemaining > 0);
                 if (business != null) business.Refresh(Model);
+                if (fanWorkbench != null) fanWorkbench.Refresh(Model);
                 lampMaterial.color = !Model.State.machineOwned ? Color.gray : Model.State.machineRemaining > 0 ? YardGeometry.Rust : Model.State.machineOutput > 0 ? Color.green : YardGeometry.Ivory;
             }
         }
@@ -260,8 +282,10 @@ namespace Scrapshift
             if (settings.IsOpen) { settings.Draw(width, height); return; }
             if (mapOpen) { DrawYardMap(width, height); return; }
             if (ordersOpen) { DrawOrders(width, height); return; }
+            if (repairOpen) { DrawRepair(width, height); return; }
+            if (dayOpen) { DrawDay(width, height); return; }
             GUI.Box(new Rect(20, 20, Mathf.Min(width - 40, 490), 140), "");
-            GUI.Label(new Rect(35, 28, 440, 30), "SCRAPSHIFT   /   €" + Model.State.money);
+            GUI.Label(new Rect(35, 28, 440, 30), "DAY " + ((long)Model.State.dayIndex+1) + "   /   €" + Model.State.money);
             GUI.Label(new Rect(25, 162, width - 50, 28), YardWorldLayout.Area(player.transform.position.x, player.transform.position.z));
             string objective = YardGuidance.Objective(Model, controls.Label(ControlAction.Interact), controls.Label(ControlAction.ManualWork), controls.Label(ControlAction.Drop));
             GUI.Label(new Rect(35, 64, Mathf.Min(width - 70, 455), 85), objective, wrappedLabel);
@@ -270,7 +294,7 @@ namespace Scrapshift
                 GUI.Box(new Rect(width - 320, 20, 300, 105), "CUSTOMER ORDER");
                 GUI.Label(new Rect(width - 305, 48, 270, 65), Model.CurrentOrder.customer + "\n" + Model.State.orderDelivered + " / " + Model.CurrentOrder.copper + " copper • €" + Model.CurrentOrder.reward, controlLegend);
             }
-            string held = Model.Carried == null ? "Hands empty" : "Carrying " + Model.Carried.kind + " ×" + Model.Carried.quantity + "   /   " + controls.Label(ControlAction.Drop) + ": drop";
+            string held = Model.Carried == null ? "Hands empty" : "Carrying " + YardItemVisual.Label(Model.Carried.kind) + " ×" + Model.Carried.quantity + "   /   " + controls.Label(ControlAction.Drop) + ": drop";
             GUI.Label(new Rect(25, height - 144, width - 50, 28), held);
             var hint = CurrentHint();
             GUI.Label(new Rect(25, height - 108, width - 50, 55), hint.text, wrappedLabel);
@@ -290,6 +314,51 @@ namespace Scrapshift
             if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 150, 360, 40), "Yard map")) { mapOpen = true; confirmNew = false; }
             if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 198, 360, 40), "Orders & storage")) { ordersOpen = true; confirmNew = false; }
             if (saveBlocked) GUI.Label(new Rect(width / 2 - 215, height / 2 - 210, 430, 65), "Saving blocked to protect unreadable data.\nChoose New game to archive it and restart.");
+        }
+        void DrawRepair(float width, float height)
+        {
+            float w = Mathf.Min(width-30,640),h = Mathf.Min(height-30,510);
+            var panel = new Rect((width-w)/2,(height-h)/2,w,h);
+            GUI.Box(panel,"RESTORATION / DESK FAN");
+            GUI.Label(new Rect(panel.x+20,panel.y+45,w-40,85),"A salvaged desk fan. Recover its useful material or put it back into service.",wrappedLabel);
+            if (Model.State.fanStage == FanStage.AwaitingInspection)
+            {
+                GUI.Label(new Rect(panel.x+20,panel.y+145,w-40,90),"Inspect the housing, wiring and motor before choosing a repair.",wrappedLabel);
+                if (GUI.Button(new Rect(panel.x+20,panel.y+255,w-40,45),"Inspect fan"))
+                { if (Model.InspectFan()) { SyncViews(); Save(); Beep(); } }
+            }
+            else if (Model.State.fanStage == FanStage.Diagnosed)
+            {
+                GUI.Label(new Rect(panel.x+20,panel.y+135,w-40,100),"FAULT / Seized motor\nThe guard, base and wiring are reusable. A replacement motor costs €"+Model.Rules.fanPartsPrice+". A tested fan sells for €"+Model.Rules.fanSalePrice+".",wrappedLabel);
+                GUI.enabled = Model.State.money >= Model.Rules.fanPartsPrice;
+                if (GUI.Button(new Rect(panel.x+20,panel.y+255,w-40,45),"Fit replacement motor / €"+Model.Rules.fanPartsPrice))
+                {
+                    if (Model.BeginFanRepair()) { SyncViews();Save();SetPaused(false);Tell("Replacement motor supplied. Use ["+controls.Label(ControlAction.ManualWork)+"] at the bench to fit it, then test the fan."); }
+                }
+                GUI.enabled = true;
+                if (GUI.Button(new Rect(panel.x+20,panel.y+315,w-40,45),"Dismantle instead / recover "+Model.Rules.fanCopperYield+" copper"))
+                {
+                    if (Model.BeginFanDismantle()) { SyncViews();Save();SetPaused(false);Tell("Salvage selected. Use ["+controls.Label(ControlAction.ManualWork)+"] at the bench to recover copper."); }
+                }
+            }
+            else
+                GUI.Label(new Rect(panel.x+20,panel.y+150,w-40,150),"Current job: "+(Model.State.fanStage==FanStage.Repairing?"fitting a replacement motor":"recovering copper")+"\n"+Model.State.fanStrokes+" hand-work steps complete.\nReturn to the bench and use ["+controls.Label(ControlAction.ManualWork)+"].",wrappedLabel);
+            if (GUI.Button(new Rect(panel.x+20,panel.yMax-55,w-40,40),"Back / Escape")) repairOpen=false;
+        }
+        void DrawDay(float width,float height)
+        {
+            float w=Mathf.Min(width-30,640),h=Mathf.Min(height-30,520);
+            var panel=new Rect((width-w)/2,(height-h)/2,w,h);
+            GUI.Box(panel,"YARD DIARY / DAY "+((long)Model.State.dayIndex+1));
+            GUI.Label(new Rect(panel.x+20,panel.y+50,w-40,190),"Sales and contract income today: €"+Model.State.incomeToday+"\nCash on hand: €"+Model.State.money+"\nCompleted customer orders: "+Model.State.orderIndex+"\nFans restored: "+Model.State.fansRepaired+" / dismantled: "+Model.State.fansDismantled+"\nSalvage fans left today: "+Mathf.Max(0,Model.Rules.fanDailyLimit-Model.State.fansTakenToday),wrappedLabel);
+            GUI.Label(new Rect(panel.x+20,panel.y+255,w-40,110),"Return tomorrow for a fresh appliance-salvage delivery. Inventory, repairs and customer orders are kept; the powered stripper finishes its current load overnight. There are no deadlines or daily fees.",wrappedLabel);
+            GUI.enabled=Model.State.dayIndex<int.MaxValue;
+            if (GUI.Button(new Rect(panel.x+20,panel.y+385,w-40,45),"Finish day / return on day "+((long)Model.State.dayIndex+2)))
+            {
+                if (Model.AdvanceDay()) { SyncViews();Save();SetPaused(false);Tell("A fresh day at the yard. New salvage fans have arrived.");Beep(1.3f); }
+            }
+            GUI.enabled=true;
+            if (GUI.Button(new Rect(panel.x+20,panel.yMax-55,w-40,40),"Keep working / Back (Escape)")) dayOpen=false;
         }
         void DrawOrders(float width, float height)
         {
@@ -326,6 +395,9 @@ namespace Scrapshift
             MapLabel(map, -16, -30, "OFFICE");
             MapLabel(map, 0, -37, "ENTRY GATE");
             MapLabel(map, 7, 12, "ORDERS");
+            MapLabel(map, -7, 12, "RESTORATION");
+            MapLabel(map, -33, -19, "FANS");
+            MapLabel(map, 6, -27, "DIARY");
             MapLabel(map, 14, -1, "STORAGE");
             foreach (var site in YardWorldLayout.SalvageSites) MapLabel(map, site.x, site.z, "WIRE");
             GUI.color = new Color(.6f, 1, .55f);

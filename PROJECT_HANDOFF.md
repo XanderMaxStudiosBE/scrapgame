@@ -2,6 +2,14 @@
 
 Updated: 2026-10-01 (UTC). Reinspect the checkout before continuing.
 
+## Latest milestone: fan restoration, salvage and a relaxed day loop
+
+Implemented a second complete scrap loop. Appliance salvage west/south supplies up to two broken desk fans per day. Carry/drop/pickup uses original fan meshes and version-one item IDs. Load the separate restoration bench north/west of the hub; inspect the seized motor, then choose a replacement (€8) or dismantling. Three rebound manual-work strokes fit the motor, then an explicit power-on test enables collection/resale (€42). Four salvage strokes instead produce three copper. Choice/parts charge, outputs, test counters and resale are exactly-once guarded; full hands/capacity/overflow/ID limits never consume protected material. Fan head/source colliders resolve to their station markers; the tested bench fan has a separately pivoted authored rotor. Repair menu transitions now stop the rest of the same Update frame before simultaneous work input can leak through.
+
+Yard diary near the entry shows day, income, cash, orders and restored/dismantled fans. Returning tomorrow refreshes daily appliance stock and finishes one running stripper load; inventory, partial repair, player position and no-deadline contracts persist. No daily fees or deadlines. The board/repair/diary interfaces share existing pause/cursor/Escape/input-release behavior. Wire remains renewable. Old item enum IDs are retained (new fan IDs appended), and all save additions default to empty/zero on older version-one files. Bin APIs explicitly reject fan kinds.
+
+44 pure C# scenarios pass (ten new fan/day/ID-limit cases), zero failed. Added two Unity fan JSON/raycast/rotor checks and two authored frame/rotor cases: 74 engine cases supplied, unrun here. Twelve FBX meshes passed the Blender import/dimension/UV/budget audit. Audit caught the separate rotor's unbaked local rotation; export now bakes rotation and the corrected file passes. Rendered previews remain Blender asset previews, not Unity. Actual engine import, input/menu isolation, fan animations/audio, scene playability, day behavior and old-save migration need local checks. Continue the authorized work session with business upgrades, presentation, audio and laptop controls.
+
 ## Latest milestone: original authored industrial props
 
 Following the user's criticism and Retro Rewind reference, authored ten original metre-scale props in Blender 4.3.2: worn/rusty hatchbacks, yard office, corrugated shipping container, broad trussed workshop canopy, sorting skip, salvage fan, workbench/vise, coiled-wire crate and bundled scrap pallet. These replace the matching primitive world/station visuals via `AuthoredYardProps`, keeping original station anchors, marker routing and explicit collision footprints. The fan mesh is prepared for the next repair milestone; no fan gameplay exists at this checkpoint.

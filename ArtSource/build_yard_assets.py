@@ -154,7 +154,7 @@ def bin_model():
     for i in range(8):
         o=cube('Bent sorted metal',((i%3-1)*1.0,.55+(i//3)*.25,(i%2-.5)*2),(1.1,.16,1.4),'metal',.02);o.rotation_euler=(.08*i,.1*i,.35*i)
     cube('Skip faded label',(0,.44,-2.02),(1.5,.32,.02),'cream')
-def fan():
+def fan(frame_only=False):
     cube('Fan weighted base',(0,.045,0),(.44,.09,.30),'sage',.035)
     cyl('Fan pedestal',(0,.30,.03),.055,.47,'metal')
     cyl('Fan rear motor',(0,.65,.08),.12,.22,'sage','Z')
@@ -164,10 +164,13 @@ def fan():
         a=i*math.tau/12
         beam('Front guard spoke',(0,.65,-.10),(.255*math.cos(a),.65+.255*math.sin(a),-.075),.008,'metal')
     for radius in [.08,.16,.22]:ring('Guard concentric wire',(0,.65,-.085),radius,.006,'metal','Z')
-    cyl('Rotor hub',(0,.65,-.025),.045,.05,'cream','Z')
+    if frame_only:return
+    fan_rotor(.65)
+def fan_rotor(height=0):
+    cyl('Rotor hub',(0,height,-.025),.045,.05,'cream','Z')
     for i in range(3):
         a=i*math.tau/3
-        o=cube('Fan blade',(.11*math.cos(a),.65+.11*math.sin(a),-.005),(.18,.065,.015),'cream',.015);o.rotation_euler[1]=-a
+        o=cube('Fan blade',(.11*math.cos(a),height+.11*math.sin(a),-.005),(.18,.065,.015),'cream',.015);o.rotation_euler[1]=-a
 
 def workbench():
     for x in [-.98,.98]:
@@ -226,7 +229,7 @@ def export(name,builder):
     bpy.ops.object.select_all(action='DESELECT');builder();atlas_uv(CURRENT)
     for o in CURRENT:o.select_set(True)
     bpy.context.view_layer.objects.active=CURRENT[0];bpy.ops.object.join();o=bpy.context.object;o.name=name
-    bpy.ops.object.transform_apply(location=False,rotation=False,scale=True)
+    bpy.ops.object.transform_apply(location=False,rotation=True,scale=True)
     bpy.context.scene.cursor.location=(0,0,0);bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
     # Import support ships in Unity: no GLB runtime package needed.
     bpy.ops.export_scene.fbx(filepath=str(OUT/(name+'.fbx')),use_selection=True,axis_forward='-Z',axis_up='Y',global_scale=1,apply_unit_scale=True,bake_space_transform=True,add_leaf_bones=False,use_mesh_modifiers=True,path_mode='STRIP')
@@ -234,10 +237,10 @@ def export(name,builder):
     stats[name]={'triangles':tri,'vertices':len(o.data.vertices),'dimensions_blender':list(o.dimensions),'materials':len(o.data.materials)}
     o.hide_render=True;o.hide_set(True);return o
 stats={}
-models=[export(n,f) for n,f in [('WornHatchback',hatchback),('YardOffice',office),('ShippingContainer',container),('WorkshopCanopy',workshop),('SortingSkip',bin_model),('SalvageFan',fan),('Workbench',workbench),('WireCrate',wire_crate),('PalletBundle',pallet_bundle),('RustyHatchback',lambda:hatchback(True))]]
+models=[export(n,f) for n,f in [('WornHatchback',hatchback),('YardOffice',office),('ShippingContainer',container),('WorkshopCanopy',workshop),('SortingSkip',bin_model),('SalvageFan',fan),('Workbench',workbench),('WireCrate',wire_crate),('PalletBundle',pallet_bundle),('RustyHatchback',lambda:hatchback(True)),('SalvageFanFrame',lambda:fan(True)),('FanRotor',fan_rotor)]]
 (OUT/'asset_manifest.json').write_text(json.dumps({'source':'Original Blender-authored models; build_yard_assets.py','units':'metres','atlas':'ScrapshiftPropAtlas.png','assets':stats},indent=2))
 # A rendered contact sheet of the actual exported source meshes, not gameplay.
-for i,o in enumerate(models):
+for i,o in enumerate([o for o in models if o.name not in ['SalvageFanFrame','FanRotor']]):
     o.hide_render=False;o.hide_set(False)
     scale=.8 if i in [0,5,6,7,8] else .20
     o.scale=(scale,)*3;o.location=((i%3-1)*3.6,(i//3)*4,0)

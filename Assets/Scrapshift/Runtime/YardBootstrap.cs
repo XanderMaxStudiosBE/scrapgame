@@ -24,7 +24,7 @@ namespace Scrapshift
             var stripper = WireStripperVisual.Build(root, new Vector3(7, 0, 2));
             YardGeometry.Sign(root, "1 / DELIVERY\nSCRAP WIRE", new Vector3(-7, 2.25f, 2));
             YardGeometry.Sign(root, "2 / WORKBENCH\nMANUAL STRIPPING", new Vector3(-2.5f, 2.35f, 4));
-            YardGeometry.Sign(root, "3 / COPPER BUYER\nSELL MATERIAL", new Vector3(2.2f, 2.35f, 4));
+            YardGeometry.Sign(root, "3 / SCRAP BUYER\nCOPPER & TESTED ITEMS", new Vector3(2.2f, 2.35f, 4));
             YardGeometry.Sign(root, "4 / POWERED STRIPPER\nFEED WIRE AT THE FRONT", new Vector3(7, 2.35f, 2));
 
             var playerObject = new GameObject("Player"); playerObject.transform.SetParent(root, false); playerObject.layer = 2;
@@ -48,6 +48,7 @@ namespace Scrapshift
 
             var game = root.gameObject.AddComponent<PrototypeGame>(); game.balance = balance; game.player = player; game.logo = logo;
             game.business = YardBusinessVisual.Build(root);
+            game.fanWorkbench = FanWorkbenchVisual.Build(root);
             game.benchDisplay = bench.materialDisplay;
             game.machineDisplay = stripper.outputDisplay;
             game.rotor = stripper.rotor; game.additionalRoller = stripper.additionalRoller;

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Scrapshift
 {
     // All material/economy mutations happen here; presentation never creates outputs.
-    public sealed class YardModel
+    public sealed partial class YardModel
     {
         public YardState State { get; private set; }
         public YardRules Rules { get; private set; }
@@ -35,11 +35,16 @@ namespace Scrapshift
                 (!s.orderAccepted && s.orderDelivered != 0) ||
                 (s.orderAccepted && (s.orderIndex == int.MaxValue || s.orderDelivered >= CustomerOrders.At(s.orderIndex).copper)))
                 throw new ArgumentException("Inconsistent customer order.");
+            if ((int)s.fanStage < 0 || (int)s.fanStage > (int)FanStage.CopperReady ||
+                s.fanStrokes < 0 || s.fanStrokes > 100 || s.fansRepaired < 0 || s.fansDismantled < 0 ||
+                s.dayIndex < 0 || s.fansTakenToday < 0 || s.fansTakenToday > 100 || s.incomeToday < 0 ||
+                (s.fanStage != FanStage.Repairing && s.fanStage != FanStage.Dismantling && s.fanStrokes != 0))
+                throw new ArgumentException("Invalid repair or working-day state.");
             var ids = new HashSet<int>();
             foreach (var item in s.items)
                 if (item == null || item.id < 1 || item.id >= s.nextId || !ids.Add(item.id) ||
-                    (item.kind != MaterialKind.Wire && item.kind != MaterialKind.Copper) || item.quantity < 1 || item.quantity > 100 ||
-                    (item.kind == MaterialKind.Wire && item.quantity != 1) ||
+                    (item.kind != MaterialKind.Wire && item.kind != MaterialKind.Copper && item.kind != MaterialKind.BrokenFan && item.kind != MaterialKind.RestoredFan) || item.quantity < 1 || item.quantity > 100 ||
+                    (item.kind != MaterialKind.Copper && item.quantity != 1) ||
                     (item.storage != StorageSlot.None && item.storage != StorageSlot.Wire && item.storage != StorageSlot.Copper) ||
                     (item.storage == StorageSlot.Wire && item.kind != MaterialKind.Wire) ||
                     (item.storage == StorageSlot.Copper && item.kind != MaterialKind.Copper) ||
@@ -57,8 +62,7 @@ namespace Scrapshift
         }
         public bool AcquireWire()
         {
-            int occupied = State.items.Count + (State.benchLoaded || State.benchOutput > 0 ? 1 : 0) + (State.machineRemaining > 0 || State.machineOutput > 0 ? 1 : 0);
-            if (Carried != null || occupied >= Rules.maxBundles) return false;
+            if (Carried != null || OccupiedBundles >= Rules.maxBundles || State.nextId == int.MaxValue) return false;
             Create(MaterialKind.Wire, 1); return true;
         }
         public bool PickUp(int id)
@@ -95,19 +99,22 @@ namespace Scrapshift
         }
         public bool CollectBench()
         {
-            if (Carried != null || State.benchOutput == 0 || State.items.Count >= Rules.maxBundles) return false;
+            if (Carried != null || State.benchOutput == 0 || State.items.Count >= Rules.maxBundles || State.nextId == int.MaxValue) return false;
             Create(MaterialKind.Copper, State.benchOutput); State.benchOutput = 0; return true;
         }
         public bool Sell()
         {
             var item = Carried;
-            if (item == null || item.kind != MaterialKind.Copper) return false;
-            long money = (long)State.money + (long)item.quantity * Rules.copperUnitPrice;
+            if (item == null || (item.kind != MaterialKind.Copper && item.kind != MaterialKind.RestoredFan)) return false;
+            long value = item.kind == MaterialKind.Copper ? (long)item.quantity * Rules.copperUnitPrice : Rules.fanSalePrice;
+            long money = (long)State.money + value;
             if (money > int.MaxValue) return false;
+            RecordIncome((int)value);
             State.money = (int)money; State.items.Remove(item); State.carriedId = 0; return true;
         }
         public int StoredBundles(MaterialKind kind)
         {
+            if (kind != MaterialKind.Wire && kind != MaterialKind.Copper) return 0;
             StorageSlot slot = kind == MaterialKind.Wire ? StorageSlot.Wire : StorageSlot.Copper;
             int count = 0;
             foreach (var item in State.items) if (item.storage == slot) count++;
@@ -115,6 +122,7 @@ namespace Scrapshift
         }
         public int StoredQuantity(MaterialKind kind)
         {
+            if (kind != MaterialKind.Wire && kind != MaterialKind.Copper) return 0;
             StorageSlot slot = kind == MaterialKind.Wire ? StorageSlot.Wire : StorageSlot.Copper;
             int total = 0;
             foreach (var item in State.items) if (item.storage == slot) total += item.quantity;
@@ -122,6 +130,7 @@ namespace Scrapshift
         }
         public bool Store(MaterialKind kind)
         {
+            if (kind != MaterialKind.Wire && kind != MaterialKind.Copper) return false;
             var item = Carried;
             if (item == null || item.kind != kind) return false;
             item.storage = kind == MaterialKind.Wire ? StorageSlot.Wire : StorageSlot.Copper;
@@ -130,6 +139,7 @@ namespace Scrapshift
         }
         public bool Retrieve(MaterialKind kind)
         {
+            if (kind != MaterialKind.Wire && kind != MaterialKind.Copper) return false;
             if (Carried != null) return false;
             StorageSlot slot = kind == MaterialKind.Wire ? StorageSlot.Wire : StorageSlot.Copper;
             var item = State.items.Find(candidate => candidate.storage == slot);
@@ -157,6 +167,7 @@ namespace Scrapshift
             if (item.quantity == 0) { State.items.Remove(item); State.carriedId = 0; }
             if (complete)
             {
+                RecordIncome(order.reward);
                 State.money = (int)payment; State.orderIndex++;
                 State.orderAccepted = false; State.orderDelivered = 0;
             }
@@ -184,7 +195,7 @@ namespace Scrapshift
         }
         public bool CollectMachine()
         {
-            if (Carried != null || State.machineOutput == 0 || State.items.Count >= Rules.maxBundles) return false;
+            if (Carried != null || State.machineOutput == 0 || State.items.Count >= Rules.maxBundles || State.nextId == int.MaxValue) return false;
             Create(MaterialKind.Copper, State.machineOutput); State.machineOutput = 0; return true;
         }
     }

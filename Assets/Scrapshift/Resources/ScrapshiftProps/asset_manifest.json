@@ -102,6 +102,26 @@
         1.5500000715255737
       ],
       "materials": 1
+    },
+    "SalvageFanFrame": {
+      "triangles": 916,
+      "vertices": 488,
+      "dimensions_blender": [
+        0.5360000133514404,
+        0.3400000035762787,
+        0.9179999828338623
+      ],
+      "materials": 1
+    },
+    "FanRotor": {
+      "triangles": 176,
+      "vertices": 96,
+      "dimensions_blender": [
+        0.3243958353996277,
+        0.05250000208616257,
+        0.37141019105911255
+      ],
+      "materials": 1
     }
   }
 }

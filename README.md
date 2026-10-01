@@ -209,3 +209,17 @@ The user supplied [Retro Rewind](https://store.steampowered.com/app/3552140/Retr
 Authoring source and regeneration/audit commands: `ArtSource/README.md`. `Assets/Scrapshift/Art/Previews/WornRetroAssetSheet.png` is an inspected Blender **asset preview**, not Unity gameplay. The exported FBX files passed a Blender round-trip for actual dimensions, vertex/UV validity and triangle budgets. Their ten supplied Unity import/material/scale tests remain unrun; the complete supplied suite is now 60 cases. Pure core checks remain 34 passing.
 
 Allow the new model/atlas/importer scripts to finish importing, then press Play in the existing scene. Watch Console for authored-prop fallback warnings: they mean that model/material did not load, and the older procedural appearance is being used. Locally verify metre scale/axes, atlas colors and URP shader, roof/windshield facing, model/collider alignment, station approaches, old-save access and per-district batches. Measure actual frame time; reduced per-prop object/material count is not proof of an FPS improvement.
+
+
+## Restore or dismantle a desk fan
+
+Find **APPLIANCE SALVAGE** southwest of the vehicle rows. Two broken fans arrive each day. Carry one to the **RESTORATION BENCH** northwest of the hub, place it, open inspection and identify the seized motor. Choose:
+
+- **Repair:** pay €8 once for a replacement, fit it with three manual-work presses using your actual binding, then interact to power on/test. Collect the tested fan and sell it at the buyer for €42.
+- **Salvage:** choose dismantling, use four manual-work presses, then collect three copper for ordinary sale or a customer order.
+
+The choice stays saved, including paid parts and partial strokes. Wrong inputs/full hands/capacity/overflow never consume protected stock. Tested fan rotor animation advances only with gameplay time. Fans can be dropped/retrieved around the yard; wire/copper bins deliberately accept only their labeled materials.
+
+The **YARD DIARY** near the entrance reviews earnings and progress. Finish a day there to replenish fan stock and finish the current stripper load overnight. Inventory, partial repairs and customer orders are kept. There are no deadlines, daily fees or automatic time pressure. Day and income appear in the save; the input/preferences format remains unchanged.
+
+44 core scenarios pass in Cloud; 74 Unity cases are supplied but unrun, including partial paid-fan JSON restore, head-ray marker routing and zero-delta rotor behavior. Twelve authored FBX files passed Blender round-trip/scale/UV/budget audits. Local checks: play both fan branches, save/restart after paying and one stroke, verify the motor is not charged twice, test/collect/sell exactly once, collect both daily fans and return tomorrow, preserve stored bundles/partial contracts, pause while a tested fan spins, and press interaction/work together while opening a menu. Check actual bindings, fan-held visibility/drop height and source/head ray reachability in Unity.

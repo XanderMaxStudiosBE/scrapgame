@@ -110,6 +110,28 @@
       ],
       "uv": "within shared atlas",
       "status": "passed"
+    },
+    {
+      "name": "SalvageFanFrame",
+      "triangles": 916,
+      "metre_dimensions": [
+        0.5360000133514404,
+        0.34000006318092346,
+        0.917999931911476
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
+    },
+    {
+      "name": "FanRotor",
+      "triangles": 176,
+      "metre_dimensions": [
+        0.3243958130478859,
+        0.052500017220154405,
+        0.37141016125679016
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
     }
   ]
 }

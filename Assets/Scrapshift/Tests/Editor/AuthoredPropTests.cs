@@ -12,6 +12,8 @@ namespace Scrapshift.Tests
         [TestCase("WorkshopCanopy", 4, 6)]
         [TestCase("SortingSkip", 1, 2)]
         [TestCase("SalvageFan", .6f, 1.2f)]
+        [TestCase("SalvageFanFrame", .6f, 1.2f)]
+        [TestCase("FanRotor", .2f, .6f)]
         [TestCase("Workbench", .9f, 1.5f)]
         [TestCase("WireCrate", .7f, 1.3f)]
         [TestCase("PalletBundle", .6f, 1.2f)]
