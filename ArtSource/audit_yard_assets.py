@@ -23,6 +23,16 @@ for name,expected in manifest['assets'].items():
         assert o.data.uv_layers.active,name+' missing UV map'
         for uv in o.data.uv_layers.active.data:
             assert all(math.isfinite(v) and 0<=v<=1 for v in uv.uv),name+' UV outside atlas'
+    if name=='IndustrialWorks':
+        # Open brick facade panels must face the yard, not disappear under URP backface culling.
+        faces=[]
+        for o in objects:
+            normal_matrix=o.matrix_world.to_3x3().inverted().transposed()
+            for p in o.data.polygons:
+                center=o.matrix_world@p.center;normal=(normal_matrix@p.normal).normalized()
+                if len(p.vertices)==4 and abs(abs(center.y)-5)<.001 and abs(normal.y)>.99:faces.append((center,normal))
+        assert len(faces)==234,(name,'missing tiled front/back brick panels',len(faces))
+        assert all(center.y*normal.y>0 for center,normal in faces),name+' inward-facing brick facade'
     results.append({'name':name,'triangles':triangles,'metre_dimensions':dimensions,'uv':'within shared atlas','status':'passed','sha256':hashlib.sha256((folder/(name+'.fbx')).read_bytes()).hexdigest()})
 report={'scope':'Blender FBX round-trip, metre dimensions, finite vertices, UVs and triangle budget; Unity import not run','assets':results}
 (folder/'asset_audit.json').write_text(json.dumps(report,indent=2))

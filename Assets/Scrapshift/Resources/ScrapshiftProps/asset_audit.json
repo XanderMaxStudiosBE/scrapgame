@@ -228,6 +228,150 @@
       "uv": "within shared atlas",
       "status": "passed",
       "sha256": "00394f73a89bbb4d2b817715d791b7ccabc10bd589f5ee3ff3cf86ec022714df"
+    },
+    {
+      "name": "WorkshopDetails",
+      "triangles": 1232,
+      "metre_dimensions": [
+        19.149999618530273,
+        7.9494524002075195,
+        3.9600002744554104
+      ],
+      "uv": "within shared atlas",
+      "status": "passed",
+      "sha256": "8b806697257e537b5932fc65791df591787932a8b97af35e57e1818ef7f065b8"
+    },
+    {
+      "name": "ToolWall",
+      "triangles": 3708,
+      "metre_dimensions": [
+        4.349999904632568,
+        0.7600001096725464,
+        3.179999841377139
+      ],
+      "uv": "within shared atlas",
+      "status": "passed",
+      "sha256": "3fba772a1f2b74d20bc19eaa907016005c46f5174124396d826458d4f73840a9"
+    },
+    {
+      "name": "RepairTools",
+      "triangles": 524,
+      "metre_dimensions": [
+        0.7309246361255646,
+        0.5212703198194504,
+        0.15300000505521894
+      ],
+      "uv": "within shared atlas",
+      "status": "passed",
+      "sha256": "36b58021e9308295802436a5dda4d5a08d1266a8f26cbbe99fef66f1ecad5331"
+    },
+    {
+      "name": "ApplianceRow",
+      "triangles": 2068,
+      "metre_dimensions": [
+        4.21999979019165,
+        1.2999999523162842,
+        2.1499999041350364
+      ],
+      "uv": "within shared atlas",
+      "status": "passed",
+      "sha256": "cff677adcb19f653d750fe23f76d0f41b09a2c6645a296e4d943372d0b66f356"
+    },
+    {
+      "name": "SalvageShelter",
+      "triangles": 660,
+      "metre_dimensions": [
+        9.099999904632568,
+        4.111220121383667,
+        3.454121478833514
+      ],
+      "uv": "within shared atlas",
+      "status": "passed",
+      "sha256": "cf25738daa3656fc491b7502431aa03deaa92f56aa3b9400aa8577b930537ae4"
+    },
+    {
+      "name": "OfficeDetails",
+      "triangles": 588,
+      "metre_dimensions": [
+        8.274999618530273,
+        0.6800003051757812,
+        3.0199999819042063
+      ],
+      "uv": "within shared atlas",
+      "status": "passed",
+      "sha256": "71bc57e51330282c6068b0745d1f851029ba8ac8a3d391fafaa9fee2e24d0f29"
+    },
+    {
+      "name": "IndustrialWorks",
+      "triangles": 2652,
+      "metre_dimensions": [
+        26.5,
+        10.399999618530273,
+        17.080000301195525
+      ],
+      "uv": "within shared atlas",
+      "status": "passed",
+      "sha256": "30ca9719a56d627618283d0a5a541cded27d0c921afeae090aaaf96d31070d3e"
+    },
+    {
+      "name": "PoplarTree",
+      "triangles": 600,
+      "metre_dimensions": [
+        5.0354905128479,
+        4.55445408821106,
+        10.519235640764236
+      ],
+      "uv": "within shared atlas",
+      "status": "passed",
+      "sha256": "aca3e3596194d1a2fa578ebab09b285d83acd613b5f0d5a88148d009f3d673ba"
+    },
+    {
+      "name": "FluorescentFixture",
+      "triangles": 224,
+      "metre_dimensions": [
+        0.949999988079071,
+        0.2200000062584877,
+        0.6580001004040241
+      ],
+      "uv": "within shared atlas",
+      "status": "passed",
+      "sha256": "43b1d7884b371eb26f1b765a0f156fa76944b5c289503f93f1745512ea269e4e"
+    },
+    {
+      "name": "FencePost",
+      "triangles": 92,
+      "metre_dimensions": [
+        0.11999999731779099,
+        0.1120000071823597,
+        2.3150000606178645
+      ],
+      "uv": "within shared atlas",
+      "status": "passed",
+      "sha256": "1d0d0a35322e5c7c36291f1310c0be92b61fab922437af14fd52222c88db28df"
+    },
+    {
+      "name": "TealContainer",
+      "triangles": 944,
+      "metre_dimensions": [
+        9.09000015258789,
+        4.246000051498413,
+        2.9000003673136234
+      ],
+      "uv": "within shared atlas",
+      "status": "passed",
+      "sha256": "cac966b7a1960c52692f4d01341092a38c33be4f9a679426cd3cb944d6498e5c"
+    },
+    {
+      "name": "WeedClump",
+      "triangles": 72,
+      "metre_dimensions": [
+        0.3282495141029358,
+        0.336246982216835,
+        0.38163040817016736
+      ],
+      "uv": "within shared atlas",
+      "status": "passed",
+      "sha256": "5930f07f9534c189ffee79afc19961aa2e163022194eb69608e2bf5558672b0f"
     }
   ]
 }

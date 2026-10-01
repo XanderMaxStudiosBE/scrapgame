@@ -1,0 +1,26 @@
+{
+  "source": "Original procedural world surfaces: ArtSource/build_world_surfaces.py",
+  "scope": "PNG data and authored material links; not Unity shader/rendering evidence",
+  "textures": {
+    "WorldAtlas": {
+      "size": 512,
+      "sha256": "df064c44ec57fb5dfa1d57f7b8436e9f17e8d9afd7001d46ffe704de20c9a7af"
+    },
+    "WorldMetalGloss": {
+      "size": 512,
+      "sha256": "f48a39260d258d49305d15be666034de34821e8fab21d924f1adca8ff7770ae1"
+    },
+    "WorldGlow": {
+      "size": 64,
+      "sha256": "0f856b7b5f624805c0830df05945eca8c4d7fdf29497b0c6ba7e8a4c04d0c6fa"
+    },
+    "GroundLayers": {
+      "size": 512,
+      "sha256": "4a06dd18b43cbc265bcfd51bef7fdc9cc680427a3e4c4f5d4fcc76e71fffa21e"
+    },
+    "ChainLink": {
+      "size": 256,
+      "sha256": "8d4be30c2120d39c01a201703caed5805dea96acf7b1e11ce28d6a5a5358c094"
+    }
+  }
+}

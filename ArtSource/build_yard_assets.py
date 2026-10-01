@@ -9,24 +9,28 @@ ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'Assets/Scrapshift/Resources/ScrapshiftProps'
 PREV=ROOT/'Assets/Scrapshift/Art/Previews'
 OUT.mkdir(parents=True, exist_ok=True); PREV.mkdir(parents=True, exist_ok=True)
-bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete(use_global=False)
 PALETTE=[('sage',(91,103,82)),('blue',(88,111,118)),('cream',(185,178,157)),('rust',(135,78,48)),('metal',(59,65,64)),('rubber',(32,34,33)),('wood',(109,91,66)),('glass',(61,82,87)),('warmglass',(160,132,82)),('copper',(160,100,59)),('leaf',(75,87,64)),('leaflight',(106,116,86)),('ochre',(143,119,71)),('darkwood',(72,62,48)),('ivory',(216,207,181)),('soil',(88,80,65))]
-MAT={}; atlas=bpy.data.images.new('ScrapshiftPropAtlas',512,512); pixels=[0.]*(512*512*4)
-rng=random.Random(381)
-for index,(name,rgb) in enumerate(PALETTE):
-    for y in range(128):
-        for x in range(128):
-            noise=rng.uniform(-7,7); dirt=-10*max(0,(16-y)/16); color=[c+noise+dirt for c in rgb]
-            if name in ['sage','blue','cream','ochre'] and rng.random()<.018: color=[122,77,48]
-            if x%19==0 and rng.random()<.18: color=[c-16 for c in color]
-            px=index%4*128+x; py=index//4*128+y; offset=(py*512+px)*4
-            pixels[offset:offset+4]=[max(0,min(1,c/255)) for c in color]+[1]
-    m=bpy.data.materials.new(name); m.diffuse_color=tuple(c/255 for c in rgb)+(1,); MAT[name]=m
-atlas.pixels=pixels; atlas.filepath_raw=str(OUT/'ScrapshiftPropAtlas.png'); atlas.file_format='PNG'; atlas.save()
-atlasmat=bpy.data.materials.new('ScrapshiftPropAtlas'); atlasmat.use_nodes=True
-bs=atlasmat.node_tree.nodes.get('Principled BSDF'); bs.inputs['Roughness'].default_value=.85
-tex=atlasmat.node_tree.nodes.new('ShaderNodeTexImage');tex.image=atlas;tex.interpolation='Linear'
-atlasmat.node_tree.links.new(tex.outputs['Color'],bs.inputs['Base Color'])
+MAT={}; atlasmat=None
+def prepare_materials(write_atlas=True):
+    global MAT,atlasmat
+    bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete(use_global=False)
+    MAT={}; atlas=bpy.data.images.new('ScrapshiftPropAtlas',512,512); pixels=[0.]*(512*512*4)
+    rng=random.Random(381)
+    for index,(name,rgb) in enumerate(PALETTE):
+        for y in range(128):
+            for x in range(128):
+                noise=rng.uniform(-7,7); dirt=-10*max(0,(16-y)/16); color=[c+noise+dirt for c in rgb]
+                if name in ['sage','blue','cream','ochre'] and rng.random()<.018: color=[122,77,48]
+                if x%19==0 and rng.random()<.18: color=[c-16 for c in color]
+                px=index%4*128+x; py=index//4*128+y; offset=(py*512+px)*4
+                pixels[offset:offset+4]=[max(0,min(1,c/255)) for c in color]+[1]
+        m=bpy.data.materials.new(name); m.diffuse_color=tuple(c/255 for c in rgb)+(1,); MAT[name]=m
+    atlas.pixels=pixels; atlas.filepath_raw=str(OUT/'ScrapshiftPropAtlas.png'); atlas.file_format='PNG'
+    if write_atlas:atlas.save()
+    atlasmat=bpy.data.materials.new('ScrapshiftPropAtlas'); atlasmat.use_nodes=True
+    bs=atlasmat.node_tree.nodes.get('Principled BSDF'); bs.inputs['Roughness'].default_value=.85
+    tex=atlasmat.node_tree.nodes.new('ShaderNodeTexImage');tex.image=atlas;tex.interpolation='Linear'
+    atlasmat.node_tree.links.new(tex.outputs['Color'],bs.inputs['Base Color'])
 CURRENT=[]
 def add(o, mat):
     o.data.materials.append(MAT[mat]);CURRENT.append(o);return o
@@ -342,30 +346,37 @@ def export(name,builder):
     tri=sum(max(0,len(p.vertices)-2) for p in o.data.polygons)
     stats[name]={'triangles':tri,'vertices':len(o.data.vertices),'dimensions_blender':list(o.dimensions),'materials':len(o.data.materials)}
     o.hide_render=True;o.hide_set(True);return o
-args=sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else []
-selected=set(args[args.index('--only')+1].split(',')) if '--only' in args else None
-manifest_path=OUT/'asset_manifest.json'
-stats=json.loads(manifest_path.read_text())['assets'] if selected and manifest_path.exists() else {}
-builders=[('WornHatchback',hatchback),('YardOffice',office),('ShippingContainer',container),('WorkshopCanopy',workshop),('SortingSkip',bin_model),('SalvageFan',fan),('Workbench',workbench),('WireCrate',wire_crate),('PalletBundle',pallet_bundle),('RustyHatchback',lambda:hatchback(True)),('SalvageFanFrame',lambda:fan(True)),('FanRotor',fan_rotor),('StorageRack',storage_rack),('PoweredStripper',powered_stripper),('BuyingScale',buying_scale),('FeedRoller',feed_roller),('WireBundle',wire_bundle),('CopperBundle',copper_bundle),('PortableRadio',portable_radio)]
-if selected and not selected.issubset({name for name,_ in builders}):raise ValueError('Unknown selected model')
-models=[export(name,builder) for name,builder in builders if selected is None or name in selected]
-(OUT/'asset_manifest.json').write_text(json.dumps({'source':'Original Blender-authored models; build_yard_assets.py','units':'metres','atlas':'ScrapshiftPropAtlas.png','assets':stats},indent=2))
-if selected is None:
-    # A rendered contact sheet of the actual exported source meshes, not gameplay.
-    for i,o in enumerate([o for o in models if o.name not in ['SalvageFanFrame','FanRotor','FeedRoller','WireBundle','CopperBundle']]):
-        o.hide_render=False;o.hide_set(False)
-        scale=.8 if i in [0,5,6,7,8,9,10,11,12] else .20
-        o.scale=(scale,)*3;o.location=((i%4-1.5)*3.8,(i//4)*4,0)
-    # Ground for contact shadows.
-    bpy.ops.mesh.primitive_plane_add(size=200);ground=bpy.context.object;ground.location.z=-.015
-    m=bpy.data.materials.new('Preview ground');m.diffuse_color=(.19,.18,.15,1);ground.data.materials.append(m)
-    bpy.ops.object.light_add(type='AREA',location=(2,-4,12));bpy.context.object.data.energy=1800;bpy.context.object.data.shape='DISK';bpy.context.object.data.size=8
-    bpy.ops.object.light_add(type='AREA',location=(-8,5,8));bpy.context.object.data.energy=850;bpy.context.object.data.color=(.68,.77,1);bpy.context.object.data.size=6
-    bpy.ops.object.camera_add(location=(12,-18,16));cam=bpy.context.object;target=Vector((0,5.8,0));cam.rotation_euler=(target-cam.location).to_track_quat('-Z','Y').to_euler();cam.data.type='ORTHO';cam.data.ortho_scale=19
-    scene=bpy.context.scene;scene.camera=cam;scene.render.engine='CYCLES';scene.cycles.samples=48;scene.cycles.use_denoising=False
-    scene.render.resolution_x=1600;scene.render.resolution_y=1200;scene.render.resolution_percentage=100
-    scene.world.color=(.24,.25,.26);scene.view_settings.view_transform='AgX'
-    scene.render.filepath=str(PREV/'WornRetroAssetSheet.png');bpy.ops.render.render(write_still=True)
-    print('SCRAPSHIFT_ASSET_STATS '+json.dumps(stats))
+def main():
+    global stats
+    prepare_materials()
+    args=sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else []
+    selected=set(args[args.index('--only')+1].split(',')) if '--only' in args else None
+    manifest_path=OUT/'asset_manifest.json'
+    manifest=json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+    stats=manifest.get('assets',{})
+    builders=[('WornHatchback',hatchback),('YardOffice',office),('ShippingContainer',container),('WorkshopCanopy',workshop),('SortingSkip',bin_model),('SalvageFan',fan),('Workbench',workbench),('WireCrate',wire_crate),('PalletBundle',pallet_bundle),('RustyHatchback',lambda:hatchback(True)),('SalvageFanFrame',lambda:fan(True)),('FanRotor',fan_rotor),('StorageRack',storage_rack),('PoweredStripper',powered_stripper),('BuyingScale',buying_scale),('FeedRoller',feed_roller),('WireBundle',wire_bundle),('CopperBundle',copper_bundle),('PortableRadio',portable_radio)]
+    if selected and not selected.issubset({name for name,_ in builders}):raise ValueError('Unknown selected model')
+    models=[export(name,builder) for name,builder in builders if selected is None or name in selected]
+    manifest.update({'source':'Original Blender-authored models; build_yard_assets.py','units':'metres','atlas':'ScrapshiftPropAtlas.png','assets':stats})
+    manifest_path.write_text(json.dumps(manifest,indent=2))
+    if selected is None:
+        # A rendered contact sheet of the actual exported source meshes, not gameplay.
+        for i,o in enumerate([o for o in models if o.name not in ['SalvageFanFrame','FanRotor','FeedRoller','WireBundle','CopperBundle']]):
+            o.hide_render=False;o.hide_set(False)
+            scale=.8 if i in [0,5,6,7,8,9,10,11,12] else .20
+            o.scale=(scale,)*3;o.location=((i%4-1.5)*3.8,(i//4)*4,0)
+        # Ground for contact shadows.
+        bpy.ops.mesh.primitive_plane_add(size=200);ground=bpy.context.object;ground.location.z=-.015
+        m=bpy.data.materials.new('Preview ground');m.diffuse_color=(.19,.18,.15,1);ground.data.materials.append(m)
+        bpy.ops.object.light_add(type='AREA',location=(2,-4,12));bpy.context.object.data.energy=1800;bpy.context.object.data.shape='DISK';bpy.context.object.data.size=8
+        bpy.ops.object.light_add(type='AREA',location=(-8,5,8));bpy.context.object.data.energy=850;bpy.context.object.data.color=(.68,.77,1);bpy.context.object.data.size=6
+        bpy.ops.object.camera_add(location=(12,-18,16));cam=bpy.context.object;target=Vector((0,5.8,0));cam.rotation_euler=(target-cam.location).to_track_quat('-Z','Y').to_euler();cam.data.type='ORTHO';cam.data.ortho_scale=19
+        scene=bpy.context.scene;scene.camera=cam;scene.render.engine='CYCLES';scene.cycles.samples=48;scene.cycles.use_denoising=False
+        scene.render.resolution_x=1600;scene.render.resolution_y=1200;scene.render.resolution_percentage=100
+        scene.world.color=(.24,.25,.26);scene.view_settings.view_transform='AgX'
+        scene.render.filepath=str(PREV/'WornRetroAssetSheet.png');bpy.ops.render.render(write_still=True)
+        print('SCRAPSHIFT_ASSET_STATS '+json.dumps(stats))
 
-print('SCRAPSHIFT_EXPORTED '+json.dumps({o.name:stats[o.name] for o in models}))
+    print('SCRAPSHIFT_EXPORTED '+json.dumps({o.name:stats[o.name] for o in models}))
+
+if __name__=="__main__":main()

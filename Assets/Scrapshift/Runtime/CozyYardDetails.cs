@@ -56,16 +56,20 @@ namespace Scrapshift
 
         public static void Workshop(Transform parent)
         {
-            YardGeometry.SurfaceBox("Workshop rear tool board", parent, new Vector3(-2.5f, 1.7f, 5.45f), new Vector3(4, 1.6f, .10f), RetroSurface.WeatheredWood, false);
-            for (int i = 0; i < 5; i++)
+            bool detailed = YardWorldDressing.TryPlace("ToolWall", parent, new Vector3(-2.5f, 0, 5.45f), out _);
+            if (!detailed)
             {
-                float x = -4 + i * .65f;
-                Accent(parent, "Hanging tool handle", new Vector3(x, 1.8f, 5.36f), new Vector3(.065f, .45f, .07f), i % 2 == 0 ? Ochre : DustyBlue);
-                Accent(parent, "Hanging tool head", new Vector3(x, 2.04f, 5.34f), new Vector3(.25f, .12f, .09f), YardGeometry.Charcoal);
+                YardGeometry.SurfaceBox("Workshop rear tool board", parent, new Vector3(-2.5f, 1.7f, 5.45f), new Vector3(4, 1.6f, .10f), RetroSurface.WeatheredWood, false);
+                for (int i=0; i<5; i++)
+                {
+                    float x = -4+i*.65f;
+                    Accent(parent,"Hanging tool handle",new Vector3(x,1.8f,5.36f),new Vector3(.065f,.45f,.07f),i%2==0 ? Ochre : DustyBlue);
+                    Accent(parent,"Hanging tool head",new Vector3(x,2.04f,5.34f),new Vector3(.25f,.12f,.09f),YardGeometry.Charcoal);
+                }
+                Accent(parent,"Workshop shelf",new Vector3(-2.5f,1.22f,5.18f),new Vector3(3.8f,.10f,.42f),Sage);
             }
-            Accent(parent, "Workshop shelf", new Vector3(-2.5f, 1.22f, 5.18f), new Vector3(3.8f, .10f, .42f), Sage);
-            Accent(parent, "Workshop coffee mug", new Vector3(-3.9f, 1.37f, 5.15f), new Vector3(.14f, .2f, .14f), YardGeometry.Ivory);
-            if(!AuthoredYardProps.TryPlace("PortableRadio",parent,new Vector3(-1.2f,1.27f,5.1f),out GameObject shelfRadio))
+            Accent(parent, "Workshop coffee mug", new Vector3(-3.9f, detailed ? 1.26f : 1.37f, detailed ? 5.25f : 5.15f), new Vector3(.14f, .2f, .14f), YardGeometry.Ivory);
+            if(!AuthoredYardProps.TryPlace("PortableRadio",parent,new Vector3(-1.2f,detailed ? 1.16f : 1.27f,detailed ? 5.25f : 5.1f),out GameObject shelfRadio))
             {
                 Accent(parent,"Workshop radio",new Vector3(-1.2f,1.43f,5.14f),new Vector3(.6f,.3f,.22f),DustyBlue);
                 Accent(parent,"Radio speaker",new Vector3(-1.35f,1.43f,5.01f),new Vector3(.24f,.21f,.02f),YardGeometry.Charcoal);

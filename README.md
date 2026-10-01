@@ -2,7 +2,7 @@
 
 A first-person scrapyard simulator prototype: collect wire and broken appliances, strip or restore them, sell useful material, fulfil customer orders and improve your yard. The visual direction is worn retro realism inspired by the warmth and readable everyday props of Retro Rewind, using original industrial assets.
 
-**Current Cloud verification:** 97 pure C# scenarios pass, including 20,000 mixed transactions, a twelve-day progression and all four restoration requests from zero money. Nineteen authored FBX files pass Blender scale/UV/triangle audits. Eight original WAVs pass format/sample checks. **Unity is unavailable here:** the 169 supplied EditMode cases, engine compilation, rendering, audio and actual FPS still need local verification. Blender previews are asset previews, not gameplay screenshots.
+**Current Cloud verification:** 97 pure C# scenarios pass, including 20,000 mixed transactions, a twelve-day progression and all four restoration requests from zero money. Thirty-one authored FBX files pass Blender scale/UV/triangle audits. Eight original WAVs pass format/sample checks. **Unity is unavailable here:** the 187 supplied EditMode cases, engine compilation, rendering, audio and actual FPS still need local verification. Blender previews are asset previews, not gameplay screenshots.
 
 ## Open or update in Unity
 
@@ -38,6 +38,12 @@ The yard now uses an editable `Resources/ScrapshiftLighting/CozyAfternoon` profi
 Assign a custom **Yard lighting profile** on the existing bootstrap to tune colors, fill, sun and fog; a missing assignment uses the tracked default. Sky/reflection/emissive materials are privately owned, and stopping Play restores the previous sky, ambient, fog, reflection and camera background. Tracked materials/scene data and game/preferences saves are preserved. Actual Unity rendering and performance remain unverified in Cloud.
 
 The next finishing milestones are in [GAME_FINISHING_PLAN.md](GAME_FINISHING_PLAN.md). Lighting, varied appliance repairs, neighbourhood requests, daily work receipts and the title/welcome/help/journal flow are implemented source milestones. Actual Unity validation, further art/pacing refinement and a verified desktop player build remain outstanding.
+
+## Concept-world pass
+
+The normal Start/Continue yard now includes original tool storage and repair kits, gutter/bracing details, hanging fluorescent fixtures, warmer office windows/interior silhouettes, recognizable washer/fridge/microwave salvage rows and teal shelters/containers. Open wire fences, textured poplars and distant brick factories give the existing 96 × 80m yard context. Layered gravel, tyre wear, rough shallow puddles and sparse weeds replace straight decorative lane strips. Twelve added FBX models share a separate worn atlas and metal/smoothness mask; original models and edited materials stay intact. Scenery adds no inventory, collisions or lights; the old boundary/container colliders and every station anchor remain.
+
+See [world implementation and verification](WORLD_PASS_VERIFICATION.md) for the per-area changes, budgets and local checklist. [Overview](Assets/Scrapshift/Art/Previews/WorldOverview.png), [workshop detail](Assets/Scrapshift/Art/Previews/WorkshopWorldDetails.png) and [appliance lane](Assets/Scrapshift/Art/Previews/ApplianceLane.png) and [office](Assets/Scrapshift/Art/Previews/OfficeWorldDetails.png) are labelled **Blender previews, not Unity gameplay**. They use exported game meshes and the runtime layout; actual Unity rendering and creator visual approval remain outstanding. The uploaded AI concept references and supplied provenance are preserved under `Campaign/Scrapshift/references/`.
 
 ## What to do in the yard
 
@@ -129,6 +135,7 @@ Check original asset packaging without Unity/Blender:
 
 ```sh
 python3 Tests/audit-original-assets.py
+python3 Tests/audit-world-assets.py
 ```
 
 This checks FBX headers/budgets and hashes against the last Blender audit, atlas size, WAV samples/durations, metadata GUIDs and assembly JSON. It does not verify Unity import or rendering.
@@ -149,7 +156,7 @@ The same command also runs three filesystem/recovery checks against the real Sav
 
 Core coverage includes inventory/money conservation, exactly-once processing, capacity/output reservations, 100 renewable wire cycles, invalid/overflow/ID guards, rebinding/conflicts/defaults, dynamic guidance, expanded-world positions, storage/independent partial copper/restoration requests, locked quote and final-delivery overflow guards, daily cost/work reconciliation and legacy reports, repair/salvage/day transactions, upgrade prerequisites/progress, legacy balance migration and presentation validation. Mixed tests reconstruct copied core data; actual JSON round-trips are supplied Unity tests.
 
-In Unity use **Window → General → Test Runner → EditMode → Run All**. There are **169 supplied cases**, all unrun in Cloud, including actual gameplay/preferences JSON and backup recovery, old saves, model/audio imports, geometry/colliders, dynamic station parts and graphics cleanup. A source/syntax/Blender audit does not replace Unity compilation or a player build.
+In Unity use **Window → General → Test Runner → EditMode → Run All**. There are **187 supplied cases**, all unrun in Cloud, including actual gameplay/preferences JSON and backup recovery, old saves, model/audio imports, geometry/colliders, dynamic station parts and graphics cleanup. A source/syntax/Blender audit does not replace Unity compilation or a player build.
 
 Optional batch commands, with `UNITY_EDITOR` set to your installed editor:
 

@@ -69,9 +69,24 @@ namespace Scrapshift
                 bulbMaterial.EnableKeyword("_EMISSION");bulbMaterial.SetColor("_EmissionColor",profile.lampColor*1.15f);
                 foreach(var lamp in WorkLights)
                 {
-                    var housing=YardGeometry.SurfaceBox("Pendant shade",lamp.transform,new Vector3(0,0,-.04f),new Vector3(.42f,.28f,.09f),RetroSurface.DarkMetal,false);
-                    housing.GetComponent<Renderer>().shadowCastingMode=ShadowCastingMode.Off;
-                    var diffuser=YardGeometry.SurfaceBox("Warm diffuser",lamp.transform,new Vector3(0,0,.015f),new Vector3(.31f,.19f,.025f),RetroSurface.DarkMetal,false);
+                    bool detailed=YardWorldDressing.TryPlace("FluorescentFixture",lamp.transform,new Vector3(0,0,-.04f),out GameObject fixture);
+                    if(detailed)
+                    {
+                        fixture.transform.localRotation=Quaternion.Euler(-90,0,0);
+                        float ceiling=lamp.transform.localPosition.y<2.6f ? 3.28f : 4.28f;
+                        float length=ceiling-lamp.transform.localPosition.y-.64f;
+                        foreach(float x in new[]{-.34f,.34f})
+                        {
+                            var wire=YardGeometry.SurfaceBox("Ceiling suspension",lamp.transform,new Vector3(x,0,-.64f-length*.5f),new Vector3(.009f,.009f,length),RetroSurface.DarkMetal,false);
+                            wire.GetComponent<Renderer>().shadowCastingMode=ShadowCastingMode.Off;
+                        }
+                    }
+                    else
+                    {
+                        var housing=YardGeometry.SurfaceBox("Pendant shade",lamp.transform,new Vector3(0,0,-.04f),new Vector3(.42f,.28f,.09f),RetroSurface.DarkMetal,false);
+                        housing.GetComponent<Renderer>().shadowCastingMode=ShadowCastingMode.Off;
+                    }
+                    var diffuser=YardGeometry.SurfaceBox("Warm diffuser",lamp.transform,new Vector3(0,0,.015f),detailed ? new Vector3(.80f,.15f,.015f) : new Vector3(.31f,.19f,.025f),RetroSurface.DarkMetal,false);
                     var renderer=diffuser.GetComponent<Renderer>();renderer.sharedMaterial=bulbMaterial;renderer.shadowCastingMode=ShadowCastingMode.Off;
                 }
             }

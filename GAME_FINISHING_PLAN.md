@@ -16,7 +16,7 @@ Accept after a new player can find scrap, make a worthwhile repair choice, finis
 
 ## 3. Bring presentation to the same standard
 
-Planned: consistent workshop/office/salvage dressing, readable material variation, purposeful signs, better handling/work animations and mixed audio. Finish one area before applying its art language across the yard. Use original assets; Retro Rewind remains a style reference, not a source of copied content.
+Source implemented: the adopted concept-world pass adds consistent workshop/office/appliance-lane/boundary dressing, twelve original models, separate worn surfaces with metal/smoothness masks, practical fixtures, open wire fences and bounded ground layers. Original station models, collision footprints, anchors and editable materials remain. See WORLD_PASS_VERIFICATION.md. Actual Unity visuals/performance and creator acceptance remain outstanding; further animation/audio/art refinement should follow local feedback. Use original assets; Retro Rewind remains a style reference, not a source of copied content.
 
 Accept after the creator approves actual Unity images and gameplay, including small-window UI, tutorial prompts, all rebound keys/mouse buttons and quiet/cozy audio.
 

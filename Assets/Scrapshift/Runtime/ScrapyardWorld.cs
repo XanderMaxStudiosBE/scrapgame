@@ -13,15 +13,7 @@ namespace Scrapshift
             // Small regional batches keep distant districts eligible for frustum culling.
             var lanes = Sector(parent, "Ground and lanes");
             Box(lanes, "Packed gravel", new Vector3(0, -.25f, 0), new Vector3(YardWorldLayout.HalfWidth * 2, .5f, YardWorldLayout.HalfDepth * 2), RetroSurface.Gravel);
-            // Pale worn lane edges make the hub easy to find without a minimap.
-            // Sparse wheel ruts break up the repeated gravel without expensive decals.
-            foreach (float x in new[] { -1.15f, 1.15f })
-                for (int i = 0; i < 6; i++)
-                    CozyYardDetails.Accent(lanes, "Worn delivery tyre track", new Vector3(x, .006f, -33 + i * 9), new Vector3(.16f, .009f, 5), new Color32(89, 83, 67, 255));
-            foreach (float x in new[] { -5f, 5f })
-                Box(lanes, "North south lane edge", new Vector3(x, .012f, 0), new Vector3(.14f, .02f, 72), RetroSurface.WeatheredWood, false);
-            foreach (float z in new[] { -10f, -16f })
-                Box(lanes, "East west lane edge", new Vector3(0, .012f, z), new Vector3(88, .02f, .14f), RetroSurface.WeatheredWood, false);
+            YardGroundDressing.Build(lanes);
             Batch(lanes, combine);
 
             var north = Sector(parent, "North loading district");
@@ -86,12 +78,16 @@ namespace Scrapshift
             Board(hub, "< VEHICLE SALVAGE    METAL SORTING >", new Vector3(0, 0, -18));
             Batch(hub, combine);
 
+            var restoration = Sector(parent, "Restoration surroundings");
+            Batch(restoration, combine);
+
             foreach (var site in YardWorldLayout.SalvageSites)
                 Supply(parent, new Vector3(site.x, 0, site.z), site.name);
 
             var horizon = Sector(parent, "Distant landscape");
             var grass = YardGeometry.Box("Outside grassland", horizon, new Vector3(0, -.65f, 0), new Vector3(180, .4f, 160), YardGeometry.Olive, false);
             grass.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            if (YardWorldDressing.LoadLayout() == null || Resources.Load<GameObject>("ScrapshiftProps/PoplarTree") == null || Resources.Load<Material>("ScrapshiftWorld/WorldProps") == null)
             for (int i = 0; i < 16; i++)
             {
                 float angle = i * Mathf.PI * 2 / 16;
@@ -115,11 +111,12 @@ namespace Scrapshift
         }
         static void Batch(Transform sector, bool combine)
         {
+            YardWorldDressing.BuildDistrict(sector);
             if (!combine) return;
             var geometry = new System.Collections.Generic.List<GameObject>();
             foreach (var renderer in sector.GetComponentsInChildren<MeshRenderer>())
                 // Dynamic font atlas updates must retain the live TextMesh geometry.
-                if (renderer.GetComponent<TextMesh>() == null) geometry.Add(renderer.gameObject);
+                if (renderer.enabled && renderer.GetComponent<TextMesh>() == null) geometry.Add(renderer.gameObject);
             StaticBatchingUtility.Combine(geometry.ToArray(), sector.gameObject);
         }
         static GameObject Box(Transform p, string name, Vector3 position, Vector3 size, RetroSurface surface, bool collider = true)
@@ -130,7 +127,7 @@ namespace Scrapshift
             return go;
         }
         static void Fence(Transform p, Vector3 position, Vector3 size)
-        { Box(p, "Perimeter fence", position, size, RetroSurface.CorrugatedMetal); }
+        { var boundary = Box(p, "Perimeter fence", position, size, RetroSurface.CorrugatedMetal); YardWorldDressing.FenceVisual(boundary, size); }
         static void Board(Transform p, string text, Vector3 ground)
         {
             // Elevated boards keep the lane underneath unobstructed.
@@ -148,7 +145,10 @@ namespace Scrapshift
         }
         static void Container(Transform p, Vector3 pos, RetroSurface surface)
         {
-            if (AuthoredYardProps.TryPlace("ShippingContainer", p, pos, out GameObject container))
+            GameObject container = null;
+            bool placed = surface == RetroSurface.CorrugatedMetal && YardWorldDressing.TryPlace("TealContainer", p, pos, out container);
+            if (!placed) placed = AuthoredYardProps.TryPlace("ShippingContainer", p, pos, out container);
+            if (placed)
             {
                 var collider = container.AddComponent<BoxCollider>(); collider.center = new Vector3(0, 1.4f, 0); collider.size = new Vector3(9, 2.8f, 4);
                 YardGeometry.Sign(p, "SCRAP / STORAGE", pos + new Vector3(-2.5f, 1.8f, -2.15f));
@@ -225,6 +225,7 @@ namespace Scrapshift
                 var collider = office.AddComponent<BoxCollider>(); collider.center = new Vector3(0, 1.5f, 0); collider.size = new Vector3(8, 3, 6);
                 // The model faces negative Z; turn it toward the entry/workshop approach.
                 office.transform.localRotation = Quaternion.Euler(0, 180, 0);
+                if (YardWorldDressing.TryPlace("OfficeDetails", p, pos, out GameObject details)) details.transform.localRotation = Quaternion.Euler(0, 180, 0);
                 YardGeometry.Sign(p, "SCRAPSHIFT / YARD OFFICE", pos + new Vector3(0, 2.55f, 3.18f), 180);
                 return;
             }

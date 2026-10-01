@@ -34,3 +34,20 @@ The Blender audit records each FBX SHA-256. `python3 Tests/audit-original-assets
 `blender --background --python-exit-code 1 --python ArtSource/build_yard_assets.py -- --only PortableRadio` exports only the selected original model, retaining other FBXs and their manifest entries. The common deterministic atlas is still regenerated; existing metadata stays intact. Run the FBX audit after any export. The new radio has 1,308 triangles, worn blue/cream housing, slatted speaker, amber tuning scale, knobs, handle and aerial.
 
 `blender --background --python-exit-code 1 --python ArtSource/render_appliance_details.py` reimports the actual fan/radio FBXs and atlas to render `ApplianceDetails.png`. It is an inspected Blender asset preview, not Unity gameplay, collision or lighting evidence. The older workshop/contact sheets are unchanged and do not contain the new portable radio. Unity import/collision/audio tests are supplied but remain unrun in Cloud.
+
+## Additive concept-world pack
+
+`build_world_surfaces.py` authors five new deterministic PNGs under `Resources/ScrapshiftWorld`: the worn-color WorldAtlas, linear metallic/smoothness mask, localized warm-glass emission, irregular ground-layer atlas and cutout chain-link wire. It writes missing shared URP materials while retaining any existing material edits. It never rewrites legacy textures/materials. Regenerating the new pack's PNGs will overwrite texture edits, so retain intentional texture changes before rerunning.
+
+`build_world_assets.py` imports the reusable original geometry helpers without running the legacy exporter or saving its atlas. It exports only the twelve new metre-scale models: WorkshopDetails, ToolWall, RepairTools, ApplianceRow, SalvageShelter, OfficeDetails, IndustrialWorks, PoplarTree, FluorescentFixture, FencePost, TealContainer and WeedClump. TealContainer reuses the proven container geometry with the new blue palette. Other models are newly authored here. Each has one atlas material; 72–3,708 triangles, 13,364 across all twelve unique meshes. Existing manifest entries and `.meta` files survive targeted exports. `-- --only ToolWall` limits regeneration to that model; run the round-trip audit after every export.
+
+```sh
+python3 ArtSource/build_world_surfaces.py
+blender --background --python-exit-code 1 --python ArtSource/build_world_assets.py
+blender --background --python-exit-code 1 --python ArtSource/audit_yard_assets.py
+python3 Tests/audit-original-assets.py
+python3 Tests/audit-world-assets.py
+MESA_SHADER_CACHE_DIR=/tmp/scrapshift-mesa blender --background --python-exit-code 1 --python ArtSource/render_world_pass.py
+```
+
+The final command reimports actual FBXs, source textures and the same `WorldDressing.json` used by runtime builders, then renders four labelled Blender previews. Use `-- WorldOverview`, `-- WorkshopWorldDetails` `-- ApplianceLane` or `-- OfficeWorldDetails` to render only one view. Blender Eevee software rendering and a broad preview-only fill approximate the unoccluded Unity ambient lighting; URP sky/fog/contact shader, UI and tone mapping are not executed. Engine rendering, import axes, collisions and FPS require local Unity checks. Some existing signs/dynamic stock/contact details are omitted from the composition study. The resource layout is decorative data, independent of gameplay saves. See `WORLD_PASS_VERIFICATION.md` for source constraints and the actual local acceptance checklist.

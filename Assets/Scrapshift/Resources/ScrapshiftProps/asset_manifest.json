@@ -192,6 +192,139 @@
         0.6110051870346069
       ],
       "materials": 1
+    },
+    "WorkshopDetails": {
+      "triangles": 1232,
+      "vertices": 752,
+      "dimensions_blender": [
+        19.149999618530273,
+        7.9494524002075195,
+        3.9600000381469727
+      ],
+      "materials": 1,
+      "pack": "ScrapshiftWorld"
+    },
+    "ToolWall": {
+      "triangles": 3708,
+      "vertices": 2248,
+      "dimensions_blender": [
+        4.349999904632568,
+        0.7599999904632568,
+        3.180000066757202
+      ],
+      "materials": 1,
+      "pack": "ScrapshiftWorld"
+    },
+    "RepairTools": {
+      "triangles": 524,
+      "vertices": 308,
+      "dimensions_blender": [
+        0.7309246063232422,
+        0.5212703347206116,
+        0.15299999713897705
+      ],
+      "materials": 1,
+      "pack": "ScrapshiftWorld"
+    },
+    "ApplianceRow": {
+      "triangles": 2068,
+      "vertices": 1160,
+      "dimensions_blender": [
+        4.21999979019165,
+        1.2999999523162842,
+        2.1499998569488525
+      ],
+      "materials": 1,
+      "pack": "ScrapshiftWorld"
+    },
+    "SalvageShelter": {
+      "triangles": 660,
+      "vertices": 440,
+      "dimensions_blender": [
+        9.100000381469727,
+        4.111220359802246,
+        3.4541211128234863
+      ],
+      "materials": 1,
+      "pack": "ScrapshiftWorld"
+    },
+    "OfficeDetails": {
+      "triangles": 588,
+      "vertices": 360,
+      "dimensions_blender": [
+        8.274999618530273,
+        0.6800000667572021,
+        3.0199999809265137
+      ],
+      "materials": 1,
+      "pack": "ScrapshiftWorld"
+    },
+    "IndustrialWorks": {
+      "triangles": 2652,
+      "vertices": 2600,
+      "dimensions_blender": [
+        26.5,
+        10.399999618530273,
+        17.079999923706055
+      ],
+      "materials": 1,
+      "pack": "ScrapshiftWorld"
+    },
+    "PoplarTree": {
+      "triangles": 600,
+      "vertices": 376,
+      "dimensions_blender": [
+        5.0354905128479,
+        4.5544538497924805,
+        10.519235610961914
+      ],
+      "materials": 1,
+      "pack": "ScrapshiftWorld"
+    },
+    "FluorescentFixture": {
+      "triangles": 224,
+      "vertices": 128,
+      "dimensions_blender": [
+        0.949999988079071,
+        0.2199999988079071,
+        0.658000111579895
+      ],
+      "materials": 1,
+      "pack": "ScrapshiftWorld"
+    },
+    "FencePost": {
+      "triangles": 92,
+      "vertices": 56,
+      "dimensions_blender": [
+        0.11999999731779099,
+        0.1120000034570694,
+        2.315000057220459
+      ],
+      "materials": 1,
+      "pack": "ScrapshiftWorld"
+    },
+    "TealContainer": {
+      "triangles": 944,
+      "vertices": 592,
+      "dimensions_blender": [
+        9.09000015258789,
+        4.246000289916992,
+        2.9000000953674316
+      ],
+      "materials": 1,
+      "pack": "ScrapshiftWorld"
+    },
+    "WeedClump": {
+      "triangles": 72,
+      "vertices": 96,
+      "dimensions_blender": [
+        0.3282495141029358,
+        0.33624696731567383,
+        0.38163042068481445
+      ],
+      "materials": 1,
+      "pack": "ScrapshiftWorld"
     }
-  }
+  },
+  "world_source": "Original additive Blender pack: ArtSource/build_world_assets.py; separate WorldAtlas material"
 }
