@@ -10,7 +10,8 @@
         1.5500000547617674
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "ff4a1bb4b143f46033c0dfb23dcd1d86f1b3f7954c240cbce98bc1d0bb637d94"
     },
     {
       "name": "YardOffice",
@@ -21,7 +22,8 @@
         4.695000281557441
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "99b6518b387895c3a71c998532e95a56023ec4575a34a0bf6a04a5508553e989"
     },
     {
       "name": "ShippingContainer",
@@ -32,7 +34,8 @@
         2.9000003673136234
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "5b7ae03c3d88df8f875c430a5316f166e0405a4568223befd1804e001201c808"
     },
     {
       "name": "WorkshopCanopy",
@@ -43,7 +46,8 @@
         4.707595116511669
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "54bbc43ce5f2e11ac0d9222df0c02f0181b28487e4d491e0596a0927c840fe70"
     },
     {
       "name": "SortingSkip",
@@ -54,7 +58,8 @@
         1.7445428278297186
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "9fa878575cbe88153d1f2afababc763fcbb8d45039e5e398ded810ab9c80b163"
     },
     {
       "name": "SalvageFan",
@@ -65,7 +70,8 @@
         0.917999931911476
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "c67d1b5d1df43eba18b3dbeeae9da105f4d7d124e2729d72a3df2c569983b21d"
     },
     {
       "name": "Workbench",
@@ -76,7 +82,8 @@
         1.3700000438762814
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "487396cde828467e2ba748b5f30a458da1c509ebd0b9e04d4c26a600a3cf7283"
     },
     {
       "name": "WireCrate",
@@ -87,7 +94,8 @@
         1.0299999415874481
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "1a2eee4010b4066adbfd334b4c573e1429de6e8618a3f0489c603c80756cc354"
     },
     {
       "name": "PalletBundle",
@@ -98,7 +106,8 @@
         1.0200000413248347
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "47880bb102147d56ac70e0d47e2f4e683ee76653bd159510d38fee1f87971db2"
     },
     {
       "name": "RustyHatchback",
@@ -109,7 +118,8 @@
         1.5500000547617674
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "195534552929d08479d72799102f9423729105d444d870aa9e98089cf3b441f4"
     },
     {
       "name": "SalvageFanFrame",
@@ -120,7 +130,8 @@
         0.917999931911476
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "34a177f4c5726b2bcdadcc36f08c2d48fdc6556bf9d77d2521b7ff1033750b46"
     },
     {
       "name": "FanRotor",
@@ -131,7 +142,8 @@
         0.37141016125679016
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "e4635e16f26e2d0c5c58f94aa9dd36db9c8375ea65a9003f34153504fa5ef98f"
     },
     {
       "name": "StorageRack",
@@ -142,7 +154,8 @@
         2.6199999281776414
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "e8bc49c8ce748e0440d853963344815b24ac4422d545c543641080f5b8ac28c5"
     },
     {
       "name": "PoweredStripper",
@@ -153,7 +166,8 @@
         1.5300000234833178
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "f81fd4f0217798848a646d5072bf6e8e5534dd17a0747924be48306ebaf4ef34"
     },
     {
       "name": "BuyingScale",
@@ -164,7 +178,8 @@
         1.929999990204223
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "f1a94d3962582fdde0c432dc01ee56318d3f30c9b68a68d95da43ab5aa867472"
     },
     {
       "name": "FeedRoller",
@@ -175,7 +190,8 @@
         0.3450000435113907
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "2c7873689a2848e09b730c0350c127cb56d4c97afd6c56ae4cd9b679880f339f"
     },
     {
       "name": "WireBundle",
@@ -186,7 +202,8 @@
         0.14000003039836884
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "90c399ccefb775af8b3e2708cb7084cef3c5ae0b395ccdbc29136a52dcf88f73"
     },
     {
       "name": "CopperBundle",
@@ -197,7 +214,8 @@
         0.07999999821186066
       ],
       "uv": "within shared atlas",
-      "status": "passed"
+      "status": "passed",
+      "sha256": "7d32d5a02a3f690154bb8a748e890ab6ecdacb6e885a04941b8c9407072a8349"
     }
   ]
 }

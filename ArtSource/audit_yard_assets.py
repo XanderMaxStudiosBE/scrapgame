@@ -1,5 +1,5 @@
 """Audit the exported FBX files through Blender's importer (not a Unity import test)."""
-import bpy, json, math
+import bpy, json, math, hashlib
 from pathlib import Path
 from mathutils import Vector
 root=Path(__file__).resolve().parents[1]
@@ -23,7 +23,7 @@ for name,expected in manifest['assets'].items():
         assert o.data.uv_layers.active,name+' missing UV map'
         for uv in o.data.uv_layers.active.data:
             assert all(math.isfinite(v) and 0<=v<=1 for v in uv.uv),name+' UV outside atlas'
-    results.append({'name':name,'triangles':triangles,'metre_dimensions':dimensions,'uv':'within shared atlas','status':'passed'})
+    results.append({'name':name,'triangles':triangles,'metre_dimensions':dimensions,'uv':'within shared atlas','status':'passed','sha256':hashlib.sha256((folder/(name+'.fbx')).read_bytes()).hexdigest()})
 report={'scope':'Blender FBX round-trip, metre dimensions, finite vertices, UVs and triangle budget; Unity import not run','assets':results}
 (folder/'asset_audit.json').write_text(json.dumps(report,indent=2))
 print('SCRAPSHIFT_FBX_AUDIT '+json.dumps(report))

@@ -86,6 +86,14 @@ Saving occurs after transactions, periodically, on pause/focus loss and normal e
 
 ## Verification
 
+Check original asset packaging without Unity/Blender:
+
+```sh
+python3 Tests/audit-original-assets.py
+```
+
+This checks FBX headers/budgets and hashes against the last Blender audit, atlas size, WAV samples/durations, metadata GUIDs and assembly JSON. It does not verify Unity import or rendering.
+
 Run pure C# checks with Mono:
 
 ```sh

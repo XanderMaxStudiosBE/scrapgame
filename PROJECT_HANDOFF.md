@@ -1,12 +1,12 @@
 # Scrapshift project handoff
 
-Updated: 2026-10-01 (UTC). Reinspect the checkout before continuing.
+Updated: 2026-10-01 (UTC). Reinspect the checkout before continuing. The first sections and README describe the current implementation; older milestone records below are historical checkpoints.
 
 ## Final compatibility sweep: preserved output reservations
 
 The last review found that lowering maxBundles in a user's existing Balance asset could strand previously reserved bench/machine/fan output. Collection now replaces its reserved station slot without applying the new acquisition cap; it still requires empty hands, an available item ID and the fixed 100-item serialization ceiling. New wire/fan acquisitions remain blocked above the new effective capacity. Prompts use the same collection guard. A new core case reconstructs a yard with three ready stations plus loose wire under a lower capacity, collects/sells all original output, and resumes normal supply only once space is free. Two supplied Unity checks cover actual reduced-capacity save loading and deserializing/preparing an old tuned Balance.
 
-58 pure C# cases pass, zero failed. There are now 108 supplied Unity EditMode cases, all unrun in Cloud. Eighteen model audits, seven WAV sample/header checks, 59 C# syntax parses, unique/complete asset metas and unchanged pre-existing GUID checks pass. All functional/visual/persistence/quality notes in README and CLOUD_TASK_PROMPT now reflect the current implementation. Unity rendering/compilation/input/audio/FPS remain the next concrete verification task; no engine result or visual approval is inferred.
+58 pure C# cases pass, zero failed. A dependency-free `Tests/audit-original-assets.py` checks packaging/GUIDs/audio and FBX hashes against the completed Blender audit, detecting stale mesh audit records after edits. There are now 108 supplied Unity EditMode cases, all unrun in Cloud. Eighteen model audits, seven WAV sample/header checks, 59 C# syntax parses, unique/complete asset metas and unchanged pre-existing GUID checks pass. All functional/visual/persistence/quality notes in README and CLOUD_TASK_PROMPT now reflect the current implementation. Unity rendering/compilation/input/audio/FPS remain the next concrete verification task; no engine result or visual approval is inferred.
 
 ## Latest integration review: authored workstations and connected economy
 
