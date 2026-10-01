@@ -63,7 +63,7 @@ namespace Scrapshift
         }
         public bool CollectFan()
         {
-            if (Carried != null || State.items.Count >= Capacity || State.nextId == int.MaxValue ||
+            if (!CanCollectOutput ||
                 (State.fanStage != FanStage.Tested && State.fanStage != FanStage.CopperReady)) return false;
             bool restored = State.fanStage == FanStage.Tested;
             Create(restored ? MaterialKind.RestoredFan : MaterialKind.Copper, restored ? 1 : Rules.fanCopperYield);

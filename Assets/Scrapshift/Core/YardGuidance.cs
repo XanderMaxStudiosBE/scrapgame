@@ -33,7 +33,7 @@ namespace Scrapshift
                     if (s.fanStage == FanStage.ReadyToTest)
                         return new StationHint(carried == null, "RESTORATION BENCH • " + (carried == null ? use + "power on and test repaired fan" : emptyHands));
                     if (s.fanStage == FanStage.Tested || s.fanStage == FanStage.CopperReady)
-                        return new StationHint(carried == null && s.items.Count < m.Capacity && s.nextId < int.MaxValue, "RESTORATION BENCH • " +
+                        return new StationHint(m.CanCollectOutput, "RESTORATION BENCH • " +
                             (carried == null ? use + (s.fanStage == FanStage.Tested ? "collect tested fan • worth €" + r.fanSalePrice : "collect " + r.fanCopperYield + " copper") : emptyHands));
                     if (s.fanStage == FanStage.Repairing || s.fanStage == FanStage.Dismantling)
                         return new StationHint(carried == null, "RESTORATION BENCH • " + (carried == null ? "[" + work + "] " +
@@ -103,7 +103,7 @@ namespace Scrapshift
         static StationHint OutputHint(YardModel m, string station, int quantity, string use, string emptyHands)
         {
             if (m.Carried != null) return new StationHint(false, station + " • Copper ready. " + emptyHands);
-            if (m.State.items.Count >= m.Capacity || m.State.nextId == int.MaxValue) return new StationHint(false, station + " • Storage full. Sell an existing copper bundle first.");
+            if (!m.CanCollectOutput) return new StationHint(false, station + " • Storage full. Sell an existing copper bundle first.");
             return new StationHint(true, station + " • " + use + "collect " + quantity + " copper");
         }
         public static string Objective(YardModel m, string interact, string work, string drop)

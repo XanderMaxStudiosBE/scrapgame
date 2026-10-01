@@ -2,7 +2,7 @@
 
 A first-person scrapyard simulator prototype: collect wire and broken appliances, strip or restore them, sell useful material, fulfil customer orders and improve your yard. The visual direction is worn retro realism inspired by the warmth and readable everyday props of Retro Rewind, using original industrial assets.
 
-**Current Cloud verification:** 57 pure C# scenarios pass, including 20,000 mixed transactions and a twelve-day progression from zero money. Eighteen authored FBX files pass Blender scale/UV/triangle audits. Seven original WAVs pass format/sample checks. **Unity is unavailable here:** the 105 supplied EditMode cases, engine compilation, rendering, audio and actual FPS still need local verification. Blender previews are asset previews, not gameplay screenshots.
+**Current Cloud verification:** 58 pure C# scenarios pass, including 20,000 mixed transactions and a twelve-day progression from zero money. Eighteen authored FBX files pass Blender scale/UV/triangle audits. Seven original WAVs pass format/sample checks. **Unity is unavailable here:** the 108 supplied EditMode cases, engine compilation, rendering, audio and actual FPS still need local verification. Blender previews are asset previews, not gameplay screenshots.
 
 ## Open or update in Unity
 
@@ -100,7 +100,7 @@ SCRAPSHIFT_MONO_ROOT=/workspace/tooling/mono ./Tests/run-core-tests.sh
 
 Core coverage includes inventory/money conservation, exactly-once processing, capacity/output reservations, 100 renewable wire cycles, invalid/overflow/ID guards, rebinding/conflicts/defaults, dynamic guidance, expanded-world positions, storage/partial contracts, repair/salvage/day transactions, upgrade prerequisites/progress, legacy balance migration and presentation validation. Mixed tests reconstruct copied core data; actual JSON round-trips are supplied Unity tests.
 
-In Unity use **Window → General → Test Runner → EditMode → Run All**. There are **105 supplied cases**, all unrun in Cloud, including actual gameplay/preferences JSON and backup recovery, old saves, model/audio imports, geometry/colliders, dynamic station parts and graphics cleanup. A source/syntax/Blender audit does not replace Unity compilation or a player build.
+In Unity use **Window → General → Test Runner → EditMode → Run All**. There are **108 supplied cases**, all unrun in Cloud, including actual gameplay/preferences JSON and backup recovery, old saves, model/audio imports, geometry/colliders, dynamic station parts and graphics cleanup. A source/syntax/Blender audit does not replace Unity compilation or a player build.
 
 Optional batch commands, with `UNITY_EDITOR` set to your installed editor:
 

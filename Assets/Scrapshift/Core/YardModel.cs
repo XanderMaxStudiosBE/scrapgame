@@ -6,6 +6,9 @@ namespace Scrapshift
     // All material/economy mutations happen here; presentation never creates outputs.
     public sealed partial class YardModel
     {
+        public const int MaxSavedItems = 100;
+        // Collecting replaces an already-reserved station slot, even after capacity is tuned down.
+        public bool CanCollectOutput { get { return Carried == null && State.items.Count < MaxSavedItems && State.nextId < int.MaxValue; } }
         public YardState State { get; private set; }
         public YardRules Rules { get; private set; }
         public ScrapItem Carried { get { return Find(State.carriedId); } }
@@ -25,7 +28,7 @@ namespace Scrapshift
         static bool Finite(float value) { return !float.IsNaN(value) && !float.IsInfinity(value); }
         public static void Validate(YardState s)
         {
-            if (s == null || s.version != 1 || s.items == null || s.items.Count > 100 || s.money < 0 || s.nextId < 1 ||
+            if (s == null || s.version != 1 || s.items == null || s.items.Count > MaxSavedItems || s.money < 0 || s.nextId < 1 ||
                 s.benchStrokes < 0 || s.benchStrokes > 100 || s.benchOutput < 0 || s.benchOutput > 100 ||
                 s.machineOutput < 0 || s.machineOutput > 100 || s.machinePendingYield < 0 || s.machinePendingYield > 100 ||
                 !Finite(s.machineRemaining) || s.machineRemaining < 0 || s.carriedId < 0 ||
@@ -112,7 +115,7 @@ namespace Scrapshift
         }
         public bool CollectBench()
         {
-            if (Carried != null || State.benchOutput == 0 || State.items.Count >= Capacity || State.nextId == int.MaxValue) return false;
+            if (!CanCollectOutput || State.benchOutput == 0) return false;
             Create(MaterialKind.Copper, State.benchOutput); State.benchOutput = 0; return true;
         }
         public bool Sell()
@@ -208,7 +211,7 @@ namespace Scrapshift
         }
         public bool CollectMachine()
         {
-            if (Carried != null || State.machineOutput == 0 || State.items.Count >= Capacity || State.nextId == int.MaxValue) return false;
+            if (!CanCollectOutput || State.machineOutput == 0) return false;
             Create(MaterialKind.Copper, State.machineOutput); State.machineOutput = 0; return true;
         }
     }

@@ -6,13 +6,33 @@ namespace Scrapshift.Tests
 {
     public static class IntegrationScenarios
     {
-        public static readonly string[] Names={"MixedYardConservation", "BusinessProgressionFromZero"};
+        public static readonly string[] Names={"MixedYardConservation", "BusinessProgressionFromZero", "ReducedCapacityPreservesReservedOutputs"};
         static void Check(bool value,string message){if(!value)throw new Exception(message);}
         public static void Run(string name)
         {
             if(name=="MixedYardConservation")Fuzz();
             else if(name=="BusinessProgressionFromZero")Progression();
+            else if(name=="ReducedCapacityPreservesReservedOutputs")ReducedCapacity();
             else throw new Exception(name);
+        }
+        static void ReducedCapacity()
+        {
+            var m=new YardModel(new YardRules{maxBundles=4});m.State.machineOwned=true;
+            m.AcquireWire();m.LoadBench();m.AcquireWire();m.FeedMachine();
+            m.AcquireFan();m.LoadFan();m.InspectFan();m.BeginFanDismantle();for(int i=0;i<4;i++)m.WorkFan();
+            m.AcquireWire();m.Drop(0,.1f,0);for(int i=0;i<4;i++)m.WorkBench();m.Tick(5);
+            Check(m.OccupiedBundles==4,"saved station reservations and loose wire");
+            m=new YardModel(new YardRules{maxBundles=1},Copy(m.State));
+            Check(!m.AcquireWire()&&!m.AcquireFan(),"lower capacity blocks fresh material");
+            Check(YardGuidance.Hint(m,TargetKind.Bench,0,"F","Right mouse").canUse,"collection hint matches reserved output");
+            Check(m.CollectBench()&&m.Sell(),"reserved bench output survives tuning");
+            Check(m.CollectMachine()&&m.Sell(),"reserved machine output survives tuning");
+            Check(YardGuidance.Hint(m,TargetKind.FanBench,0,"F","Right mouse").canUse,"fan collection hint");
+            Check(m.CollectFan()&&m.Sell()&&m.State.money==36,"reserved fan material and money intact");
+            Check(m.OccupiedBundles==1&&!m.AcquireWire(),"one old wire remains");
+            m.PickUp(m.State.items[0].id);m.LoadBench();for(int i=0;i<4;i++)m.WorkBench();
+            Check(m.CollectBench()&&m.Sell()&&m.AcquireWire(),"normal acquisition resumes after reducing old stock");
+            YardModel.Validate(m.State);
         }
         static long Material(YardModel m)
         {
