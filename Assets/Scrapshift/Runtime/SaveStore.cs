@@ -39,7 +39,8 @@ namespace Scrapshift
                     message = candidate == path ? "Yard restored." : "Restored backup; latest save was unreadable.";
                     return state;
                 }
-                catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is UnauthorizedAccessException)
+                // InvalidDataException derives from SystemException, so IOException alone does not catch missing fields.
+                catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is ArgumentException || ex is UnauthorizedAccessException)
                 {
                     Debug.LogWarning("Could not load " + Path.GetFileName(candidate) + ": " + ex.Message);
                 }
