@@ -60,6 +60,12 @@ class CoreRunner
             try { IntegrationScenarios.Run(name); Console.WriteLine("PASS " + name); }
             catch (Exception ex) { failed++; Console.WriteLine("FAIL " + name + ": " + ex.Message); }
         }
+        foreach (var name in WorkFeedbackScenarios.Names)
+        {
+            total++;
+            try { WorkFeedbackScenarios.Run(name); Console.WriteLine("PASS " + name); }
+            catch (Exception ex) { failed++; Console.WriteLine("FAIL " + name + ": " + ex.Message); }
+        }
         Console.WriteLine((total - failed) + " passed, " + failed + " failed");
         return failed == 0 ? 0 : 1;
     }

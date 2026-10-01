@@ -2,6 +2,14 @@
 
 Updated: 2026-10-01 (UTC). Reinspect the checkout before continuing. The first sections and README describe the current implementation; older milestone records below are historical checkpoints.
 
+## Latest continuation: tangible handwork feedback
+
+The user requested further development after the completed two-hour pass. Replaced the manual bench's growing/recolored block rendering with existing authored wire/copper bundles. Copper emerges and wire diminishes during stripping; a fixed decorative pliers assembly moves/closes for each successful stroke and settles after 0.22 seconds. Source bootstrap anchor/renderer, scene data, GUIDs and gameplay saves remain compatible. Decorative child colliders are disabled; there is no work-animation spawning, active physics, extra realtime lighting or private material clone. Idle tool animation skips transform writes. Fan work now pulses its own display instead of moving the unrelated wire bench. Both animations advance only during unpaused gameplay.
+
+A compact contextual progress panel derives steps/rewards from authoritative wire/fan state and effective tool-upgrade thresholds. It distinguishes motor fitting from the mandatory explicit power-on test and tested resale. No state/save schema or bindings change. Three additional pure scenarios check actual transactions, rejected full-hand work, collection, resumed upgraded salvage and read-only presentation. All 61 core cases pass. Five new supplied Unity cases (three shared scenarios plus two display/animation checks) bring the engine suite to 113, unrun here. Asset integrity checks pass for 18 FBX/seven WAV/126 GUIDs; 62 C# source files parse without syntax errors. None of these checks establishes Unity compilation or visual approval.
+
+Next local verification: compile/import, inspect tabletop heights/tool placement and contextual HUD fit, pause midway through a work stroke, confirm fan work leaves the wire bench still, restore partial upgraded jobs and test actual fan/roller rendering. Measure laptop Editor/player performance before making performance claims. Continue refinement from that feedback; do not reset working scenes or saves.
+
 ## Work-session status
 
 The authorized two-hour development pass on 2026-10-01 is complete, and all milestones were committed and pushed directly to main. Current README/CLOUD_TASK_PROMPT describe the resulting game. A clean checkout and matching local/remote heads were confirmed. The asset integrity check passes and also rejects a deliberately stale FBX hash in an isolated temporary copy. No Unity Editor, player build, measured FPS result or user visual approval is available for this new pass. The next session should begin with local Unity import/compilation/play/visual/performance feedback rather than assuming the older “continue this active session” checkpoint instructions are still active.

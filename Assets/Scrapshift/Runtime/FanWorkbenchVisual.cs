@@ -7,6 +7,8 @@ namespace Scrapshift
         public static readonly Vector3 SupplyPosition = new Vector3(-33, 0, -19);
         public static readonly Vector3 DiaryPosition = new Vector3(6, 0, -27);
         public readonly Transform display, rotor, copper, supplyStock;
+        float pulseAge = .22f;
+        public void Pulse() { pulseAge = 0; }
         FanWorkbenchVisual(Transform display, Transform rotor, Transform copper, Transform supplyStock)
         { this.display = display; this.rotor = rotor; this.copper = copper; this.supplyStock = supplyStock; }
         public static FanWorkbenchVisual Build(Transform parent)
@@ -53,6 +55,12 @@ namespace Scrapshift
         }
         public void Step(YardModel m, float seconds)
         {
+            if (pulseAge < .22f)
+            {
+                pulseAge = Mathf.Min(.22f,pulseAge+Mathf.Max(0,seconds));
+                float pulse = pulseAge >= .22f ? 0 : Mathf.Sin(pulseAge/.22f*Mathf.PI);
+                display.localRotation = Quaternion.Euler(0,0,-3*pulse);
+            }
             if (rotor != null && m.State.fanStage == FanStage.Tested) rotor.Rotate(0,0,480*seconds,Space.Self);
         }
     }

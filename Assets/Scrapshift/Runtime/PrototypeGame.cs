@@ -20,15 +20,15 @@ namespace Scrapshift
         readonly List<int> removedViews = new List<int>();
         static readonly ProfilerMarker ViewsMarker = new ProfilerMarker("Scrapshift.SyncViews");
         static readonly ProfilerMarker SaveMarker = new ProfilerMarker("Scrapshift.Save");
-        Material benchMaterial, lampMaterial;
+        Material lampMaterial;
+        WorkbenchJobVisual benchJob;
         GUIStyle wrappedLabel, controlLegend, mapLabel;
         readonly YardInterfaceTheme theme = new YardInterfaceTheme();
         bool paused, confirmNew, saveBlocked, mapOpen, ordersOpen, repairOpen, dayOpen, investmentsOpen;
         PlayerInputSettings controls;
         SettingsMenu settings;
         PresentationSettings presentation;
-        Vector3 benchRestPosition;
-        float workPulseUntil, frameElapsed;
+        float frameElapsed;
         int frameSamples;
         string frameReadout = "Measuring gameplay frames…";
         string message;
@@ -42,8 +42,8 @@ namespace Scrapshift
             controls = new PlayerInputSettings();
             presentation = new PresentationSettings(player.view, transform);
             settings = new SettingsMenu(controls, presentation);
-            player.controls = controls; benchRestPosition = benchDisplay.localPosition;
-            benchMaterial = benchDisplay.GetComponent<Renderer>().material;
+            player.controls = controls;
+            benchJob = new WorkbenchJobVisual(benchDisplay);
             lampMaterial = machineLamp.material;
             sounds = new YardAudio(transform, player, presentation);
             try { Model = new YardModel(balance.PreparedRules, SaveStore.Read(SavePath, out message)); }
@@ -109,7 +109,9 @@ namespace Scrapshift
             {
                 if (target.kind == TargetKind.FanBench ? Model.WorkFan() : Model.WorkBench())
                 {
-                    nextStroke = Time.time + .22f; workPulseUntil = Time.time + .18f;
+                    nextStroke = Time.time + .22f;
+                    if (target.kind == TargetKind.Bench) benchJob.Pulse();
+                    else if (fanWorkbench != null) fanWorkbench.Pulse();
                     sounds.Play(YardSound.Tool);
                     Tell(target.kind == TargetKind.FanBench ?
                         (Model.State.fanStage == FanStage.ReadyToTest ? "Motor fitted. Power on and test the fan." : Model.State.fanStage == FanStage.CopperReady ? "Fan dismantled. Collect the recovered copper." : "Working on the fan • " + Model.State.fanStrokes + " steps complete") :
@@ -119,7 +121,7 @@ namespace Scrapshift
                 else Tell(CurrentHint().text);
             }
             // Inventory presentation changes only on transactions/load/completion. Carried objects follow the camera by parenting.
-            benchDisplay.localPosition = benchRestPosition + (Time.time < workPulseUntil ? Vector3.up * .025f : Vector3.zero);
+            benchJob.Step(Time.deltaTime);
             if (Model.State.machineRemaining > 0)
             {
                 rotor.Rotate(0, 0, 240 * Time.deltaTime, Space.Self);
@@ -216,10 +218,7 @@ namespace Scrapshift
                     foreach (var collider in view.GetComponentsInChildren<Collider>()) collider.enabled = !held;
                 }
                 benchDisplay.gameObject.SetActive(Model.State.benchLoaded || Model.State.benchOutput > 0);
-                float progress = Model.State.benchLoaded ? (float)Model.State.benchStrokes / Model.WireWorkSteps : 1;
-                benchDisplay.localScale = new Vector3(.75f, .12f + .15f * progress, .35f);
-                benchMaterial.color = Model.State.benchOutput > 0 ? YardGeometry.Copper : Color.Lerp(YardGeometry.Charcoal, YardGeometry.Copper, progress);
-                benchDisplay.localPosition = benchRestPosition + (Time.time < workPulseUntil ? Vector3.up * .025f : Vector3.zero);
+                benchJob.Refresh(Model);
                 machineDisplay.gameObject.SetActive(Model.State.machineOutput > 0);
                 if (feedDisplay != null) feedDisplay.gameObject.SetActive(Model.State.machineRemaining > 0);
                 if (business != null) business.Refresh(Model);
@@ -257,7 +256,7 @@ namespace Scrapshift
             SyncViews(); Save(); confirmNew = false; SetPaused(false); Tell("New yard. Take wire from the delivery crate.");
         }
         void OnApplicationQuit() { Save(); }
-        void OnDestroy() { theme.Dispose(); if (presentation != null) presentation.Dispose(); Time.timeScale = 1; Cursor.lockState = CursorLockMode.None; Cursor.visible = true; if (sounds != null) sounds.Dispose(); if (benchMaterial != null) Destroy(benchMaterial); if (lampMaterial != null) Destroy(lampMaterial); }
+        void OnDestroy() { theme.Dispose(); if (presentation != null) presentation.Dispose(); Time.timeScale = 1; Cursor.lockState = CursorLockMode.None; Cursor.visible = true; if (sounds != null) sounds.Dispose(); if (lampMaterial != null) Destroy(lampMaterial); }
 
         StationHint CurrentHint()
         {
@@ -318,6 +317,22 @@ namespace Scrapshift
                 GUI.Box(new Rect((width-promptWidth)/2,height-139,promptWidth,93),"");
                 GUI.Label(new Rect((width-promptWidth)/2+14,height-134,promptWidth-28,25),held,controlLegend);
                 GUI.Label(new Rect((width-promptWidth)/2+14,height-106,promptWidth-28,55),hint.text,wrappedLabel);
+                if (!paused && target != null)
+                {
+                    var progress = StationProgress.Read(Model,target.kind);
+                    if (progress.Visible)
+                    {
+                        float progressWidth = Mathf.Min(promptWidth,460);
+                        float x = (width-progressWidth)/2, y = height-205;
+                        GUI.Box(new Rect(x,y,progressWidth,56), "");
+                        GUI.Label(new Rect(x+12,y+3,progressWidth-24,25),progress.label,controlLegend);
+                        GUI.color = new Color(.2f,.22f,.2f);
+                        GUI.DrawTexture(new Rect(x+12,y+34,progressWidth-24,8),Texture2D.whiteTexture);
+                        GUI.color = new Color(.78f,.64f,.37f);
+                        GUI.DrawTexture(new Rect(x+12,y+34,(progressWidth-24)*progress.fraction,8),Texture2D.whiteTexture);
+                        GUI.color = Color.white;
+                    }
+                }
                 GUI.Label(new Rect(24,height-40,width-48,35),ControlHints(),controlLegend);
                 GUI.color=hint.canUse?new Color(.77f,.86f,.62f):YardGeometry.Ivory;
                 GUI.DrawTexture(new Rect(width/2-2,height/2-2,4,4),Texture2D.whiteTexture);
