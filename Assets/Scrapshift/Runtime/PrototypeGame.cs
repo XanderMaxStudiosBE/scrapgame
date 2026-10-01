@@ -15,6 +15,7 @@ namespace Scrapshift
         public Texture2D logo;
         public YardBusinessVisual business;
         public FanWorkbenchVisual fanWorkbench;
+        public YardLighting lighting;
         public YardModel Model { get; private set; }
         readonly Dictionary<int, GameObject> itemViews = new Dictionary<int, GameObject>();
         readonly List<int> removedViews = new List<int>();
@@ -266,7 +267,7 @@ namespace Scrapshift
             SyncViews(); Save(); confirmNew = false; SetPaused(false); Tell("New yard. Take wire from the delivery crate.");
         }
         void OnApplicationQuit() { Save(); }
-        void OnDestroy() { theme.Dispose(); if (presentation != null) presentation.Dispose(); Time.timeScale = 1; Cursor.lockState = CursorLockMode.None; Cursor.visible = true; if (sounds != null) sounds.Dispose(); if (lampMaterial != null) Destroy(lampMaterial); }
+        void OnDestroy() { theme.Dispose(); if (presentation != null) presentation.Dispose(); if(lighting!=null)lighting.Dispose(); Time.timeScale = 1; Cursor.lockState = CursorLockMode.None; Cursor.visible = true; if (sounds != null) sounds.Dispose(); if (lampMaterial != null) Destroy(lampMaterial); }
 
         StationHint CurrentHint()
         {

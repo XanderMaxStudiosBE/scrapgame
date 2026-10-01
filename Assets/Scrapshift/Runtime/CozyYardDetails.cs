@@ -68,8 +68,6 @@ namespace Scrapshift
             Accent(parent, "Workshop radio", new Vector3(-1.2f, 1.43f, 5.14f), new Vector3(.6f, .3f, .22f), DustyBlue);
             Accent(parent, "Radio speaker", new Vector3(-1.35f, 1.43f, 5.01f), new Vector3(.24f, .21f, .02f), YardGeometry.Charcoal);
             Accent(parent, "Radio dial", new Vector3(-1.04f, 1.43f, 5.0f), new Vector3(.15f, .1f, .025f), WarmWindow);
-            Accent(parent, "Workshop hanging lamp", new Vector3(-2.5f, 2.85f, 3.5f), new Vector3(.55f, .15f, .35f), Ochre);
-            Accent(parent, "Workshop lamp diffuser", new Vector3(-2.5f, 2.77f, 3.5f), new Vector3(.4f, .03f, .25f), WarmWindow);
             Plant(parent, new Vector3(-5.4f, 0, 5.8f));
         }
 

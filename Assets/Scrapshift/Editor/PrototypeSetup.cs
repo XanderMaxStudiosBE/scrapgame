@@ -22,6 +22,7 @@ namespace Scrapshift
         public static void UpdateExistingVisuals()
         {
             RetroMaterialSetup.EnsureMaterials();
+            PresetShadowSupport.EnsureGenerated();
             Debug.Log("Tracked materials ready. Existing YardBootstrap scenes use the updated props and Settings automatically on next Play; scene and balance edits were preserved.");
         }
         // Batch entry point: -executeMethod Scrapshift.PrototypeSetup.Generate
@@ -44,6 +45,7 @@ namespace Scrapshift
                 pipeline.name = "Scrapshift URP";
                 AssetDatabase.CreateAsset(pipeline, Folder + "/ScrapshiftURP.asset");
             }
+            PresetShadowSupport.EnsureGenerated();
             GraphicsSettings.defaultRenderPipeline = pipeline; QualitySettings.renderPipeline = pipeline;
             PlayerSettings.companyName = "XanderMaxStudiosBE"; PlayerSettings.productName = "Scrapshift";
             // Legacy input keeps this small prototype free of an additional input package.

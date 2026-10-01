@@ -2,7 +2,7 @@
 
 A first-person scrapyard simulator prototype: collect wire and broken appliances, strip or restore them, sell useful material, fulfil customer orders and improve your yard. The visual direction is worn retro realism inspired by the warmth and readable everyday props of Retro Rewind, using original industrial assets.
 
-**Current Cloud verification:** 69 pure C# scenarios pass, including 20,000 mixed transactions and a twelve-day progression from zero money. Eighteen authored FBX files pass Blender scale/UV/triangle audits. Seven original WAVs pass format/sample checks. **Unity is unavailable here:** the 122 supplied EditMode cases, engine compilation, rendering, audio and actual FPS still need local verification. Blender previews are asset previews, not gameplay screenshots.
+**Current Cloud verification:** 69 pure C# scenarios pass, including 20,000 mixed transactions and a twelve-day progression from zero money. Eighteen authored FBX files pass Blender scale/UV/triangle audits. Seven original WAVs pass format/sample checks. **Unity is unavailable here:** the 128 supplied EditMode cases, engine compilation, rendering, audio and actual FPS still need local verification. Blender previews are asset previews, not gameplay screenshots.
 
 ## Open or update in Unity
 
@@ -30,6 +30,14 @@ Gameplay/look are blocked during all menus and capture. Captured input is consum
 **Video** offers Laptop/Balanced/Detailed, 30/60/120 frame limits, 55–95° FOV, an optional warm grade and an optional gameplay FPS/frame-time readout. Presets use 75/90/100% render scale and 20/35/50m shadow distance. Laptop uses shorter hard shadows and disables post processing. Balanced/Detailed can use subtle warm grading and bloom. The HUD remains at display resolution. Settings change a private runtime URP clone and restore Editor pipeline/VSync/frame cap when it is disposed.
 
 **Audio** controls master, effects and ambience. Original gravel footsteps, tool/handling/sale cues and nearby machine/fan loops provide feedback; outdoor breeze and sparse birds provide ambience. Gameplay sounds pause with menus; quiet ambience continues. Video/audio defaults are separate from Controls defaults.
+
+## Lighting and visual direction
+
+The yard now uses an editable `Resources/ScrapshiftLighting/CozyAfternoon` profile: a blue-to-warm gradient sky, neutral warm daylight, three downward task lights over stripping/buying/restoration, matching horizon fog and a small deterministic sky reflection map. Diffusers glow mildly; contact shading grounds static props through one collider-free mesh. Laptop/Balanced/Detailed use one/two/four shadow cascades with the existing render-scale/shadow-distance/map-resolution budgets. Laptop still uses hard shadows and no post processing. The editor enables the generated `ScrapshiftURP.asset` soft-shadow capability flag idempotently so Balanced/Detailed variants are included in player builds; all other pipeline values and its GUID are preserved. No realtime reflection probes or fullscreen ambient-occlusion pass are added.
+
+Assign a custom **Yard lighting profile** on the existing bootstrap to tune colors, fill, sun and fog; a missing assignment uses the tracked default. Sky/reflection/emissive materials are privately owned, and stopping Play restores the previous sky, ambient, fog, reflection and camera background. Tracked materials/scene data and game/preferences saves are preserved. Actual Unity rendering and performance remain unverified in Cloud.
+
+The next finishing milestones are in [GAME_FINISHING_PLAN.md](GAME_FINISHING_PLAN.md). The new lighting is an implemented source milestone; the radio loop, full title flow and finished player build are planned.
 
 ## What to do in the yard
 
@@ -114,7 +122,7 @@ The same command also runs three filesystem/recovery checks against the real Sav
 
 Core coverage includes inventory/money conservation, exactly-once processing, capacity/output reservations, 100 renewable wire cycles, invalid/overflow/ID guards, rebinding/conflicts/defaults, dynamic guidance, expanded-world positions, storage/partial contracts, repair/salvage/day transactions, upgrade prerequisites/progress, legacy balance migration and presentation validation. Mixed tests reconstruct copied core data; actual JSON round-trips are supplied Unity tests.
 
-In Unity use **Window → General → Test Runner → EditMode → Run All**. There are **122 supplied cases**, all unrun in Cloud, including actual gameplay/preferences JSON and backup recovery, old saves, model/audio imports, geometry/colliders, dynamic station parts and graphics cleanup. A source/syntax/Blender audit does not replace Unity compilation or a player build.
+In Unity use **Window → General → Test Runner → EditMode → Run All**. There are **128 supplied cases**, all unrun in Cloud, including actual gameplay/preferences JSON and backup recovery, old saves, model/audio imports, geometry/colliders, dynamic station parts and graphics cleanup. A source/syntax/Blender audit does not replace Unity compilation or a player build.
 
 Optional batch commands, with `UNITY_EDITOR` set to your installed editor:
 
@@ -131,6 +139,7 @@ Inspect exit status, Console/editor logs and populated test-result XML. An empty
 ### Required local checks
 
 - Import with the pinned editor; check zero compile errors, normal URP shaders, metre scale/axes, atlas appearance, roof joins, shadow readability, signs and HUD at different Game-view sizes.
+- Check gradient sky/sun direction, fog joins, workshop/fan readability, task-light cutoff/fixtures, static contact shade and copper reflections. Switch all presets and grade; watch cascade transitions/shadow shimmer while walking. Stop Play and confirm sky/fog/ambient/reflections restore. Run the supplied lighting/shader tests in Unity.
 - Complete wire processing, orders, both fan choices and all investments. Test wrong inputs/full hands, duplicate purchase/collection, partial/surplus delivery, capacity and the explicit fan test.
 - Save/reopen with carried/dropped/stored material, running/output-ready machine, paid partial fan repair, active partial order and upgrades. Confirm old saves and tuned Balance values. Verify archived New game and backups through tests.
 - Check cable/copper tabletop alignment, pliers movement, independent fan feedback, partial-job progress and explicit test status. Pause mid-stroke, resume and verify animation/input isolation; inspect small Game-view HUD fit.

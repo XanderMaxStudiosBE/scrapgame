@@ -16,7 +16,7 @@ namespace Scrapshift.Tests
             PresentationSettings settings=null;
             try
             {
-                source.renderScale=1;source.shadowDistance=47;
+                source.renderScale=1;source.shadowDistance=47;source.shadowCascadeCount=3;source.maxAdditionalLightsCount=2;
                 QualitySettings.renderPipeline=source;Application.targetFrameRate=93;QualitySettings.vSyncCount=2;
                 var camera=root.AddComponent<Camera>();camera.fieldOfView=69;
                 var data=camera.GetUniversalAdditionalCameraData();data.renderPostProcessing=false;
@@ -24,10 +24,12 @@ namespace Scrapshift.Tests
                 settings=new PresentationSettings(camera,root.transform);
                 settings.Preferences.graphics=GraphicsPreset.Laptop;settings.Preferences.frameLimit=30;settings.Preferences.fieldOfView=80;settings.Apply();
                 var clone=QualitySettings.renderPipeline as UniversalRenderPipelineAsset;
-                Assert.NotNull(clone);Assert.AreNotSame(source,clone);Assert.AreEqual(.75f,clone.renderScale);Assert.AreEqual(20,clone.shadowDistance);
-                Assert.AreEqual(1,source.renderScale);Assert.AreEqual(47,source.shadowDistance,"Source asset stays intact");
+                Assert.NotNull(clone);Assert.AreNotSame(source,clone);Assert.AreEqual(.75f,clone.renderScale);Assert.AreEqual(20,clone.shadowDistance);Assert.AreEqual(1,clone.shadowCascadeCount);Assert.AreEqual(3,clone.maxAdditionalLightsCount);
+                Assert.AreEqual(1,source.renderScale);Assert.AreEqual(47,source.shadowDistance,"Source asset stays intact");Assert.AreEqual(3,source.shadowCascadeCount);Assert.AreEqual(2,source.maxAdditionalLightsCount);
                 Assert.AreEqual(30,Application.targetFrameRate);Assert.AreEqual(0,QualitySettings.vSyncCount);Assert.AreEqual(80,camera.fieldOfView);
                 Assert.IsFalse(data.renderPostProcessing);Assert.AreEqual(LightShadows.Hard,light.shadows);
+                settings.Preferences.graphics=GraphicsPreset.Balanced;settings.Apply();Assert.AreEqual(2,clone.shadowCascadeCount);
+                settings.Preferences.graphics=GraphicsPreset.Detailed;settings.Apply();Assert.AreEqual(4,clone.shadowCascadeCount);
                 settings.Dispose();settings.Dispose();
                 Assert.AreSame(source,QualitySettings.renderPipeline);Assert.AreEqual(93,Application.targetFrameRate);Assert.AreEqual(2,QualitySettings.vSyncCount);
                 Assert.AreEqual(69,camera.fieldOfView);Assert.IsFalse(data.renderPostProcessing);Assert.AreEqual(LightShadows.Soft,light.shadows);

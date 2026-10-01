@@ -74,9 +74,9 @@ namespace Scrapshift
             gradeObject = new GameObject("Scrapshift warm color grade"); gradeObject.transform.SetParent(parent, false);
             var volume = gradeObject.AddComponent<Volume>(); volume.isGlobal = true; volume.priority = 10;
             gradeProfile = ScriptableObject.CreateInstance<VolumeProfile>(); volume.sharedProfile = gradeProfile;
-            var color = gradeProfile.Add<ColorAdjustments>(); color.postExposure.Override(.08f); color.contrast.Override(6); color.saturation.Override(-8);
+            var color = gradeProfile.Add<ColorAdjustments>(); color.postExposure.Override(-.05f); color.contrast.Override(8); color.saturation.Override(-4);
             var tone = gradeProfile.Add<Tonemapping>(); tone.mode.Override(TonemappingMode.Neutral);
-            var bloom = gradeProfile.Add<Bloom>(); bloom.threshold.Override(1.4f); bloom.intensity.Override(.12f);
+            var bloom = gradeProfile.Add<Bloom>(); bloom.threshold.Override(1.4f); bloom.intensity.Override(.08f);
             Apply();
         }
         public void Apply()
@@ -87,6 +87,9 @@ namespace Scrapshift
             if (pipeline != null)
             {
                 pipeline.renderScale = Preferences.RenderScale; pipeline.shadowDistance = Preferences.ShadowDistance;
+                pipeline.shadowCascadeCount = Preferences.graphics == GraphicsPreset.Laptop ? 1 : Preferences.graphics == GraphicsPreset.Balanced ? 2 : 4;
+                pipeline.cascade2Split = .35f; pipeline.cascade4Split = new Vector3(.12f,.32f,.60f);
+                pipeline.maxAdditionalLightsCount = 3;
                 pipeline.msaaSampleCount = Preferences.graphics == GraphicsPreset.Detailed ? 4 : 2;
                 pipeline.mainLightShadowmapResolution = Preferences.graphics == GraphicsPreset.Laptop ? 512 : Preferences.graphics == GraphicsPreset.Balanced ? 1024 : 2048;
 

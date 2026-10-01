@@ -37,3 +37,21 @@ for path in ASSETS.rglob('*'):
 print('PASS',len(guids),'unique GUIDs and complete asset/folder metadata')
 for path in ASSETS.rglob('*.asmdef'):json.loads(path.read_text())
 print('PASS assembly-definition JSON; Unity compilation remains unverified')
+
+# Verify lighting-resource links and runtime property names; shader compilation remains an engine check.
+lighting=ASSETS/'Resources/ScrapshiftLighting'
+for name,shader_name in [('YardSky','YardSky'),('ContactShade','ContactShade')]:
+    material=(lighting/(name+'.mat')).read_text()
+    shader=ASSETS/'Shaders'/(shader_name+'.shader')
+    shader_guid=re.search(r'^guid: ([0-9a-f]{32})$',Path(str(shader)+'.meta').read_text(),re.M)[1]
+    assert 'guid: '+shader_guid in material, name+' material points to the wrong shader'
+    assert '"RenderPipeline"="UniversalPipeline"' in shader.read_text(),name+' missing URP tag'
+    assert 'ShaderLibrary/Core.hlsl' in shader.read_text(),name+' missing pinned URP include'
+profile=(lighting/'CozyAfternoon.asset').read_text()
+profile_script=ASSETS/'Runtime/YardLightingProfile.cs'
+script_guid=re.search(r'^guid: ([0-9a-f]{32})$',Path(str(profile_script)+'.meta').read_text(),re.M)[1]
+assert 'guid: '+script_guid in profile,'Lighting profile points to the wrong script'
+sky_source=(ASSETS/'Shaders/YardSky.shader').read_text()
+for property_name in re.findall(r'sky.Set(?:Color|Vector)\("([^"]+)"', (ASSETS/'Runtime/YardLighting.cs').read_text()):
+    assert property_name in sky_source,'Unknown sky property '+property_name
+print('PASS lighting material/shader/profile GUID links and sky property names (not shader compilation)')

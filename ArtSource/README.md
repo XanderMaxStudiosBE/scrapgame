@@ -24,3 +24,7 @@ Run `python3 ArtSource/build_yard_audio.py` to regenerate seven deterministic mo
 `blender --background --python-exit-code 1 --python ArtSource/render_workshop_details.py` reimports exported workbench, stripper chassis, buyer scale, fan and bundle FBXs, assigns their original atlas and renders a close-up inspection sheet. It does not modify models or any Unity scene. Both previews use studio lighting and are explicitly asset previews, not gameplay. Separate rotor meshes are integrated by runtime code.
 
 The Blender audit records each FBX SHA-256. `python3 Tests/audit-original-assets.py` uses the standard library to verify matching audit hashes, binary FBX headers, budgets, atlas dimensions, PCM samples, complete/unique metadata and assembly JSON. Re-exporting any FBX invalidates its previous audit hash until the Blender import audit is run again. This portable packaging check does not replace Unity import/rendering.
+
+## Workshop lighting composition study
+
+`blender --background --python-exit-code 1 --python ArtSource/render_yard_lighting_study.py` reimports original exported meshes and the real atlas/gravel texture, using colors from the tracked CozyAfternoon profile. It writes `Assets/Scrapshift/Art/Previews/YardLightingStudy.png`. It is a **Blender composition study, not Unity gameplay or shader/FPS verification**. Blender lights/tone mapping and a broad area fill approximate ambient readability; they do not execute the runtime sky/contact shader, URP presets or exactly reproduce the Unity rig. The additional study fill is not a runtime light.

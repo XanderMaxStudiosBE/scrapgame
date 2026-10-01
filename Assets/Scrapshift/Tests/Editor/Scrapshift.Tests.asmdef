@@ -1,1 +1,1 @@
-{"name":"Scrapshift.Tests","references":["Scrapshift.Core","Scrapshift.Runtime","Unity.RenderPipelines.Core.Runtime","Unity.RenderPipelines.Universal.Runtime"],"includePlatforms":["Editor"],"optionalUnityReferences":["TestAssemblies"]}
+{"name":"Scrapshift.Tests","references":["Scrapshift.Core","Scrapshift.Runtime","Unity.RenderPipelines.Core.Runtime","Unity.RenderPipelines.Universal.Runtime","Scrapshift.Editor"],"includePlatforms":["Editor"],"optionalUnityReferences":["TestAssemblies"]}
