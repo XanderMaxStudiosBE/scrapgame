@@ -70,7 +70,7 @@ namespace Scrapshift
             if (sounds != null) sounds.Pause(value);
             paused = value; Time.timeScale = value ? 0 : 1;
             if (!value && settings != null) settings.Close();
-            if (!value) { mapOpen = false; ordersOpen = false; repairOpen = false; dayOpen = false; titleOpen=false;helpOpen=false;introOpen=false;creditsOpen=false; }
+            if (!value) { mapOpen = false; ordersOpen = false; repairOpen = false; dayOpen = false; dayReportOpen=false; titleOpen=false;helpOpen=false;introOpen=false;creditsOpen=false; }
             if (controls != null) controls.SuppressUntilRelease();
             Cursor.lockState = value ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = value;
@@ -92,6 +92,7 @@ namespace Scrapshift
                 else if(creditsOpen)creditsOpen=false;
                 else if(titleOpen)confirmNew=false;
                 else if(repairOpen)repairOpen=false;
+                else if(dayReportOpen)CloseDayReportMenu();
                 else if(dayOpen)dayOpen=false;
                 else if(ordersOpen)ordersOpen=false;
                 else if(mapOpen)mapOpen=false;
@@ -152,7 +153,7 @@ namespace Scrapshift
             MaterialKind oldKind = Model.Carried == null ? MaterialKind.Wire : Model.Carried.kind;
             bool ownedBefore = Model.State.machineOwned;
             int oldOrder = Model.State.orderIndex;
-            bool orderAcceptedBefore = Model.State.orderAccepted;
+            int oldCommission = Model.State.commissionIndex;
             bool changed = false;
             switch (target.kind)
             {
@@ -167,7 +168,11 @@ namespace Scrapshift
                     break;
                 case TargetKind.WireStorage: changed = Model.Carried == null ? Model.Retrieve(MaterialKind.Wire) : Model.Store(MaterialKind.Wire); break;
                 case TargetKind.CopperStorage: changed = Model.Carried == null ? Model.Retrieve(MaterialKind.Copper) : Model.Store(MaterialKind.Copper); break;
-                case TargetKind.OrderBoard: changed = Model.State.orderAccepted ? Model.DeliverOrder() : Model.AcceptOrder(); break;
+                case TargetKind.OrderBoard:
+                    if(Model.CanDeliverCommission)changed=Model.DeliverCommission();
+                    else if(Model.State.orderAccepted && Model.Carried!=null && Model.Carried.kind==MaterialKind.Copper)changed=Model.DeliverOrder();
+                    else {SetPaused(true);ordersOpen=true;Save();return;}
+                    break;
                 case TargetKind.Supply: changed = Model.AcquireWire(); break;
                 case TargetKind.LooseItem: changed = Model.PickUp(target.itemId); break;
                 case TargetKind.Sell: changed = Model.Sell(); break;
@@ -180,11 +185,11 @@ namespace Scrapshift
             if (changed)
             {
                 if (Model.State.orderIndex > oldOrder) { Tell("Order complete • +€" + (Model.State.money - oldMoney) + ". A new customer request is on the board."); Beep(1.6f); }
-                else if (!orderAcceptedBefore && Model.State.orderAccepted) { Tell(Model.CurrentOrder.customer + " order accepted. Deliver " + Model.CurrentOrder.copper + " copper for €" + Model.CurrentOrder.reward + ". No rush."); Beep(); }
-                else if (target.kind == TargetKind.OrderBoard) { Tell("Copper delivered • " + Model.State.orderDelivered + "/" + Model.CurrentOrder.copper + ". The order pays when complete."); Beep(1.2f); }
+                else if(Model.State.commissionIndex>oldCommission){Tell("Restoration request complete • +€"+(Model.State.money-oldMoney)+". Another neighbour has a request on the board.");Beep(1.6f);}
+                else if(target.kind==TargetKind.OrderBoard){Tell(oldKind==MaterialKind.Copper?"Copper delivered • "+Model.State.orderDelivered+"/"+Model.CurrentOrder.copper+". The order pays when complete.":"Appliance delivered • "+Model.State.commissionDelivered+"/"+Model.CurrentCommission.quantity+". Your request and agreed payout are kept for later.");Beep(1.2f);}
                 else if (target.kind == TargetKind.WireStorage || target.kind == TargetKind.CopperStorage) { Tell(Model.Carried == null ? "Bundle stored safely. Use this bin with empty hands to retrieve it." : "Bundle retrieved from storage."); Beep(); }
                 else if (Model.State.money > oldMoney) { Tell("Sold " + YardItemVisual.Label(oldKind) + " • +€" + (Model.State.money - oldMoney)); Beep(1.6f); }
-                else if (target.kind == TargetKind.FanBench && Model.State.fanStage == FanStage.Tested) { Tell(Model.CurrentRepair.testResult+" Collect it and sell it for €"+Model.CurrentRepair.salePrice+"."); Beep(1.4f); }
+                else if (target.kind == TargetKind.FanBench && Model.State.fanStage == FanStage.Tested) { Tell(Model.CurrentRepair.testResult+" Collect it for resale or a matching customer request."); Beep(1.4f); }
                 else if (!ownedBefore && Model.State.machineOwned) { Tell("Powered stripper installed • -€" + Model.Rules.machinePrice + ". Feed wire into the front opening."); Beep(.8f); }
                 else if (target.kind == TargetKind.Machine && Model.State.machineRemaining > 0) { Tell("Wire accepted. Rollers are stripping; collect copper from the output tray when ready."); Beep(.9f); }
                 else { Tell(YardGuidance.Objective(Model, controls.Label(ControlAction.Interact), controls.Label(ControlAction.ManualWork), controls.Label(ControlAction.Drop))); Beep(); }
@@ -309,6 +314,7 @@ namespace Scrapshift
                 hudLegend = ControlHints();
                 hudDay = "DAY " + ((long)Model.State.dayIndex+1) + "    •    €" + Model.State.money;
                 hudOrder = Model.State.orderAccepted ? Model.CurrentOrder.customer+"\n"+Model.State.orderDelivered+" / "+Model.CurrentOrder.copper+" copper • €"+Model.CurrentOrder.reward : "";
+                if(Model.State.commissionAccepted)hudOrder+=(hudOrder.Length>0?"\n\n":"")+Model.CurrentCommission.customer+"\n"+Model.State.commissionDelivered+" / "+Model.CurrentCommission.quantity+" "+Model.CurrentCommission.ItemName+" • €"+Model.CommissionReward;
                 var p = player.transform.position;
                 hudArea = YardWorldLayout.Area(p.x,p.z);
                 var destination = navigator.Resolve(Model,p.x,p.z);
@@ -344,6 +350,7 @@ namespace Scrapshift
                 if (mapOpen) { DrawYardMap(width, height); return; }
                 if (ordersOpen) { DrawOrders(width, height); return; }
                 if (repairOpen) { DrawRepair(width, height); return; }
+                if(dayReportOpen){DrawDayReport(width,height);return;}
                 if (dayOpen) { DrawDay(width, height); return; }
                 float objectiveWidth = Mathf.Min(width - 40, 420);
                 GUI.Box(new Rect(20,20,objectiveWidth,152), "");
@@ -351,10 +358,10 @@ namespace Scrapshift
                 GUI.Label(new Rect(34,58,objectiveWidth-28,68),hudObjective,controlLegend);
                 GUI.Label(new Rect(34,137,objectiveWidth-28,28),hudRoute,controlLegend);
                 GUI.Label(new Rect(24,178,objectiveWidth,24),hudArea,controlLegend);
-                if (Model.State.orderAccepted && width > 900)
+                if ((Model.State.orderAccepted || Model.State.commissionAccepted) && width > 900)
                 {
-                    GUI.Box(new Rect(width-300,20,280,95),"CUSTOMER ORDER");
-                    GUI.Label(new Rect(width-286,48,252,54),hudOrder,controlLegend);
+                    GUI.Box(new Rect(width-310,20,290,180),"ACTIVE REQUESTS");
+                    GUI.Label(new Rect(width-296,48,262,138),hudOrder,controlLegend);
                 }
                 if (presentation.Preferences.showFrameRate)
                     GUI.Label(new Rect(width-250,height-175,230,28),frameReadout,controlLegend);
@@ -398,7 +405,12 @@ namespace Scrapshift
             var panel=new Rect((width-w)/2,(height-h)/2,w,h);
             var recipe=Model.CurrentRepair;
             GUI.Box(panel,"RESTORATION / "+recipe.name.ToUpperInvariant());
-            GUI.Label(new Rect(panel.x+20,panel.y+45,w-40,70),"Give this salvaged "+recipe.name+" another life, or recover its useful copper.",wrappedLabel);
+            bool requested=Model.State.commissionAccepted && Model.CurrentCommission.kind==
+                (Model.State.benchAppliance==RepairAppliance.PortableRadio?MaterialKind.RestoredRadio:MaterialKind.RestoredFan);
+            int requestedCount=Model.CurrentCommission.quantity-Model.State.commissionDelivered;
+            GUI.Label(new Rect(panel.x+20,panel.y+45,w-40,70),requested?
+                Model.CurrentCommission.customer+" needs "+requestedCount+" more "+Model.CurrentCommission.ItemName+(requestedCount==1?"":"s")+".\nAgreed payout: €"+Model.CommissionReward+" after all deliveries.":
+                "Give this salvaged "+recipe.name+" another life, or recover its useful copper.",wrappedLabel);
             if(Model.State.fanStage==FanStage.AwaitingInspection)
             {
                 GUI.Label(new Rect(panel.x+20,panel.y+135,w-40,105),"Inspect the housing, wiring and moving parts before choosing a repair. The fault stays with this appliance until the job is finished.",wrappedLabel);
@@ -428,24 +440,6 @@ namespace Scrapshift
                 GUI.Label(new Rect(panel.x+20,panel.y+150,w-40,150),"Current job: "+(Model.State.fanStage==FanStage.Repairing?recipe.workAction:"recovering copper")+"\n"+Model.State.fanStrokes+" hand-work steps complete.\nReturn to the bench and use ["+controls.Label(ControlAction.ManualWork)+"].",wrappedLabel);
             if(GUI.Button(new Rect(panel.x+20,panel.yMax-55,w-40,40),"Back / Escape"))repairOpen=false;
         }
-        void DrawDay(float width,float height)
-        {
-            float w=Mathf.Min(width-30,640),h=Mathf.Min(height-30,620);
-            var panel=new Rect((width-w)/2,(height-h)/2,w,h);
-            GUI.Box(panel,"YARD DIARY / DAY "+((long)Model.State.dayIndex+1));
-            if(GUI.Button(new Rect(panel.x+20,panel.y+42,(w-50)/2,35),"Day review"))investmentsOpen=false;
-            if(GUI.Button(new Rect(panel.center.x+5,panel.y+42,(w-50)/2,35),"Invest in the yard"))investmentsOpen=true;
-            if(investmentsOpen){DrawInvestments(panel);return;}
-            GUI.Label(new Rect(panel.x+20,panel.y+100,w-40,190),"Sales and contract income today: €"+Model.State.incomeToday+"\nCash on hand: €"+Model.State.money+"\nCompleted customer orders: "+Model.State.orderIndex+"\nFans restored: "+Model.State.fansRepaired+" / dismantled: "+Model.State.fansDismantled+"\nRadios restored: "+Model.State.radiosRepaired+" / dismantled: "+Model.State.radiosDismantled+"\nSalvage fans left today: "+Mathf.Max(0,Model.Rules.fanDailyLimit-Model.State.fansTakenToday)+" / radios: "+Mathf.Max(0,Model.Rules.radioDailyLimit-Model.State.radiosTakenToday),wrappedLabel);
-            GUI.Label(new Rect(panel.x+20,panel.y+315,w-40,110),"Return tomorrow for a fresh appliance-salvage delivery. Inventory, repairs and customer orders are kept; the powered stripper finishes its current load overnight. There are no deadlines or daily fees.",wrappedLabel);
-            GUI.enabled=Model.State.dayIndex<int.MaxValue;
-            if (GUI.Button(new Rect(panel.x+20,panel.y+475,w-40,45),"Finish day / return on day "+((long)Model.State.dayIndex+2)))
-            {
-                if (Model.AdvanceDay()) { SyncViews();Save();SetPaused(false);Tell("A fresh day at the yard. Fresh fans and radios have arrived at salvage.");Beep(1.3f); }
-            }
-            GUI.enabled=true;
-            if (GUI.Button(new Rect(panel.x+20,panel.yMax-55,w-40,40),"Keep working / Back (Escape)")) dayOpen=false;
-        }
         void DrawInvestments(Rect panel)
         {
             GUI.Label(new Rect(panel.x+20,panel.y+87,panel.width-40,30),"Cash available: €"+Model.State.money);
@@ -465,21 +459,6 @@ namespace Scrapshift
                 if(Model.BuyUpgrade(upgrade)){SyncViews();Save();Beep(1.2f);Tell(title+" installed.");}
             }
             GUI.enabled=true;
-        }
-        void DrawOrders(float width, float height)
-        {
-            float w = Mathf.Min(width - 30, 640), h = Mathf.Min(height - 30, 530);
-            var panel = new Rect((width - w) / 2, (height - h) / 2, w, h);
-            GUI.Box(panel, "ORDERS & STORAGE");
-            var order = Model.CurrentOrder;
-            GUI.Label(new Rect(panel.x + 20, panel.y + 40, w - 40, 75),
-                (Model.State.orderAccepted ? "ACTIVE ORDER" : "AVAILABLE AT THE CUSTOMER BOARD") + "\n" + order.customer + " / " + order.title, wrappedLabel);
-            GUI.Label(new Rect(panel.x + 20, panel.y + 125, w - 40, 100), order.note + "\n" + Model.State.orderDelivered + " / " + order.copper + " copper • €" + order.reward + " on completion • No deadline", wrappedLabel);
-            GUI.Label(new Rect(panel.x + 20, panel.y + 240, w - 40, 105),
-                "Completed orders: " + Model.State.orderIndex + " / Yard occupancy: " + Model.OccupiedBundles + "/" + Model.Capacity + "\nWire storage: " + Model.StoredBundles(MaterialKind.Wire) + " bundles\nCopper storage: " + Model.StoredQuantity(MaterialKind.Copper) + " units in " + Model.StoredBundles(MaterialKind.Copper) + " bundles", wrappedLabel);
-            GUI.Label(new Rect(panel.x + 20, panel.y + 355, w - 40, 80),
-                "Use the CUSTOMER BOARD north of the workshop to accept and deliver. Storage bins east of the workshop store your carried bundle; use them with empty hands to retrieve one.", controlLegend);
-            if (GUI.Button(new Rect(panel.x + 20, panel.yMax - 55, w - 40, 40), "Back / Escape")) ordersOpen = false;
         }
         void DrawYardMap(float width, float height)
         {

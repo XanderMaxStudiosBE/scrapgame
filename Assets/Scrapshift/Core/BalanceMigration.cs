@@ -23,6 +23,7 @@ namespace Scrapshift
             Fill(ref rules.radioRepairStrokes,defaults.radioRepairStrokes,ref changed);
             Fill(ref rules.radioDismantleStrokes,defaults.radioDismantleStrokes,ref changed);
             Fill(ref rules.radioDailyLimit,defaults.radioDailyLimit,ref changed);
+            Fill(ref rules.commissionBonusPerItem,defaults.commissionBonusPerItem,ref changed);
             return changed;
         }
         static void Fill(ref int value,int fallback,ref bool changed){if(value==0){value=fallback;changed=true;}}

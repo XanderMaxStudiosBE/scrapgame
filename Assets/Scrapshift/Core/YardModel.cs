@@ -16,7 +16,7 @@ namespace Scrapshift
         {
             rules.Validate();
             Rules = rules;
-            State = state ?? new YardState();
+            State = state ?? new YardState { dailyDetailsComplete=true };
             Validate(State);
         }
         public ScrapItem Find(int id)
@@ -67,6 +67,7 @@ namespace Scrapshift
                     (item.id == s.carriedId && item.storage != StorageSlot.None) || !Finite(item.x) || !Finite(item.y) || !Finite(item.z))
                     throw new ArgumentException("Invalid item state.");
             if (s.carriedId != 0 && !ids.Contains(s.carriedId)) throw new ArgumentException("Missing carried item.");
+            RestorationOrders.Validate(s);YardDayReport.Validate(s);
         }
         ScrapItem Create(MaterialKind kind, int quantity)
         {
@@ -118,6 +119,7 @@ namespace Scrapshift
         {
             State.benchLoaded = false; State.benchStrokes = 0; State.benchOutput = Rules.copperPerWire;
             State.milestones|=YardMilestone.RecoveredCopper;
+            CountToday(ref State.wireLoadsToday,1);
         }
         public bool CollectBench()
         {
@@ -132,6 +134,8 @@ namespace Scrapshift
             long money = (long)State.money + value;
             if (money > int.MaxValue) return false;
             RecordIncome((int)value);
+            if(item.kind==MaterialKind.Copper)CountToday(ref State.copperSoldToday,item.quantity);
+            else CountToday(ref State.appliancesSoldToday,1);
             State.money = (int)money; State.items.Remove(item); State.carriedId = 0; return true;
         }
         public int StoredBundles(MaterialKind kind)
@@ -185,11 +189,13 @@ namespace Scrapshift
             long payment = (long)State.money + order.reward;
             // A failed payment never consumes the final material or advances the order.
             if (complete && payment > int.MaxValue) return false;
+            CountToday(ref State.copperDeliveredToday,delivered);
             item.quantity -= delivered;
             if (item.quantity == 0) { State.items.Remove(item); State.carriedId = 0; }
             if (complete)
             {
                 RecordIncome(order.reward);
+                CountToday(ref State.copperOrdersToday,1);
                 State.money = (int)payment; State.orderIndex++;
                 State.milestones|=YardMilestone.ServedCustomer;
                 State.orderAccepted = false; State.orderDelivered = 0;
@@ -200,7 +206,7 @@ namespace Scrapshift
         public bool BuyMachine()
         {
             if (State.machineOwned || State.money < Rules.machinePrice) return false;
-            State.money -= Rules.machinePrice; State.machineOwned = true; State.milestones|=YardMilestone.PoweredYard; return true;
+            State.money -= Rules.machinePrice;RecordExpense(Rules.machinePrice,true); State.machineOwned = true; State.milestones|=YardMilestone.PoweredYard; return true;
         }
         public bool FeedMachine()
         {
@@ -215,6 +221,7 @@ namespace Scrapshift
             {
                 State.machineOutput = State.machinePendingYield; State.machinePendingYield = 0;
                 State.milestones|=YardMilestone.RecoveredCopper;
+                CountToday(ref State.wireLoadsToday,1);
             }
         }
         public bool CollectMachine()

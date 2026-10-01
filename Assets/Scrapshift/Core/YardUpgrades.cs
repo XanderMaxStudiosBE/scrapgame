@@ -29,7 +29,7 @@ namespace Scrapshift
         public bool BuyUpgrade(YardUpgrade upgrade)
         {
             if(!CanBuyUpgrade(upgrade))return false;
-            State.money-=UpgradePrice(upgrade);State.upgrades|=upgrade;
+            int price=UpgradePrice(upgrade);State.money-=price;RecordExpense(price,true);State.upgrades|=upgrade;
             State.milestones|=YardMilestone.InvestedYard;
             if(upgrade==YardUpgrade.HandTools)
             {

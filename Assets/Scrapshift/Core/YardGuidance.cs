@@ -58,12 +58,17 @@ namespace Scrapshift
                             (carried.kind == storedKind ? use + "store carried bundle • " + stored + " stored" : "This bin holds " + storedKind.ToString().ToLowerInvariant() + "."));
                     return new StationHint(stored > 0, bin + " • " + (stored > 0 ? use + "take one bundle • " + m.StoredQuantity(storedKind) + " units stored" : "Empty. Bring " + storedKind.ToString().ToLowerInvariant() + " here to store it."));
                 case TargetKind.OrderBoard:
+                    if(m.CanDeliverCommission)
+                    {
+                        bool final=s.commissionDelivered+1==m.CurrentCommission.quantity;
+                        if(final && (long)s.money+m.CommissionReward>int.MaxValue)
+                            return new StationHint(false,"CUSTOMER BOARD • Balance limit reached; appliance retained.");
+                        return new StationHint(true,"CUSTOMER BOARD • "+use+"deliver "+m.CurrentCommission.ItemName+" • "+s.commissionDelivered+"/"+m.CurrentCommission.quantity+" • €"+m.CommissionReward+" on completion");
+                    }
                     var order = m.CurrentOrder;
-                    if (!s.orderAccepted)
-                        return new StationHint(s.orderIndex < int.MaxValue, "CUSTOMER BOARD • " + use + "accept " + order.copper + " copper for €" + order.reward + " • no deadline");
+                    if (!s.orderAccepted || carried==null || carried.kind!=MaterialKind.Copper)
+                        return new StationHint(true,"CUSTOMER BOARD • "+use+"view copper and appliance requests • no deadlines");
                     int remaining = order.copper - s.orderDelivered;
-                    if (carried == null || carried.kind != MaterialKind.Copper)
-                        return new StationHint(false, "CUSTOMER BOARD • " + order.customer + " needs " + remaining + " more copper. Carry a copper bundle here.");
                     int amount = System.Math.Min(remaining, carried.quantity);
                     if (amount == remaining && (long)s.money + order.reward > int.MaxValue)
                         return new StationHint(false, "CUSTOMER BOARD • Balance limit reached; copper retained.");
@@ -85,7 +90,8 @@ namespace Scrapshift
                         return new StationHint(false,"SCRAP BUYER • "+(ApplianceRecipe.IsBroken(carried.kind)?"Inspect, repair or dismantle this appliance at the restoration bench first.":"Wire must be stripped at the bench or machine first."));
                     long value=m.SaleValue(carried);
                     if((long)s.money+value>int.MaxValue)return new StationHint(false,"SCRAP BUYER • Balance limit reached; item retained.");
-                    return new StationHint(true,"SCRAP BUYER • "+use+"sell "+(ApplianceRecipe.IsRestored(carried.kind)?"tested "+ApplianceName(carried.kind):carried.quantity+" copper")+" for €"+value);
+                    return new StationHint(true,"SCRAP BUYER • "+use+"sell "+(ApplianceRecipe.IsRestored(carried.kind)?"tested "+ApplianceName(carried.kind):carried.quantity+" copper")+" for €"+value+
+                        (m.CanDeliverCommission?" • Your customer request pays €"+m.CommissionReward+" on completion at the board.":""));
                 case TargetKind.Bench:
                     if (s.benchOutput > 0) return OutputHint(m, "WORKBENCH", s.benchOutput, use, emptyHands);
                     if (s.benchLoaded)
@@ -129,10 +135,11 @@ namespace Scrapshift
         {
             var s = m.State; var c = m.Carried; var r = m.Rules;
             if(c!=null && ApplianceRecipe.IsBroken(c.kind))return "Place the "+ApplianceName(c.kind)+" on the RESTORATION BENCH ["+interact+"] to inspect it.";
+            if(m.CanDeliverCommission)return "Deliver your "+m.CurrentCommission.ItemName+" to the CUSTOMER BOARD ["+interact+"] • "+s.commissionDelivered+"/"+m.CurrentCommission.quantity+" • €"+m.CommissionReward+" on completion.";
             if(c!=null && ApplianceRecipe.IsRestored(c.kind))return "Sell your tested "+ApplianceName(c.kind)+" at the BUYER ["+interact+"] • €"+m.SaleValue(c)+".";
             if (s.orderAccepted && c != null && c.kind == MaterialKind.Copper) return "Deliver copper to the CUSTOMER BOARD [" + interact + "] • " + s.orderDelivered + "/" + m.CurrentOrder.copper + ".";
             if (c != null && c.kind == MaterialKind.Copper) return "Sell your copper at the BUYER [" + interact + "].";
-            if (!s.machineOwned && s.money >= r.machinePrice) return "Buy the POWERED STRIPPER for €" + r.machinePrice + " [" + interact + "].";
+            if (!s.machineOwned && s.money >= r.machinePrice && (!s.commissionAccepted || c!=null)) return "Buy the POWERED STRIPPER for €" + r.machinePrice + " [" + interact + "].";
             if (c != null)
             {
                 if (s.machineOwned && s.machineRemaining == 0 && s.machineOutput == 0) return "Feed wire into the STRIPPER's front opening [" + interact + "].";
@@ -148,6 +155,13 @@ namespace Scrapshift
             if (s.fanStage == FanStage.AwaitingInspection || s.fanStage == FanStage.Diagnosed) return "Inspect the RESTORATION BENCH [" + interact + "] and choose repair or salvage.";
             if (s.orderAccepted && m.StoredBundles(MaterialKind.Copper) > 0) return "Take copper from COPPER STORAGE [" + interact + "] for your customer order.";
             if (m.StoredBundles(MaterialKind.Wire) > 0) return "Take wire from WIRE STORAGE [" + interact + "] to process it.";
+            if(s.commissionAccepted)
+            {
+                bool radio=m.CurrentCommission.kind==MaterialKind.RestoredRadio;
+                int left=radio?r.radioDailyLimit-s.radiosTakenToday:r.fanDailyLimit-s.fansTakenToday;
+                return left>0 ? "Restore a "+(radio?"radio from ELECTRONICS SALVAGE":"fan from APPLIANCE SALVAGE")+" for "+m.CurrentCommission.customer+" • €"+m.CommissionReward+" on completion." :
+                    "Finish any remaining "+(radio?"radio":"fan")+" in the yard, or visit the YARD DIARY ["+interact+"] for fresh salvage tomorrow. Your request stays active.";
+            }
             if (s.machineRemaining > 0) return "The STRIPPER is working. Take more wire to the manual bench while you wait.";
             if (s.orderAccepted) return "Strip wire for " + m.CurrentOrder.customer + " • " + s.orderDelivered + "/" + m.CurrentOrder.copper + " copper delivered.";
             if (s.machineOwned && (m.CanBuyUpgrade(YardUpgrade.StorageRack) || m.CanBuyUpgrade(YardUpgrade.HandTools) || m.CanBuyUpgrade(YardUpgrade.MachineTuning)))

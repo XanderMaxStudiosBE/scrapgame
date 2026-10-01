@@ -59,9 +59,10 @@ namespace Scrapshift
         {
             var s=m.State;var c=m.Carried;
             if(c!=null && ApplianceRecipe.IsBroken(c.kind))return Get(YardLandmark.FanBench);
+            if(m.CanDeliverCommission)return Get(YardLandmark.Orders);
             if(c!=null && ApplianceRecipe.IsRestored(c.kind))return Get(YardLandmark.Buyer);
             if(c!=null && c.kind==MaterialKind.Copper)return Get(s.orderAccepted?YardLandmark.Orders:YardLandmark.Buyer);
-            if(!s.machineOwned && s.money>=m.Rules.machinePrice)return Get(YardLandmark.Machine);
+            if(!s.machineOwned && s.money>=m.Rules.machinePrice && (!s.commissionAccepted || c!=null))return Get(YardLandmark.Machine);
             if(c!=null)
             {
                 if(s.machineOwned && s.machineRemaining==0 && s.machineOutput==0)return Get(YardLandmark.Machine);
@@ -73,6 +74,12 @@ namespace Scrapshift
             if(s.fanStage!=FanStage.Empty)return Get(YardLandmark.FanBench);
             if(s.orderAccepted && m.StoredBundles(MaterialKind.Copper)>0)return Get(YardLandmark.CopperStorage);
             if(m.StoredBundles(MaterialKind.Wire)>0)return Get(YardLandmark.WireStorage);
+            if(s.commissionAccepted)
+            {
+                bool radio=m.CurrentCommission.kind==MaterialKind.RestoredRadio;
+                int left=radio?m.Rules.radioDailyLimit-s.radiosTakenToday:m.Rules.fanDailyLimit-s.fansTakenToday;
+                return Get(left>0?(radio?YardLandmark.RadioSupply:YardLandmark.FanSupply):YardLandmark.Diary);
+            }
             if(s.orderAccepted || s.machineRemaining>0)return NearestWire(x,z);
             if(s.machineOwned && (m.CanBuyUpgrade(YardUpgrade.StorageRack)||m.CanBuyUpgrade(YardUpgrade.HandTools)||m.CanBuyUpgrade(YardUpgrade.MachineTuning)))return Get(YardLandmark.Diary);
             return NearestWire(x,z);

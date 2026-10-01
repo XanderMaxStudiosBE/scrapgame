@@ -48,6 +48,18 @@ class CoreRunner
             try{ApplianceScenarios.Run(name);Console.WriteLine("PASS "+name);}
             catch(Exception ex){failed++;Console.WriteLine("FAIL "+name+": "+ex.Message);}
         }
+        foreach(var name in RestorationOrderScenarios.Names)
+        {
+            total++;
+            try{RestorationOrderScenarios.Run(name);Console.WriteLine("PASS "+name);}
+            catch(Exception ex){failed++;Console.WriteLine("FAIL "+name+": "+ex.Message);}
+        }
+        foreach(var name in DayReportScenarios.Names)
+        {
+            total++;
+            try{DayReportScenarios.Run(name);Console.WriteLine("PASS "+name);}
+            catch(Exception ex){failed++;Console.WriteLine("FAIL "+name+": "+ex.Message);}
+        }
         foreach(var name in JourneyScenarios.Names)
         {
             total++;

@@ -27,6 +27,9 @@ namespace Scrapshift
                     case TargetKind.Sell:Patch(vertices,colors,triangles,p,1.45f,.85f,.13f);break;
                     case TargetKind.WireStorage:case TargetKind.CopperStorage:Patch(vertices,colors,triangles,p,1.25f,.9f,.14f);break;
                     case TargetKind.DayBoard:Patch(vertices,colors,triangles,p,.8f,.45f,.13f);break;
+                    case TargetKind.OrderBoard:
+                        foreach(float x in new[]{-2.2f,2.2f})Patch(vertices,colors,triangles,p+new Vector3(x,0,.06f),.25f,.25f,.2f);
+                        break;
                 }
             }
             foreach(var prop in parent.GetComponentsInChildren<Transform>())

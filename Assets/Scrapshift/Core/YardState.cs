@@ -53,6 +53,19 @@ namespace Scrapshift
         public int radiosTakenToday, radiosRepaired, radiosDismantled;
         public bool introSeen;
         public YardMilestone milestones;
+        public bool commissionAccepted;
+        public int commissionIndex, commissionDelivered, commissionReward;
+        // New day detail starts complete for a new model or after the next day boundary.
+        // Absent old-save fields mean unknown earlier spending/work, never invented profit.
+        public bool dailyDetailsComplete, dailyTotalsCapped;
+        public int dayOpeningCash, partsSpentToday, equipmentSpentToday;
+        public int wireLoadsToday, copperSoldToday, copperDeliveredToday;
+        public int appliancesTestedToday, appliancesSalvagedToday, appliancesSoldToday, appliancesDeliveredToday;
+        public int copperOrdersToday, restorationOrdersToday;
+        public bool hasLastDayReport, lastDayDetailsComplete, lastDayTotalsCapped;
+        public int lastDayIndex, lastDayIncome, lastDayOpeningCash, lastDayClosingCash, lastDayPartsSpent, lastDayEquipmentSpent;
+        public int lastDayWireLoads, lastDayCopperSold, lastDayCopperDelivered;
+        public int lastDayAppliancesTested, lastDayAppliancesSalvaged, lastDayAppliancesSold, lastDayAppliancesDelivered, lastDayCopperOrders, lastDayRestorationOrders;
     }
 
     [Serializable]
@@ -69,6 +82,7 @@ namespace Scrapshift
         public int storageUpgradePrice = 60, toolsUpgradePrice = 75, tuningUpgradePrice = 120;
         public int radioPartsPrice = 6, radioSalePrice = 34, radioCopperYield = 2;
         public int radioRepairStrokes = 3, radioDismantleStrokes = 3, radioDailyLimit = 1;
+        public int commissionBonusPerItem = 10;
 
         public void Validate()
         {
@@ -81,7 +95,8 @@ namespace Scrapshift
                 toolsUpgradePrice < 1 || toolsUpgradePrice > 10000 || tuningUpgradePrice < 1 || tuningUpgradePrice > 10000 ||
                 radioPartsPrice < 1 || radioPartsPrice > 10000 || radioSalePrice < 1 || radioSalePrice > 10000 ||
                 radioCopperYield < 1 || radioCopperYield > 100 || radioRepairStrokes < 1 || radioRepairStrokes > 100 ||
-                radioDismantleStrokes < 1 || radioDismantleStrokes > 100 || radioDailyLimit < 1 || radioDailyLimit > 100)
+                radioDismantleStrokes < 1 || radioDismantleStrokes > 100 || radioDailyLimit < 1 || radioDailyLimit > 100 ||
+                commissionBonusPerItem < 1 || commissionBonusPerItem > 10000)
                 throw new ArgumentException("Invalid prototype balance values.");
         }
     }

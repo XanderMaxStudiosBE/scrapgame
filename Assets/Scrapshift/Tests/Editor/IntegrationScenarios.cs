@@ -6,13 +6,14 @@ namespace Scrapshift.Tests
 {
     public static class IntegrationScenarios
     {
-        public static readonly string[] Names={"MixedYardConservation", "BusinessProgressionFromZero", "ReducedCapacityPreservesReservedOutputs"};
+        public static readonly string[] Names={"MixedYardConservation", "BusinessProgressionFromZero", "ReducedCapacityPreservesReservedOutputs", "RestorationRequestsFromZero"};
         static void Check(bool value,string message){if(!value)throw new Exception(message);}
         public static void Run(string name)
         {
             if(name=="MixedYardConservation")Fuzz();
             else if(name=="BusinessProgressionFromZero")Progression();
             else if(name=="ReducedCapacityPreservesReservedOutputs")ReducedCapacity();
+            else if(name=="RestorationRequestsFromZero")RestorationProgression();
             else throw new Exception(name);
         }
         static void ReducedCapacity()
@@ -67,7 +68,7 @@ namespace Scrapshift.Tests
             long acquired=0,consumed=0,expectedMoney=0;
             for(int i=0;i<20000;i++)
             {
-                string before=Fingerprint(m.State);bool success=false;int action=random.Next(26);
+                string before=Fingerprint(m.State);bool success=false;int action=random.Next(28);
                 ScrapItem held=m.Carried;int money=m.State.money;
                 switch(action)
                 {
@@ -105,6 +106,11 @@ namespace Scrapshift.Tests
                     case 23:success=m.TestFan();break;
                     case 24:success=m.CollectFan();break;
                     case 25:success=m.AcquireRadio();if(success)acquired+=m.Rules.radioCopperYield;break;
+                    case 26:success=m.AcceptCommission();break;
+                    case 27:
+                        int agreed=m.State.commissionReward;
+                        success=m.DeliverCommission();
+                        if(success){consumed+=held.kind==MaterialKind.RestoredRadio?m.Rules.radioCopperYield:m.Rules.fanCopperYield;if(!m.State.commissionAccepted)expectedMoney+=agreed;}break;
                 }
                 Check(success || before==Fingerprint(m.State),"Rejected action mutated state at step "+i+" action "+action);
                 if(i%7==0)m.Tick(.5f);if(i%59==0)m.AdvanceDay();
@@ -145,6 +151,29 @@ namespace Scrapshift.Tests
             Check(m.State.machineOwned&&m.Owns(YardUpgrade.StorageRack|YardUpgrade.HandTools|YardUpgrade.MachineTuning),"all upgrades earned from zero");
             Check(m.State.orderIndex>5&&m.State.fansRepaired>10&&m.State.dayIndex==12,"repeat business progression");
             Check(m.State.money>0&&m.State.items.Count==0,"clean retained economy");
+        }
+        static void RestorationProgression()
+        {
+            var m=new YardModel(new YardRules());
+            m.AcceptOrder();BusinessScenarioTools.Copper(m);Check(m.DeliverOrder()&&m.State.money==18,"first copper request funds parts");
+            int costs=0;
+            for(int request=0;request<4;request++)
+            {
+                Check(m.AcceptCommission(),"accept next neighbour request");
+                bool radio=m.CurrentCommission.kind==MaterialKind.RestoredRadio;
+                int count=m.CurrentCommission.quantity;
+                for(int item=0;item<count;item++)
+                {
+                    if((radio?m.State.radiosTakenToday:m.State.fansTakenToday)>=(radio?m.Rules.radioDailyLimit:m.Rules.fanDailyLimit))Check(m.AdvanceDay(),"replenish only exhausted stock");
+                    int cash=m.State.money;BusinessScenarioTools.Repair(m,radio);costs+=cash-m.State.money;
+                    Check(m.DeliverCommission(),"tested appliance delivered");
+                    m=new YardModel(m.Rules,Copy(m.State));
+                }
+            }
+            Check(costs==25&&m.State.money==281&&m.State.dayIndex==2,"default route earns every euro and covers actual parts");
+            Check(m.State.commissionIndex==4&&m.State.orderIndex==1&&m.State.items.Count==0,"all four restoration requests and original copper order complete");
+            Check(m.CurrentCommission.customer=="Marta's Cafe"&&m.State.fansRepaired==3&&m.State.radiosRepaired==3,"repeatable queue, correct tested counts");
+            YardModel.Validate(m.State);
         }
     }
 }

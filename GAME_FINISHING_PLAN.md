@@ -10,7 +10,7 @@ Accept this milestone after the workshop, restoration bench and salvage rows sta
 
 ## 2. Make a full scrapyard day worth playing
 
-Source implemented: one repairable portable radio, three inspectable faults for fans and radios, and explicit repair-versus-salvage costs/work/outcomes. Electronics salvage makes the eastern district useful. Faults persist with items and partial jobs; legacy fan fields/defaults remain compatible. Customer requests currently remain copper orders. Keep bounded recipes, exactly-once payments/materials and additive old-save compatibility. Keep the relaxed day loop and avoid fees/deadlines that punish experimentation.
+Source implemented: one repairable portable radio, three inspectable faults for fans and radios, and explicit repair-versus-salvage costs/work/outcomes. Electronics salvage makes the eastern district useful. Faults persist with items and partial jobs; legacy fan fields/defaults remain compatible. Independent neighbourhood fan/radio requests now reward explicit tests, keep agreed payouts and separate partial deliveries across days/saves. A daily money/work ledger and saved last-day receipt make costs and accomplishments clear; legacy saves label unknown earlier detail until the next full day. Copper orders remain compatible. Keep bounded recipes, exactly-once payments/materials and additive old-save compatibility. Keep the relaxed day loop and avoid fees/deadlines that punish experimentation.
 
 Accept after a new player can find scrap, make a worthwhile repair choice, finish a contract, buy a useful improvement and understand what to try next. Verify partial jobs, rejected inputs, full hands, save/restart and all menu transitions.
 

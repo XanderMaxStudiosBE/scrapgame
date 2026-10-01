@@ -11,7 +11,6 @@ namespace Scrapshift
                     (State.machineRemaining > 0 || State.machineOutput > 0 ? 1 : 0) + (State.fanStage != FanStage.Empty ? 1 : 0);
             }
         }
-        void RecordIncome(int amount) { State.incomeToday = (int)Math.Min(int.MaxValue, (long)State.incomeToday + amount); State.milestones|=YardMilestone.EarnedIncome; }
         public bool AcquireFan()
         {
             if (Carried != null || OccupiedBundles >= Capacity || State.nextId == int.MaxValue || State.fansTakenToday >= Rules.fanDailyLimit) return false;
@@ -44,7 +43,7 @@ namespace Scrapshift
         public bool BeginFanRepair()
         {
             if (State.fanStage != FanStage.Diagnosed || State.money < CurrentRepair.partsPrice) return false;
-            State.money -= CurrentRepair.partsPrice; State.fanStage = FanStage.Repairing; return true;
+            State.money -= CurrentRepair.partsPrice;RecordExpense(CurrentRepair.partsPrice,false); State.fanStage = FanStage.Repairing; return true;
         }
         public bool BeginFanDismantle()
         {
@@ -69,6 +68,7 @@ namespace Scrapshift
             if (!repairing)
             {
                 State.milestones|=YardMilestone.RecoveredCopper;
+                CountToday(ref State.appliancesSalvagedToday,1);
                 if(State.benchAppliance==RepairAppliance.PortableRadio)State.radiosDismantled=Math.Min(int.MaxValue-1,State.radiosDismantled)+1;
                 else State.fansDismantled = Math.Min(int.MaxValue - 1, State.fansDismantled) + 1;
             }
@@ -78,6 +78,7 @@ namespace Scrapshift
             if (State.fanStage != FanStage.ReadyToTest || Carried != null) return false;
             State.fanStage = FanStage.Tested;
             State.milestones|=YardMilestone.RestoredAppliance;
+            CountToday(ref State.appliancesTestedToday,1);
             if(State.benchAppliance==RepairAppliance.PortableRadio)State.radiosRepaired=Math.Min(int.MaxValue-1,State.radiosRepaired)+1;
             else State.fansRepaired = Math.Min(int.MaxValue - 1, State.fansRepaired) + 1;
             return true;
@@ -97,7 +98,7 @@ namespace Scrapshift
             if (State.dayIndex == int.MaxValue) return false;
             // Powered work finishes overnight once; hand-work and all material locations are retained.
             if (State.machineRemaining > 0) Tick(State.machineRemaining);
-            State.dayIndex++; State.fansTakenToday = 0; State.radiosTakenToday=0; State.incomeToday = 0; return true;
+            CloseDayReport();State.dayIndex++; State.fansTakenToday = 0; State.radiosTakenToday=0; return true;
         }
     }
 }

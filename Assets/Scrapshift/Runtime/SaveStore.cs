@@ -26,7 +26,7 @@ namespace Scrapshift
         public static YardState Read(string path, out string message)
         {
             message = "New yard. Start at the delivery crate.";
-            if (!File.Exists(path) && !File.Exists(path + ".bak")) return new YardState();
+            if (!File.Exists(path) && !File.Exists(path + ".bak")) return new YardState { dailyDetailsComplete=true };
             foreach (string candidate in new[] { path, path + ".bak" })
             {
                 if (!File.Exists(candidate)) continue;

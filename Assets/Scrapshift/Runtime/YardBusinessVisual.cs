@@ -5,13 +5,13 @@ namespace Scrapshift
     public sealed class YardBusinessVisual
     {
         public readonly Transform wireStock, copperStock, rack;
-        public readonly TextMesh orderText;
+        public readonly TextMesh orderText, commissionText;
         public static readonly Vector3 WirePosition = YardBootstrap.StationPosition(YardLandmark.WireStorage);
         public static readonly Vector3 CopperPosition = YardBootstrap.StationPosition(YardLandmark.CopperStorage);
         public static readonly Vector3 OrderPosition = YardBootstrap.StationPosition(YardLandmark.Orders);
 
-        YardBusinessVisual(Transform wire, Transform copper, TextMesh text, Transform rack)
-        { wireStock = wire; copperStock = copper; orderText = text; this.rack = rack; }
+        YardBusinessVisual(Transform wire, Transform copper, TextMesh text, TextMesh commission, Transform rack)
+        { wireStock = wire; copperStock = copper; orderText = text; commissionText=commission; this.rack = rack; }
 
         public static YardBusinessVisual Build(Transform parent)
         {
@@ -22,23 +22,37 @@ namespace Scrapshift
             board.gameObject.AddComponent<InteractionTarget>().kind = TargetKind.OrderBoard;
             var collider = board.gameObject.AddComponent<BoxCollider>();
             collider.center = new Vector3(0, 1.6f, 0); collider.size = new Vector3(2.8f, 2.8f, .3f);
-            YardGeometry.SurfaceBox("Customer notice board", board, new Vector3(0, 1.9f, 0), new Vector3(2.8f, 1.8f, .15f), RetroSurface.WeatheredWood, false);
-            foreach (float x in new[] { -1.2f, 1.2f })
+            // Keep the original low footprint. The wider notice surface leaves previously
+            // dropped material outside that footprint targetable underneath its raised wings.
+            var noticeCollider=board.gameObject.AddComponent<BoxCollider>();
+            noticeCollider.center=new Vector3(0,1.9f,0);noticeCollider.size=new Vector3(4.8f,1.8f,.3f);
+            YardGeometry.SurfaceBox("Customer notice board", board, new Vector3(0, 1.9f, 0), new Vector3(4.8f, 1.8f, .15f), RetroSurface.WeatheredWood, false);
+            foreach (float x in new[] { -2.2f, 2.2f })
                 YardGeometry.SurfaceBox("Notice board post", board, new Vector3(x, 1.5f, .06f), new Vector3(.13f, 3, .13f), RetroSurface.DarkMetal, false);
-            CozyYardDetails.Accent(board, "Pinned customer note", new Vector3(0, 1.9f, -.095f), new Vector3(2.45f, 1.55f, .015f), YardGeometry.Ivory);
-            YardGeometry.Sign(board, "CUSTOMER ORDERS", new Vector3(0, 3.12f, -.12f));
-            var status = new GameObject("Live order note").transform; status.SetParent(board, false); status.localPosition = new Vector3(0, 1.9f, -.12f);
-            var text = status.gameObject.AddComponent<TextMesh>();
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); text.fontSize = 48; text.characterSize = .028f;
-            text.anchor = TextAnchor.MiddleCenter; text.alignment = TextAlignment.Center; text.color = YardGeometry.Charcoal;
-            text.GetComponent<MeshRenderer>().sharedMaterial = text.font.material;
+            var text=CustomerNote(board,-1.15f,"Copper customer note");
+            var commission=CustomerNote(board,1.15f,"Restoration customer note");
+            YardGeometry.MountedSign(board,"NEIGHBOURHOOD REQUESTS",new Vector3(0,0,-.12f),3.12f,4.3f);
             var rack=new GameObject("Storage upgrade rack").transform; rack.SetParent(parent,false);rack.localPosition=new Vector3(14,0,12);
             if(!AuthoredYardProps.TryPlace("StorageRack",rack,Vector3.zero,out GameObject rackModel))
             {
                 foreach(float x in new[]{-1.1f,1.1f})YardGeometry.SurfaceBox("Rack upright",rack,new Vector3(x,1.3f,0),new Vector3(.12f,2.6f,1.2f),RetroSurface.DarkMetal,false);
                 foreach(float y in new[]{.25f,1.35f,2.45f})YardGeometry.SurfaceBox("Rack shelf",rack,new Vector3(0,y,0),new Vector3(2.4f,.10f,1.2f),RetroSurface.WeatheredWood,false);
             }
-            return new YardBusinessVisual(wire, copper, text,rack);
+            return new YardBusinessVisual(wire, copper, text,commission,rack);
+        }
+        static TextMesh CustomerNote(Transform board,float x,string name)
+        {
+            CozyYardDetails.Accent(board,name,new Vector3(x,1.9f,-.095f),new Vector3(2.05f,1.55f,.015f),YardGeometry.Ivory);
+            // Small worn tape strips pin each useful request to the shared wooden board.
+            foreach(float edge in new[]{-.68f,.68f})
+                CozyYardDetails.Accent(board,"Note tape",new Vector3(x+edge,2.65f,-.112f),new Vector3(.2f,.13f,.012f),new Color(.67f,.64f,.49f));
+            var status=new GameObject(name+" live text").transform;
+            status.SetParent(board,false);status.localPosition=new Vector3(x,1.9f,-.125f);
+            var text=status.gameObject.AddComponent<TextMesh>();
+            text.font=Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");text.fontSize=48;text.characterSize=.022f;
+            text.anchor=TextAnchor.MiddleCenter;text.alignment=TextAlignment.Center;text.color=YardGeometry.Charcoal;
+            text.GetComponent<MeshRenderer>().sharedMaterial=text.font.material;
+            return text;
         }
         static Transform Storage(Transform parent, Vector3 pos, MaterialKind kind)
         {
@@ -69,7 +83,11 @@ namespace Scrapshift
             UpdateStock(copperStock, model.StoredBundles(MaterialKind.Copper));
             var order = model.CurrentOrder;
             orderText.text = order.customer + "\n" + (model.State.orderAccepted ? model.State.orderDelivered + " / " : "") +
-                order.copper + " COPPER\nREWARD / €" + order.reward + "\n" + (model.State.orderAccepted ? "DELIVER COPPER HERE" : "ACCEPT HERE / NO DEADLINE");
+                order.copper + " COPPER\nREWARD / €" + order.reward + "\n" + (model.State.orderAccepted ? "DELIVER COPPER HERE" : "VIEW HERE / NO DEADLINE");
+            var request=model.CurrentCommission;
+            commissionText.text=request.customer+"\n"+(model.State.commissionAccepted?model.State.commissionDelivered+" / ":"")+request.quantity+
+                (request.kind==MaterialKind.RestoredRadio?" TESTED RADIO":" TESTED FAN")+(request.quantity==1?"":"S")+"\nREWARD / €"+model.CommissionReward+"\n"+
+                (model.State.commissionAccepted?"DELIVER TESTED ITEMS HERE":"VIEW HERE / NO DEADLINE");
         }
         static void UpdateStock(Transform stock, int count)
         {

@@ -2,7 +2,7 @@
 
 A first-person scrapyard simulator prototype: collect wire and broken appliances, strip or restore them, sell useful material, fulfil customer orders and improve your yard. The visual direction is worn retro realism inspired by the warmth and readable everyday props of Retro Rewind, using original industrial assets.
 
-**Current Cloud verification:** 82 pure C# scenarios pass, including 20,000 mixed transactions and a twelve-day progression from zero money. Nineteen authored FBX files pass Blender scale/UV/triangle audits. Eight original WAVs pass format/sample checks. **Unity is unavailable here:** the 149 supplied EditMode cases, engine compilation, rendering, audio and actual FPS still need local verification. Blender previews are asset previews, not gameplay screenshots.
+**Current Cloud verification:** 97 pure C# scenarios pass, including 20,000 mixed transactions, a twelve-day progression and all four restoration requests from zero money. Nineteen authored FBX files pass Blender scale/UV/triangle audits. Eight original WAVs pass format/sample checks. **Unity is unavailable here:** the 169 supplied EditMode cases, engine compilation, rendering, audio and actual FPS still need local verification. Blender previews are asset previews, not gameplay screenshots.
 
 ## Open or update in Unity
 
@@ -10,7 +10,7 @@ Use **Unity 6000.3.25f1** and the pinned **URP 17.3.0** packages. Open this repo
 
 For a first checkout, use **Scrapshift → Create or Open Prototype**. It creates missing scene/balance/rendering assets and reuses existing ones. **Update Existing Prototype Visuals** validates tracked materials without replacing scene or balance data. Manually authored scenes without `YardBootstrap` need deliberate integration; they are not overwritten.
 
-Older Balance assets receive defaults only for missing/zero new repair and investment fields. Existing wire rules and positive custom values are retained. Tune prices, yields, durations, work strokes and capacity in `Generated/Balance.asset`.
+Older Balance assets receive defaults only for missing/zero new repair, investment and customer-bonus fields. Existing wire rules and positive custom values are retained. Tune prices, yields, durations, work strokes and capacity in `Generated/Balance.asset`.
 
 ## Controls and Settings
 
@@ -37,7 +37,7 @@ The yard now uses an editable `Resources/ScrapshiftLighting/CozyAfternoon` profi
 
 Assign a custom **Yard lighting profile** on the existing bootstrap to tune colors, fill, sun and fog; a missing assignment uses the tracked default. Sky/reflection/emissive materials are privately owned, and stopping Play restores the previous sky, ambient, fog, reflection and camera background. Tracked materials/scene data and game/preferences saves are preserved. Actual Unity rendering and performance remain unverified in Cloud.
 
-The next finishing milestones are in [GAME_FINISHING_PLAN.md](GAME_FINISHING_PLAN.md). Lighting, varied appliance repairs and the title/welcome/help/journal flow are implemented source milestones. Actual Unity validation, further art/pacing refinement and a verified desktop player build remain outstanding.
+The next finishing milestones are in [GAME_FINISHING_PLAN.md](GAME_FINISHING_PLAN.md). Lighting, varied appliance repairs, neighbourhood requests, daily work receipts and the title/welcome/help/journal flow are implemented source milestones. Actual Unity validation, further art/pacing refinement and a verified desktop player build remain outstanding.
 
 ## What to do in the yard
 
@@ -59,7 +59,18 @@ Aim at the station body within 3.2m. Prompts show current action, progress, pric
 
 Wire/copper bins east of the workshop store your carried bundle. Use a bin with empty hands to retrieve one. Storage keeps the original item ID/quantity and counts toward yard capacity; it does not duplicate inventory.
 
-Accept a request at **CUSTOMER ORDERS**, north of the workshop. Deliver copper there, including partial bundles over multiple trips. Five requests repeat with different quantities/rewards. Only required copper is consumed; surplus remains carried. Completion pays once. No deadline or daily fee. Pause → **Orders & storage** shows progress and stock.
+Use **CUSTOMER BOARD**, north of the workshop, to view two independent request queues. The same page is available through Pause → **Customer requests & storage**. Accept a request on its card, then carry matching material to the physical board and interact to deliver. Copper orders keep their original five quantities/rewards and saved sequence; partial bundles are accepted and surplus stays carried.
+
+Neighbourhood restoration requests give tested appliances another use:
+
+| Customer | Needs | Default payout |
+| --- | --- | --- |
+| Marta's Cafe | One tested fan | €52 |
+| Rowan's Garage | One tested radio | €44 |
+| Neighbourhood Hall | Two tested fans | €104 |
+| Local Repair Club | Two tested radios | €88 |
+
+These requests repeat separately from copper orders. Their payout is ordinary resale plus the editable €10 bonus per appliance, locked when accepted. Two-item requests keep separate deliveries across days and saves; payment happens only when complete. Broken/wrong appliances stay with you, and a balance-limit failure retains the final item and earlier deliveries. No deadlines or daily fees. The buyer still offers ordinary resale; the HUD/map sends a matching tested item to the customer board. Restoration inspection shows a matching accepted request's agreed payout.
 
 ### Fan and radio restoration or salvage
 
@@ -86,7 +97,9 @@ Pause offers Return to title and Save & Quit. Returning keeps the current yard; 
 
 ### Diary and investments
 
-Use **YARD DIARY** near the entry. Day review shows income, cash, customer completions, repair totals and appliance stock. **Finish day / return tomorrow** refreshes fans/radios and finishes the stripper's current load overnight, preserving inventory, player position, unfinished hand work and orders. No automatic clock or penalty forces you to end a day. Wire remains renewable.
+Use **YARD DIARY** near the entry. Day review shows earned income, parts/equipment spending, cash change, stripped loads, copper and appliance sales/deliveries, completed repairs/salvage/requests and appliance stock. **Finish day / return tomorrow** refreshes fans/radios and finishes the stripper's current load overnight, preserving inventory, player position, unfinished hand work and orders. A paused work receipt appears after closing the day; continue or Escape opens the next day through the existing input-release gate. The stripper's overnight completion belongs to the finished day. **Review last finished day** reopens the saved receipt without changing finances or advancing time.
+
+Old saves keep their income/cash but label earlier unrecorded work and costs as unavailable. Their next day has a complete ledger with the actual opening balance. Display counters saturate safely and report a limit instead of overflowing; money still uses the original guarded transactions. No automatic clock or penalty forces you to end a day. Wire remains renewable.
 
 | Investment | Price | Effect |
 | --- | --- | --- |
@@ -100,7 +113,7 @@ Purchases are guarded against double charges. Already-worked hand jobs complete 
 
 Under `Application.persistentDataPath` (company `XanderMaxStudiosBE`, product `Scrapshift`):
 
-- `yard-v1.json`: cash/equipment/upgrades, carried/dropped/stored items, station/appliance faults and progress, orders, day statistics, welcome/journal goals and player position/look.
+- `yard-v1.json`: cash/equipment/upgrades, carried/dropped/stored items, station/appliance faults and progress, copper/restoration requests and agreed payout, current daily ledger/last-day receipt, welcome/journal goals and player position/look.
 - `controls-v1.json`: action bindings, sensitivity and invert-Y.
 - `presentation-v1.json`: graphics/FOV/frame limit/FPS display and audio volumes.
 
@@ -134,9 +147,9 @@ SCRAPSHIFT_MONO_ROOT=/workspace/tooling/mono ./Tests/run-core-tests.sh
 
 The same command also runs three filesystem/recovery checks against the real SaveStore with a narrow serializer adapter after its field checks. They verify missing-field primary recovery, double corruption protection and backup-only loading without modifying files. They do **not** validate Unity JSON; the existing Unity corruption test covers the real serializer.
 
-Core coverage includes inventory/money conservation, exactly-once processing, capacity/output reservations, 100 renewable wire cycles, invalid/overflow/ID guards, rebinding/conflicts/defaults, dynamic guidance, expanded-world positions, storage/partial contracts, repair/salvage/day transactions, upgrade prerequisites/progress, legacy balance migration and presentation validation. Mixed tests reconstruct copied core data; actual JSON round-trips are supplied Unity tests.
+Core coverage includes inventory/money conservation, exactly-once processing, capacity/output reservations, 100 renewable wire cycles, invalid/overflow/ID guards, rebinding/conflicts/defaults, dynamic guidance, expanded-world positions, storage/independent partial copper/restoration requests, locked quote and final-delivery overflow guards, daily cost/work reconciliation and legacy reports, repair/salvage/day transactions, upgrade prerequisites/progress, legacy balance migration and presentation validation. Mixed tests reconstruct copied core data; actual JSON round-trips are supplied Unity tests.
 
-In Unity use **Window → General → Test Runner → EditMode → Run All**. There are **149 supplied cases**, all unrun in Cloud, including actual gameplay/preferences JSON and backup recovery, old saves, model/audio imports, geometry/colliders, dynamic station parts and graphics cleanup. A source/syntax/Blender audit does not replace Unity compilation or a player build.
+In Unity use **Window → General → Test Runner → EditMode → Run All**. There are **169 supplied cases**, all unrun in Cloud, including actual gameplay/preferences JSON and backup recovery, old saves, model/audio imports, geometry/colliders, dynamic station parts and graphics cleanup. A source/syntax/Blender audit does not replace Unity compilation or a player build.
 
 Optional batch commands, with `UNITY_EDITOR` set to your installed editor:
 
@@ -156,6 +169,8 @@ Inspect exit status, Console/editor logs and populated test-result XML. An empty
 - Import with the pinned editor; check zero compile errors, normal URP shaders, metre scale/axes, atlas appearance, roof joins, shadow readability, signs and HUD at different Game-view sizes.
 - Check gradient sky/sun direction, fog joins, workshop/fan readability, task-light cutoff/fixtures, static contact shade and copper reflections. Switch all presets and grade; watch cascade transitions/shadow shimmer while walking. Stop Play and confirm sky/fog/ambient/reflections restore. Run the supplied lighting/shader tests in Unity.
 - Complete wire processing, orders, repair and salvage for fans/radios, all three faults and all investments. Test wrong inputs/full hands, duplicate purchase/collection, partial/surplus delivery, capacity and the explicit appliance tests.
+- Accept both request types, deliver matching copper/tested fans/radios, and reopen partial two-item requests after a day/save. Check wrong/broken items, ordinary resale, quote changes in Balance, final-payout overflow and immediate dynamic hints.
+- Finish/review/reopen day receipts; verify costs, completed work, partial deliveries and overnight machine credit; test legacy unrecorded detail, Escape, held-input resume and small windows. Reviewing must never pay or advance another day.
 - Save/reopen with carried/dropped/stored material, running/output-ready machine, paid partial fan/radio repair and saved fault, active partial order and upgrades. Confirm old saves and tuned Balance values. Verify archived New game and backups through tests.
 - Check cable/copper tabletop alignment, pliers movement, independent fan feedback, partial-job progress and explicit test status. Pause mid-stroke, resume and verify animation/input isolation; inspect small Game-view HUD fit.
 - Select map pins/sidebar stations, resume with held input and verify the release gate; turn through all directions, arrive nearby and choose Follow objective. Check nearest wire sources, active fan jobs while the stripper runs, storage/customer routes and no save changes from tracking.
