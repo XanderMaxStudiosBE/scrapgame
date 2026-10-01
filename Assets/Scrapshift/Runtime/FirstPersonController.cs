@@ -12,6 +12,7 @@ namespace Scrapshift
         public float Pitch { get; private set; }
         CharacterController controller;
         float fallSpeed;
+        public bool Grounded { get { return controller != null && controller.isGrounded; } }
 
         void Awake() { controller = GetComponent<CharacterController>(); }
         public void Restore(YardState state)

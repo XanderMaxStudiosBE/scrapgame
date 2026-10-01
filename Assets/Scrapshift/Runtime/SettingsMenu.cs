@@ -7,6 +7,9 @@ namespace Scrapshift
     {
         readonly PlayerInputSettings input;
         readonly ControlRebind rebind;
+        readonly PresentationSettings presentation;
+        int page;
+        GUIStyle wrap;
         bool captureArmed;
         int captureFrame;
         bool discardCaptureEvents;
@@ -16,7 +19,7 @@ namespace Scrapshift
         Vector2 scroll;
         public bool IsOpen { get; private set; }
         public bool IsCapturing { get { return rebind.IsCapturing; } }
-        public SettingsMenu(PlayerInputSettings input) { this.input = input; rebind = new ControlRebind(input.Preferences); }
+        public SettingsMenu(PlayerInputSettings input, PresentationSettings presentation = null) { this.input = input; this.presentation = presentation; rebind = new ControlRebind(input.Preferences); }
         public void Open() { IsOpen = true; CancelRebind(); discardCaptureEvents = false; }
         public void Close() { IsOpen = false; CancelRebind(); discardCaptureEvents = false; }
         void CancelRebind()
@@ -73,16 +76,69 @@ namespace Scrapshift
         {
             CancelRebind(); rebind.Begin(action); captureArmed = false; captureFrame = Time.frameCount;
         }
+        void DrawPresentation()
+        {
+            var p = presentation.Preferences;
+            bool changed = false;
+            if (page == 1)
+            {
+                GUILayout.Label("Graphics preset", wrap);
+                int selected = GUILayout.Toolbar((int)p.graphics, new[] { "Laptop", "Balanced", "Detailed" }, GUILayout.Height(36));
+                if (selected != (int)p.graphics) { p.graphics = (GraphicsPreset)selected; changed = true; }
+                GUILayout.Space(12);
+                GUILayout.Label("Laptop: 75% resolution, short sharp shadows, no post processing. Balanced: 90% resolution, soft shadows and a subtle warm grade. Detailed: full resolution and longer shadows.", wrap);
+                GUILayout.Space(12);
+                GUILayout.Label("Frame limit");
+                int index = p.frameLimit == 30 ? 0 : p.frameLimit == 60 ? 1 : 2;
+                int next = GUILayout.Toolbar(index, new[] { "30 FPS", "60 FPS", "120 FPS" }, GUILayout.Height(32));
+                if (next != index) { p.frameLimit = next == 0 ? 30 : next == 1 ? 60 : 120; changed = true; }
+                GUILayout.Space(12);
+                GUILayout.Label("Field of view: " + p.fieldOfView.ToString("0") + "°");
+                float fov = Mathf.Round(GUILayout.HorizontalSlider(p.fieldOfView, 55, 95));
+                if (fov != p.fieldOfView) { p.fieldOfView = fov; changed = true; }
+                bool grade = GUILayout.Toggle(p.warmGrade, "Warm colour grade (Balanced / Detailed)");
+                if (grade != p.warmGrade) { p.warmGrade = grade; changed = true; }
+                GUILayout.Space(10);
+                GUILayout.Label("Changes apply immediately. If the Editor feels slow, try Laptop, close Scene view while playing, and compare a standalone build.", wrap);
+            }
+            else
+            {
+                changed |= VolumeSlider("Master", ref p.masterVolume);
+                changed |= VolumeSlider("Tools and machines", ref p.effectsVolume);
+                changed |= VolumeSlider("Yard ambience", ref p.ambienceVolume);
+                GUILayout.Label("Tools, footsteps and machines stop while menus are open. Gentle outdoor ambience continues.", wrap);
+            }
+            if (changed) presentation.Save();
+            GUILayout.Space(16);
+            if (GUILayout.Button("Restore video and audio defaults", GUILayout.Height(34))) presentation.RestoreDefaults();
+            if (!string.IsNullOrEmpty(presentation.Notice)) GUILayout.Label(presentation.Notice, wrap);
+        }
+        static bool VolumeSlider(string label, ref float value)
+        {
+            GUILayout.Space(12); GUILayout.Label(label + ": " + (value * 100).ToString("0") + "%");
+            float next = Mathf.Round(GUILayout.HorizontalSlider(value, 0, 1) * 100) / 100;
+            if (next == value) return false;
+            value = next; return true;
+        }
         public void Draw(float width, float height)
         {
             if (!IsOpen) return;
             if (discardCaptureEvents && (Event.current.isMouse || Event.current.isKey)) Event.current.Use();
             float panelWidth = Mathf.Min(640, width - 30), panelHeight = Mathf.Min(650, height - 30);
             Rect panel = new Rect((width - panelWidth) / 2, (height - panelHeight) / 2, panelWidth, panelHeight);
-            GUI.Box(panel, "SETTINGS / CONTROLS");
+            GUI.Box(panel, "SETTINGS");
             GUILayout.BeginArea(new Rect(panel.x + 18, panel.y + 36, panel.width - 36, panel.height - 48));
+            if (presentation != null)
+            {
+                GUI.enabled = !rebind.Action.HasValue;
+                int nextPage = GUILayout.Toolbar(page, new[] { "Controls", "Video", "Audio" }, GUILayout.Height(32));
+                GUI.enabled = true;
+                if (nextPage != page) { page = nextPage; scroll = Vector2.zero; input.SuppressUntilRelease(); }
+            }
             scroll = GUILayout.BeginScrollView(scroll);
-            GUIStyle wrap = new GUIStyle(GUI.skin.label) { wordWrap = true };
+            if (wrap == null) wrap = new GUIStyle(GUI.skin.label) { wordWrap = true };
+            if (page == 0)
+            {
             GUILayout.Label("Select a binding, then press a keyboard key or mouse button. Escape always cancels or goes back.", wrap);
             bool idle = !rebind.Action.HasValue;
             foreach (var action in ControlPreferences.Actions)
@@ -118,6 +174,8 @@ namespace Scrapshift
             GUI.enabled = true;
             if (!string.IsNullOrEmpty(input.Notice)) GUILayout.Label(input.Notice, wrap);
             GUILayout.Label("Keyboard, mouse buttons 1–7, and arrow keys are supported. Escape is reserved. Defaults include movement arrow aliases.", wrap);
+            }
+            else DrawPresentation();
             GUILayout.EndScrollView();
             if (GUILayout.Button(rebind.Action.HasValue ? "Cancel rebinding / Back (Escape)" : "Back to pause menu (Escape)", GUILayout.Height(36))) HandleEscape();
             GUILayout.EndArea();

@@ -51,7 +51,7 @@ namespace Scrapshift
                 YardGeometry.SurfaceBox("Storage bin side", bin, new Vector3(x, .55f, 0), new Vector3(.14f, .86f, 1.5f), surface);
             YardGeometry.SurfaceBox("Storage bin back", bin, new Vector3(0, .55f, .67f), new Vector3(2.5f, .86f, .16f), surface);
             YardGeometry.SurfaceBox("Storage bin front", bin, new Vector3(0, .35f, -.67f), new Vector3(2.5f, .46f, .16f), surface);
-            YardGeometry.Sign(bin, kind == MaterialKind.Wire ? "WIRE STORAGE\nSTORE / TAKE ONE BUNDLE" : "COPPER STORAGE\nSTORE / TAKE ONE BUNDLE", new Vector3(0, 2.05f, 0));
+            YardGeometry.MountedSign(bin, kind == MaterialKind.Wire ? "WIRE STORAGE" : "COPPER STORAGE", new Vector3(0, 0, .78f), 2.05f);
             var stock = new GameObject("Stored bundle display").transform; stock.SetParent(bin, false);
             for (int i = 0; i < 4; i++)
             {

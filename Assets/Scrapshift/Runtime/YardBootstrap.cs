@@ -22,10 +22,10 @@ namespace Scrapshift
             var bench = YardProps.Workbench(root, new Vector3(-2.5f, 0, 4));
             YardProps.Buyer(root, new Vector3(2.2f, 0, 4));
             var stripper = WireStripperVisual.Build(root, new Vector3(7, 0, 2));
-            YardGeometry.Sign(root, "1 / DELIVERY\nSCRAP WIRE", new Vector3(-7, 2.25f, 2));
-            YardGeometry.Sign(root, "2 / WORKBENCH\nMANUAL STRIPPING", new Vector3(-2.5f, 2.35f, 4));
-            YardGeometry.Sign(root, "3 / SCRAP BUYER\nCOPPER & TESTED ITEMS", new Vector3(2.2f, 2.35f, 4));
-            YardGeometry.Sign(root, "4 / POWERED STRIPPER\nFEED WIRE AT THE FRONT", new Vector3(7, 2.35f, 2));
+            YardGeometry.MountedSign(root, "WIRE DELIVERY", new Vector3(-7, 0, 2.7f));
+            YardGeometry.MountedSign(root, "STRIPPING BENCH", new Vector3(-2.5f, 0, 4.7f));
+            YardGeometry.MountedSign(root, "SCRAP BUYER", new Vector3(2.2f, 0, 4.7f));
+            YardGeometry.MountedSign(root, "POWERED STRIPPER", new Vector3(7, 0, 2.7f));
 
             var playerObject = new GameObject("Player"); playerObject.transform.SetParent(root, false); playerObject.layer = 2;
             var controller = playerObject.AddComponent<CharacterController>(); controller.height = 1.8f; controller.radius = .3f; controller.stepOffset = .25f;

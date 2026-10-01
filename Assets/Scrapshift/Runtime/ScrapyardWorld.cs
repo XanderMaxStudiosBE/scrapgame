@@ -143,7 +143,7 @@ namespace Scrapshift
         {
             var crate = YardProps.Delivery(p, pos); crate.name = label + " wire crate";
             crate.GetComponent<InteractionTarget>().displayName = label;
-            YardGeometry.Sign(crate.transform, label + "\nFREE SCRAP WIRE", new Vector3(0, 2.25f, 0));
+            YardGeometry.MountedSign(crate.transform, label, new Vector3(0, 0, .7f));
             // These markers remain outside the stationary scenery batches.
         }
         static void Container(Transform p, Vector3 pos, RetroSurface surface)

@@ -1,1 +1,1 @@
-{"name":"Scrapshift.Runtime","rootNamespace":"Scrapshift","references":["Scrapshift.Core"]}
+{"name":"Scrapshift.Runtime","rootNamespace":"Scrapshift","references":["Scrapshift.Core","Unity.RenderPipelines.Core.Runtime","Unity.RenderPipelines.Universal.Runtime"]}

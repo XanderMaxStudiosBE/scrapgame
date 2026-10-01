@@ -1,0 +1,44 @@
+{
+  "GravelStep": {
+    "seconds": 0.2,
+    "sample_rate": 22050,
+    "channels": 1,
+    "source": "original deterministic synthesis"
+  },
+  "ToolStroke": {
+    "seconds": 0.28,
+    "sample_rate": 22050,
+    "channels": 1,
+    "source": "original deterministic synthesis"
+  },
+  "Pickup": {
+    "seconds": 0.18,
+    "sample_rate": 22050,
+    "channels": 1,
+    "source": "original deterministic synthesis"
+  },
+  "Sale": {
+    "seconds": 0.48,
+    "sample_rate": 22050,
+    "channels": 1,
+    "source": "original deterministic synthesis"
+  },
+  "StripperLoop": {
+    "seconds": 2,
+    "sample_rate": 22050,
+    "channels": 1,
+    "source": "original deterministic synthesis"
+  },
+  "FanLoop": {
+    "seconds": 2,
+    "sample_rate": 22050,
+    "channels": 1,
+    "source": "original deterministic synthesis"
+  },
+  "YardAmbience": {
+    "seconds": 16,
+    "sample_rate": 22050,
+    "channels": 1,
+    "source": "original deterministic synthesis"
+  }
+}

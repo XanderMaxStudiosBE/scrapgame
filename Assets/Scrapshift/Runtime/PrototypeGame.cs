@@ -22,33 +22,32 @@ namespace Scrapshift
         static readonly ProfilerMarker SaveMarker = new ProfilerMarker("Scrapshift.Save");
         Material benchMaterial, lampMaterial;
         GUIStyle wrappedLabel, controlLegend, mapLabel;
+        readonly YardInterfaceTheme theme = new YardInterfaceTheme();
         bool paused, confirmNew, saveBlocked, mapOpen, ordersOpen, repairOpen, dayOpen, investmentsOpen;
         PlayerInputSettings controls;
         SettingsMenu settings;
+        PresentationSettings presentation;
         Vector3 benchRestPosition;
         float workPulseUntil;
         string message;
         float messageUntil, nextStroke, nextAutosave;
         InteractionTarget target;
-        AudioSource audioSource;
-        AudioClip feedback;
+        YardAudio sounds;
         string SavePath { get { return Path.Combine(Application.persistentDataPath, "yard-v1.json"); } }
 
         void Start()
         {
-            controls = new PlayerInputSettings(); settings = new SettingsMenu(controls);
+            controls = new PlayerInputSettings();
+            presentation = new PresentationSettings(player.view, transform);
+            settings = new SettingsMenu(controls, presentation);
             player.controls = controls; benchRestPosition = benchDisplay.localPosition;
             benchMaterial = benchDisplay.GetComponent<Renderer>().material;
             lampMaterial = machineLamp.material;
-            audioSource = gameObject.AddComponent<AudioSource>();
-            feedback = AudioClip.Create("Tool click", 2205, 1, 22050, false);
-            var samples = new float[2205];
-            for (int i = 0; i < samples.Length; i++) samples[i] = Mathf.Sin(i * .19f) * .12f * (1f - i / 2205f);
-            feedback.SetData(samples, 0);
-            try { Model = new YardModel(balance.rules, SaveStore.Read(SavePath, out message)); }
+            sounds = new YardAudio(transform, player, presentation);
+            try { Model = new YardModel(balance.PreparedRules, SaveStore.Read(SavePath, out message)); }
             catch (Exception ex)
             {
-                Model = new YardModel(balance.rules); saveBlocked = true;
+                Model = new YardModel(balance.PreparedRules); saveBlocked = true;
                 message = "Save could not load: " + ex.Message; Debug.LogWarning(message);
             }
             player.Restore(Model.State); messageUntil = Time.unscaledTime + 10;
@@ -56,6 +55,7 @@ namespace Scrapshift
         }
         void SetPaused(bool value)
         {
+            if (sounds != null) sounds.Pause(value);
             paused = value; Time.timeScale = value ? 0 : 1;
             if (!value && settings != null) settings.Close();
             if (!value) { mapOpen = false; ordersOpen = false; repairOpen = false; dayOpen = false; }
@@ -70,6 +70,7 @@ namespace Scrapshift
         void Update()
         {
             if (Model == null) return;
+            sounds.ApplyVolumes();
             // Escape is permanently reserved for cancellation/back. Never process gameplay on a menu transition frame.
             if (Input.GetKeyDown(KeyCode.Escape))
             {
@@ -87,7 +88,8 @@ namespace Scrapshift
             if (inputReady) player.Step();
             bool machineWasRunning = Model.State.machineRemaining > 0;
             Model.Tick(Time.deltaTime);
-            if (machineWasRunning && Model.State.machineRemaining == 0) SyncViews();
+            if (machineWasRunning && Model.State.machineRemaining == 0) { SyncViews(); Tell("Stripping finished. Copper is ready in the output tray."); }
+            sounds.Step(Model);
             target = null;
             if (Physics.Raycast(player.view.transform.position, player.view.transform.forward, out RaycastHit hit, 3.2f, ~(1 << 2)))
                 target = hit.collider.GetComponentInParent<InteractionTarget>();
@@ -100,7 +102,7 @@ namespace Scrapshift
                 if (target.kind == TargetKind.FanBench ? Model.WorkFan() : Model.WorkBench())
                 {
                     nextStroke = Time.time + .22f; workPulseUntil = Time.time + .18f;
-                    Beep(1.25f);
+                    sounds.Play(YardSound.Tool);
                     Tell(target.kind == TargetKind.FanBench ?
                         (Model.State.fanStage == FanStage.ReadyToTest ? "Motor fitted. Power on and test the fan." : Model.State.fanStage == FanStage.CopperReady ? "Fan dismantled. Collect the recovered copper." : "Working on the fan • " + Model.State.fanStrokes + " steps complete") :
                         Model.State.benchOutput > 0 ? "Insulation removed. Collect the copper." : "Stripping stroke " + Model.State.benchStrokes + "/" + Model.WireWorkSteps);
@@ -179,7 +181,7 @@ namespace Scrapshift
             else point.y = .3f;
             if (Model.Drop(point.x, point.y, point.z)) { SyncViews(); Save(); }
         }
-        void Beep(float pitch = 1f) { audioSource.pitch = pitch; audioSource.PlayOneShot(feedback); }
+        void Beep(float pitch = 1f) { sounds.Play(pitch >= 1.5f ? YardSound.Sale : YardSound.Pickup); }
         void Tell(string text) { message = text; messageUntil = Time.unscaledTime + 5; }
         void SyncViews()
         {
@@ -243,11 +245,11 @@ namespace Scrapshift
                 if (File.Exists(SavePath + ".bak")) File.Copy(SavePath + ".bak", SavePath + suffix + ".bak", false);
             }
             catch (Exception ex) { Tell("Could not archive old save: " + ex.Message); return; }
-            Model = new YardModel(balance.rules); saveBlocked = false; player.Restore(Model.State);
+            Model = new YardModel(balance.PreparedRules); saveBlocked = false; player.Restore(Model.State);
             SyncViews(); Save(); confirmNew = false; SetPaused(false); Tell("New yard. Take wire from the delivery crate.");
         }
         void OnApplicationQuit() { Save(); }
-        void OnDestroy() { Time.timeScale = 1; Cursor.lockState = CursorLockMode.None; Cursor.visible = true; if (feedback != null) Destroy(feedback); if (benchMaterial != null) Destroy(benchMaterial); if (lampMaterial != null) Destroy(lampMaterial); }
+        void OnDestroy() { theme.Dispose(); if (presentation != null) presentation.Dispose(); Time.timeScale = 1; Cursor.lockState = CursorLockMode.None; Cursor.visible = true; if (sounds != null) sounds.Dispose(); if (benchMaterial != null) Destroy(benchMaterial); if (lampMaterial != null) Destroy(lampMaterial); }
 
         StationHint CurrentHint()
         {
@@ -262,58 +264,71 @@ namespace Scrapshift
         {
             return "Move " + PrimaryLabel(ControlAction.MoveForward) + "/" + PrimaryLabel(ControlAction.MoveBackward) + "/" +
                 PrimaryLabel(ControlAction.MoveLeft) + "/" + PrimaryLabel(ControlAction.MoveRight) + " • Mouse look • " +
-                controls.Label(ControlAction.Interact) + " interact • " + controls.Label(ControlAction.ManualWork) + " strip • " +
+                controls.Label(ControlAction.Interact) + " interact • " + controls.Label(ControlAction.ManualWork) + " work • " +
                 controls.Label(ControlAction.Drop) + " drop • Esc pause";
         }
         void OnGUI()
         {
             if (Model == null) return;
             float scale = Mathf.Clamp(Screen.height / 800f, .65f, 2f);
-            GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1));
-            float width = Screen.width / scale, height = Screen.height / scale;
-            GUI.skin.label.fontSize = 18; GUI.skin.button.fontSize = 18; GUI.skin.box.fontSize = 18;
-            if (wrappedLabel == null)
+            using (theme.Begin(scale))
             {
-                wrappedLabel = new GUIStyle(GUI.skin.label) { wordWrap = true };
-                controlLegend = new GUIStyle(wrappedLabel) { fontSize = 15 };
-                mapLabel = new GUIStyle(controlLegend) { fontSize = 13, alignment = TextAnchor.MiddleCenter };
+                float width = Screen.width / scale, height = Screen.height / scale;
+                if (wrappedLabel == null)
+                {
+                    wrappedLabel = new GUIStyle(GUI.skin.label) { wordWrap = true };
+                    controlLegend = new GUIStyle(wrappedLabel) { fontSize = 15 };
+                    mapLabel = new GUIStyle(controlLegend) { fontSize = 13, alignment = TextAnchor.MiddleCenter };
+                }
+                if (paused)
+                {
+                    GUI.color = new Color(0, 0, 0, .42f);
+                    GUI.DrawTexture(new Rect(0, 0, width, height), Texture2D.whiteTexture);
+                }
+                GUI.color = Color.white;
+                if (settings.IsOpen) { settings.Draw(width, height); return; }
+                if (mapOpen) { DrawYardMap(width, height); return; }
+                if (ordersOpen) { DrawOrders(width, height); return; }
+                if (repairOpen) { DrawRepair(width, height); return; }
+                if (dayOpen) { DrawDay(width, height); return; }
+                float objectiveWidth = Mathf.Min(width - 40, 420);
+                GUI.Box(new Rect(20,20,objectiveWidth,118), "");
+                GUI.Label(new Rect(34,27,objectiveWidth-28,26), "DAY " + ((long)Model.State.dayIndex+1) + "    •    €" + Model.State.money);
+                string objective = YardGuidance.Objective(Model, controls.Label(ControlAction.Interact), controls.Label(ControlAction.ManualWork), controls.Label(ControlAction.Drop));
+                GUI.Label(new Rect(34,58,objectiveWidth-28,68),objective,controlLegend);
+                GUI.Label(new Rect(24,144,objectiveWidth,24),YardWorldLayout.Area(player.transform.position.x,player.transform.position.z),controlLegend);
+                if (Model.State.orderAccepted && width > 900)
+                {
+                    GUI.Box(new Rect(width-300,20,280,95),"CUSTOMER ORDER");
+                    GUI.Label(new Rect(width-286,48,252,54),Model.CurrentOrder.customer+"\n"+Model.State.orderDelivered+" / "+Model.CurrentOrder.copper+" copper • €"+Model.CurrentOrder.reward,controlLegend);
+                }
+                string held = Model.Carried == null ? "Hands empty" : "Carrying " + YardItemVisual.Label(Model.Carried.kind) + " ×" + Model.Carried.quantity + "   /   " + controls.Label(ControlAction.Drop) + ": drop";
+                float promptWidth=Mathf.Min(width-40,720);
+                var hint=CurrentHint();
+                GUI.Box(new Rect((width-promptWidth)/2,height-139,promptWidth,93),"");
+                GUI.Label(new Rect((width-promptWidth)/2+14,height-134,promptWidth-28,25),held,controlLegend);
+                GUI.Label(new Rect((width-promptWidth)/2+14,height-106,promptWidth-28,55),hint.text,wrappedLabel);
+                GUI.Label(new Rect(24,height-40,width-48,35),ControlHints(),controlLegend);
+                GUI.color=hint.canUse?new Color(.77f,.86f,.62f):YardGeometry.Ivory;
+                GUI.DrawTexture(new Rect(width/2-2,height/2-2,4,4),Texture2D.whiteTexture);
+                GUI.color=Color.white;
+                if(Time.unscaledTime<messageUntil)
+                {
+                    GUI.Box(new Rect((width-promptWidth)/2,184,promptWidth,76),"");
+                    GUI.Label(new Rect((width-promptWidth)/2+14,194,promptWidth-28,56),message,wrappedLabel);
+                }
+                if (!paused) return;
+                GUI.Box(new Rect(width / 2 - 235, height / 2 - 215, 470, 495), "PAUSED");
+                if (logo != null) GUI.DrawTexture(new Rect(width / 2 - 140, height / 2 - 155, 280, 85), logo, ScaleMode.ScaleToFit);
+                if (GUI.Button(new Rect(width / 2 - 180, height / 2 - 50, 360, 40), "Resume")) SetPaused(false);
+                if (GUI.Button(new Rect(width / 2 - 180, height / 2, 360, 40), "Save yard")) { Save(); }
+                if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 50, 360, 40), "Settings")) { confirmNew = false; messageUntil = 0; settings.Open(); }
+                if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 100, 360, 40), confirmNew ? "Confirm: reset yard (old save archived)" : "New game"))
+                { if (confirmNew) NewGame(); else confirmNew = true; }
+                if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 150, 360, 40), "Yard map")) { mapOpen = true; confirmNew = false; }
+                if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 198, 360, 40), "Orders & storage")) { ordersOpen = true; confirmNew = false; }
+                if (saveBlocked) GUI.Label(new Rect(width / 2 - 215, height / 2 - 210, 430, 65), "Saving blocked to protect unreadable data.\nChoose New game to archive it and restart.");
             }
-            GUI.color = YardGeometry.Ivory;
-            if (settings.IsOpen) { settings.Draw(width, height); return; }
-            if (mapOpen) { DrawYardMap(width, height); return; }
-            if (ordersOpen) { DrawOrders(width, height); return; }
-            if (repairOpen) { DrawRepair(width, height); return; }
-            if (dayOpen) { DrawDay(width, height); return; }
-            GUI.Box(new Rect(20, 20, Mathf.Min(width - 40, 490), 140), "");
-            GUI.Label(new Rect(35, 28, 440, 30), "DAY " + ((long)Model.State.dayIndex+1) + "   /   €" + Model.State.money);
-            GUI.Label(new Rect(25, 162, width - 50, 28), YardWorldLayout.Area(player.transform.position.x, player.transform.position.z));
-            string objective = YardGuidance.Objective(Model, controls.Label(ControlAction.Interact), controls.Label(ControlAction.ManualWork), controls.Label(ControlAction.Drop));
-            GUI.Label(new Rect(35, 64, Mathf.Min(width - 70, 455), 85), objective, wrappedLabel);
-            if (Model.State.orderAccepted && width > 980)
-            {
-                GUI.Box(new Rect(width - 320, 20, 300, 105), "CUSTOMER ORDER");
-                GUI.Label(new Rect(width - 305, 48, 270, 65), Model.CurrentOrder.customer + "\n" + Model.State.orderDelivered + " / " + Model.CurrentOrder.copper + " copper • €" + Model.CurrentOrder.reward, controlLegend);
-            }
-            string held = Model.Carried == null ? "Hands empty" : "Carrying " + YardItemVisual.Label(Model.Carried.kind) + " ×" + Model.Carried.quantity + "   /   " + controls.Label(ControlAction.Drop) + ": drop";
-            GUI.Label(new Rect(25, height - 144, width - 50, 28), held);
-            var hint = CurrentHint();
-            GUI.Label(new Rect(25, height - 108, width - 50, 55), hint.text, wrappedLabel);
-            GUI.Label(new Rect(25, height - 53, width - 50, 48), ControlHints(), controlLegend);
-            GUI.color = hint.canUse ? new Color(.65f, 1f, .55f) : YardGeometry.Ivory;
-            GUI.Label(new Rect(width / 2 - 5, height / 2 - 15, 20, 30), "+");
-            GUI.color = YardGeometry.Ivory;
-            if (Time.unscaledTime < messageUntil) GUI.Label(new Rect(25, 198, width - 50, 85), message, wrappedLabel);
-            if (!paused) return;
-            GUI.Box(new Rect(width / 2 - 235, height / 2 - 215, 470, 495), "PAUSED");
-            if (logo != null) GUI.DrawTexture(new Rect(width / 2 - 140, height / 2 - 155, 280, 85), logo, ScaleMode.ScaleToFit);
-            if (GUI.Button(new Rect(width / 2 - 180, height / 2 - 50, 360, 40), "Resume")) SetPaused(false);
-            if (GUI.Button(new Rect(width / 2 - 180, height / 2, 360, 40), "Save yard")) { Save(); }
-            if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 50, 360, 40), "Settings")) { confirmNew = false; messageUntil = 0; settings.Open(); }
-            if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 100, 360, 40), confirmNew ? "Confirm: reset yard (old save archived)" : "New game"))
-            { if (confirmNew) NewGame(); else confirmNew = true; }
-            if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 150, 360, 40), "Yard map")) { mapOpen = true; confirmNew = false; }
-            if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 198, 360, 40), "Orders & storage")) { ordersOpen = true; confirmNew = false; }
-            if (saveBlocked) GUI.Label(new Rect(width / 2 - 215, height / 2 - 210, 430, 65), "Saving blocked to protect unreadable data.\nChoose New game to archive it and restart.");
         }
         void DrawRepair(float width, float height)
         {

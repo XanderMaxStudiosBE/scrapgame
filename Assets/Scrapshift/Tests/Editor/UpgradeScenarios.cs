@@ -3,7 +3,7 @@ namespace Scrapshift.Tests
 {
     public static class UpgradeScenarios
     {
-        public static readonly string[] Names={"UpgradePurchaseGuards","StorageUpgradePreservesCapacity","ToolUpgradeReducesWork","MachineTuningPreservesRunningLoad","UpgradeLimitsAndResume","InvalidUpgradeStates"};
+        public static readonly string[] Names={"UpgradePurchaseGuards","StorageUpgradePreservesCapacity","ToolUpgradeReducesWork","MachineTuningPreservesRunningLoad","UpgradeLimitsAndResume","InvalidUpgradeStates", "LegacyBalanceExtensions"};
         static void Check(bool value,string message){if(!value)throw new Exception(message);}
         public static void Run(string name)
         {
@@ -39,6 +39,15 @@ namespace Scrapshift.Tests
                     {
                         bool rejected=false;try{YardModel.Validate(state);}catch(ArgumentException){rejected=true;}Check(rejected,"invalid ownership accepted");
                     }break;
+                case "LegacyBalanceExtensions":
+                    var old = new YardRules { copperPerWire=5, manualStrokes=7, maxBundles=18,
+                        fanPartsPrice=0,fanSalePrice=55,fanCopperYield=0,fanRepairStrokes=0,fanDismantleStrokes=0,fanDailyLimit=0,
+                        storageUpgradePrice=0,toolsUpgradePrice=0,tuningUpgradePrice=0 };
+                    Check(BalanceMigration.FillMissingExtensions(old),"legacy fields should migrate");old.Validate();
+                    Check(old.copperPerWire==5&&old.manualStrokes==7&&old.maxBundles==18&&old.fanSalePrice==55,"existing tuning retained");
+                    Check(old.fanPartsPrice==8&&old.storageUpgradePrice==60&&!BalanceMigration.FillMissingExtensions(old),"idempotent defaults");
+                    old.toolsUpgradePrice=-1;BalanceMigration.FillMissingExtensions(old);
+                    bool invalid=false;try{old.Validate();}catch(ArgumentException){invalid=true;}Check(invalid,"negative authored values still rejected");break;
                 default:throw new Exception(name);
             }
             YardModel.Validate(m.State);

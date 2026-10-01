@@ -227,3 +227,11 @@ The **YARD DIARY** near the entrance reviews earnings and progress. Finish a day
 ### Yard investments
 
 Use the yard diary near the entry, then Investments. Buy a storage rack (€60, twelve extra bundle slots), hand tools (€75, one fewer work stroke per job) or machine tuning (€120, requires the stripper and speeds future loads). Existing saves retain inventory and active machine timers. Verify each purchase, repeat-purchase prevention, dynamic hints and save/reload in Unity.
+
+### Laptop graphics and sound
+
+Pause → Settings → Video offers Laptop, Balanced and Detailed, frame cap, FOV and optional warm grade. Start with Laptop if Unity Editor play is slow; compare a standalone player, since Editor overhead differs. Audio controls master, tools/machines and outdoor ambience. These preferences persist in `presentation-v1.json`, separately from controls and gameplay.
+
+Local checks: switch all presets without pink shaders, inspect warm grade on/off and shadow readability, verify 30/60/120 limits in a standalone player, reopen after exiting Play to confirm Editor pipeline/VSync restoration, and reload to confirm settings. Listen near/away from running machines, walk on gravel, use tools/sell, open menus to check machine/footstep pause and continuing ambience, then mute each slider. Repeat rebind cancellation/conflict tests after changing Settings tabs. None of these engine checks has run in Cloud.
+
+Older local Balance assets are handled automatically: missing/zero new fan and investment fields get defaults, while existing wire rules and positive custom values are retained. No Generated-folder reset is needed.

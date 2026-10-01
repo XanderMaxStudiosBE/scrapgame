@@ -15,7 +15,7 @@ namespace Scrapshift
             bench.root.name = "Appliance restoration workbench";
             bench.root.GetComponent<InteractionTarget>().kind = TargetKind.FanBench;
             bench.materialDisplay.gameObject.SetActive(false);
-            YardGeometry.Sign(parent, "RESTORATION BENCH\nINSPECT / REPAIR / SALVAGE", Position + Vector3.up * 2.55f);
+            YardGeometry.MountedSign(parent, "RESTORATION BENCH", Position + Vector3.forward * .7f, 2.55f);
             if (AuthoredYardProps.TryPlace("WorkshopCanopy", parent, Position, out GameObject shelter))
                 shelter.transform.localScale = new Vector3(.26f,.70f,.50f);
             var display = new GameObject("Fan job display").transform; display.SetParent(bench.root.transform,false); display.localPosition = new Vector3(0,1.1f,-.05f);
@@ -39,10 +39,10 @@ namespace Scrapshift
             var stock = YardItemVisual.Create(MaterialKind.BrokenFan,supply.transform); stock.transform.localPosition = new Vector3(0,.5f,0);
             // Aiming at the displayed fan resolves to the supply marker on its parent.
             foreach(var collider in stock.GetComponentsInChildren<Collider>()) collider.enabled = true;
-            YardGeometry.Sign(supply.transform,"APPLIANCE SALVAGE\nBROKEN DESK FANS",new Vector3(0,2.35f,0));
+            YardGeometry.MountedSign(supply.transform,"APPLIANCE SALVAGE",new Vector3(0,0,.7f));
             var diary = YardGeometry.SurfaceBox("Yard diary stand",parent,DiaryPosition+new Vector3(0,.75f,0),new Vector3(1.3f,1.5f,.5f),RetroSurface.WeatheredWood);
             diary.AddComponent<InteractionTarget>().kind = TargetKind.DayBoard;
-            YardGeometry.Sign(parent,"YARD DIARY\nREVIEW / FINISH YOUR DAY",DiaryPosition+Vector3.up*1.9f);
+            YardGeometry.MountedSign(parent,"YARD DIARY",DiaryPosition+Vector3.forward*.28f,1.9f,1.65f);
             return new FanWorkbenchVisual(display,rotor,copper,stock.transform);
         }
         public void Refresh(YardModel m)

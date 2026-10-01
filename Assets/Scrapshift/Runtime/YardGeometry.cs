@@ -81,6 +81,18 @@ namespace Scrapshift
             sign.GetComponent<MeshRenderer>().sharedMaterial = mesh.font.material;
             mesh.anchor = TextAnchor.MiddleCenter; mesh.alignment = TextAlignment.Center; mesh.color = Ivory;
         }
+        public static void MountedSign(Transform parent, string text, Vector3 ground, float height = 2.25f, float width = 2.8f)
+        {
+            var root = new GameObject("Mounted yard sign").transform;
+            root.SetParent(parent, false); root.localPosition = ground;
+            SurfaceBox("Painted signboard", root, new Vector3(0, height, .07f), new Vector3(width, .56f, .09f), RetroSurface.DarkMetal, false);
+            foreach (float x in new[] { -width * .38f, width * .38f })
+                SurfaceBox("Sign support", root, new Vector3(x, height * .5f, .13f), new Vector3(.06f, height, .06f), RetroSurface.DarkMetal, false);
+            Sign(root, text, new Vector3(0, height, .01f));
+            var label = root.GetChild(root.childCount - 1).GetComponent<TextMesh>();
+            label.characterSize = .027f;
+            // Decorative only; targeting retains the station's original collision footprint.
+        }
         public static GameObject Station(Transform parent, string name, TargetKind kind, Vector3 position, Color color)
         {
             var station = Box(name, parent, position, new Vector3(2.5f, 1.2f, 1.3f), color);
