@@ -14,6 +14,14 @@ namespace Scrapshift
         public static GameObject Delivery(Transform parent, Vector3 groundPosition)
         {
             var root = StationRoot("Wire delivery crate", parent, groundPosition, TargetKind.Supply);
+            if (AuthoredYardProps.TryPlace("WireCrate", root.transform, Vector3.zero, out GameObject crate))
+            {
+                Collision(root, new Vector3(0, .18f, 0), new Vector3(2.3f, .22f, 1.3f));
+                Collision(root, new Vector3(0, .65f, .57f), new Vector3(2.3f, .85f, .16f));
+                Collision(root, new Vector3(0, .43f, -.57f), new Vector3(2.3f, .45f, .16f));
+                foreach (float x in new[] { -1.07f, 1.07f }) Collision(root, new Vector3(x, .65f, 0), new Vector3(.16f, .85f, 1.3f));
+                return root;
+            }
             Box("Crate bottom", root.transform, new Vector3(0, .18f, 0), new Vector3(2.3f, .22f, 1.3f), RetroSurface.WeatheredWood);
             // Open top and low front make the supplied wire visible from standing height.
             Box("Crate back", root.transform, new Vector3(0, .65f, .57f), new Vector3(2.3f, .85f, .16f), RetroSurface.WeatheredWood);
@@ -41,6 +49,16 @@ namespace Scrapshift
         public static BenchVisual Workbench(Transform parent, Vector3 groundPosition)
         {
             var root = StationRoot("Manual stripping workbench", parent, groundPosition, TargetKind.Bench);
+            if (AuthoredYardProps.TryPlace("Workbench", root.transform, Vector3.zero, out GameObject bench))
+            {
+                foreach (float x in new[] { -.97f, .97f })
+                    foreach (float z in new[] { -.47f, .47f }) Collision(root, new Vector3(x, .5f, z), new Vector3(.14f, 1, .14f));
+                Collision(root, new Vector3(0, 1.01f, 0), new Vector3(2.5f, .16f, 1.3f));
+                Collision(root, new Vector3(0, .28f, 0), new Vector3(2.05f, .1f, 1.05f));
+                var material = Box("Bench wire and copper", root.transform, new Vector3(0, 1.25f, -.1f), Vector3.one, RetroSurface.WireInsulation, false);
+                material.transform.localScale = new Vector3(.75f, .17f, .45f);
+                return new BenchVisual { root = root, materialDisplay = material.transform };
+            }
             foreach (float x in new[] { -.97f, .97f })
                 foreach (float z in new[] { -.47f, .47f })
                     Box("Workbench leg", root.transform, new Vector3(x, .5f, z), new Vector3(.14f, 1, .14f), RetroSurface.DarkMetal);
@@ -97,11 +115,21 @@ namespace Scrapshift
 
         public static void WorkshopSurroundings(Transform parent)
         {
-            foreach (float x in new[] { -4.5f, -.5f })
-                Box("Workshop rear pillar", parent, new Vector3(x, 1.6f, 5.2f), new Vector3(.15f, 3.2f, .15f), RetroSurface.DarkMetal);
-            var roof = Box("Corrugated workshop roof", parent, new Vector3(-2.5f, 3.18f, 4.2f), new Vector3(4.6f, .12f, 3.2f), RetroSurface.CorrugatedMetal, false);
-            roof.transform.localRotation = Quaternion.Euler(-5, 0, 0);
-            Box("Workshop front beam", parent, new Vector3(-2.5f, 3.03f, 2.66f), new Vector3(4.6f, .16f, .13f), RetroSurface.RustPaint, false);
+            if (AuthoredYardProps.TryPlace("WorkshopCanopy", parent, new Vector3(0, 0, 4), out GameObject canopy))
+            {
+                // Preserve the two original collision posts inside the broader shelter.
+                foreach (float x in new[] { -4.5f, -.5f })
+                    Box("Workshop rear pillar", parent, new Vector3(x, 1.6f, 5.2f), new Vector3(.15f, 3.2f, .15f), RetroSurface.DarkMetal);
+                YardGeometry.Sign(parent, "SCRAPSHIFT / WORKSHOP", new Vector3(0, 3.9f, .8f));
+            }
+            else
+            {
+                foreach (float x in new[] { -4.5f, -.5f })
+                    Box("Workshop rear pillar", parent, new Vector3(x, 1.6f, 5.2f), new Vector3(.15f, 3.2f, .15f), RetroSurface.DarkMetal);
+                var roof = Box("Corrugated workshop roof", parent, new Vector3(-2.5f, 3.18f, 4.2f), new Vector3(4.6f, .12f, 3.2f), RetroSurface.CorrugatedMetal, false);
+                roof.transform.localRotation = Quaternion.Euler(-5, 0, 0);
+                Box("Workshop front beam", parent, new Vector3(-2.5f, 3.03f, 2.66f), new Vector3(4.6f, .16f, .13f), RetroSurface.RustPaint, false);
+            }
             // Clutter stays at the perimeter, leaving the four station approaches clear.
             for (int i = 0; i < 8; i++)
             {
@@ -112,6 +140,11 @@ namespace Scrapshift
             {
                 Cylinder("Salvage drum", parent, new Vector3(9.3f, .5f, 6.7f + i * .8f), .34f, 1, i % 2 == 0 ? RetroSurface.RustPaint : RetroSurface.DarkMetal, Quaternion.identity);
             }
+        }
+
+        static void Collision(GameObject root, Vector3 centre, Vector3 size)
+        {
+            var collider = root.AddComponent<BoxCollider>(); collider.center = centre; collider.size = size;
         }
 
         static GameObject StationRoot(string name, Transform parent, Vector3 position, TargetKind kind)

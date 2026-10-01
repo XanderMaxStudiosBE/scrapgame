@@ -148,6 +148,12 @@ namespace Scrapshift
         }
         static void Container(Transform p, Vector3 pos, RetroSurface surface)
         {
+            if (AuthoredYardProps.TryPlace("ShippingContainer", p, pos, out GameObject container))
+            {
+                var collider = container.AddComponent<BoxCollider>(); collider.center = new Vector3(0, 1.4f, 0); collider.size = new Vector3(9, 2.8f, 4);
+                YardGeometry.Sign(p, "SCRAP / STORAGE", pos + new Vector3(-2.5f, 1.8f, -2.15f));
+                return;
+            }
             Box(p, "Storage container", pos + new Vector3(0, 1.4f, 0), new Vector3(9, 2.8f, 4), surface);
             foreach (float x in new[] { -4.4f, 4.4f })
                 CozyYardDetails.Accent(p, "Container corner rail", pos + new Vector3(x, 1.4f, -2.06f), new Vector3(.12f, 2.7f, .12f), CozyYardDetails.Sage);
@@ -157,11 +163,23 @@ namespace Scrapshift
         }
         static void Pallet(Transform p, Vector3 pos)
         {
+            if (AuthoredYardProps.TryPlace("PalletBundle", p, pos, out GameObject pallet))
+            {
+                var collider = pallet.AddComponent<BoxCollider>(); collider.center = new Vector3(0, .5f, 0); collider.size = new Vector3(2.4f, 1, 1.6f);
+                return;
+            }
             Box(p, "Pallet base", pos + Vector3.up * .12f, new Vector3(2.4f, .24f, 1.6f), RetroSurface.WeatheredWood);
             for (int i = 0; i < 3; i++) Box(p, "Bundled scrap panels", pos + new Vector3(0, .4f + i * .22f, 0), new Vector3(2, .18f, 1.3f), i % 2 == 0 ? RetroSurface.RustPaint : RetroSurface.DarkMetal);
         }
         static void Car(Transform p, Vector3 pos, bool rust)
         {
+            if (AuthoredYardProps.TryPlace(rust ? "RustyHatchback" : "WornHatchback", p, pos, out GameObject car))
+            {
+                // Coarse body/cabin volumes preserve the previous walkable row spacing.
+                var body = car.AddComponent<BoxCollider>(); body.center = new Vector3(0, .65f, 0); body.size = new Vector3(2.1f, .65f, 4.4f);
+                var cabin = car.AddComponent<BoxCollider>(); cabin.center = new Vector3(0, 1.25f, .1f); cabin.size = new Vector3(1.8f, .7f, 1.9f);
+                return;
+            }
             var surface = rust ? RetroSurface.RustPaint : RetroSurface.CorrugatedMetal;
             Box(p, "Salvaged vehicle body", pos + new Vector3(0, .65f, 0), new Vector3(2.1f, .65f, 4.4f), surface);
             Box(p, "Vehicle cabin", pos + new Vector3(0, 1.25f, .1f), new Vector3(1.8f, .7f, 1.9f), surface);
@@ -184,6 +202,11 @@ namespace Scrapshift
         }
         static void ScrapBin(Transform p, Vector3 pos, bool rust)
         {
+            if (AuthoredYardProps.TryPlace("SortingSkip", p, pos, out GameObject skip))
+            {
+                var collider = skip.AddComponent<BoxCollider>(); collider.center = new Vector3(0, .7f, 0); collider.size = new Vector3(4, 1.4f, 4);
+                return;
+            }
             Box(p, "Sorting bin floor", pos + Vector3.up * .15f, new Vector3(4, .3f, 4), RetroSurface.DarkMetal);
             foreach (float x in new[] { -1.95f, 1.95f }) Box(p, "Sorting bin wall", pos + new Vector3(x, .65f, 0), new Vector3(.1f, 1.3f, 4), RetroSurface.RustPaint);
             Box(p, "Sorting bin back", pos + new Vector3(0, .65f, 1.95f), new Vector3(4, 1.3f, .1f), RetroSurface.RustPaint);
@@ -197,6 +220,14 @@ namespace Scrapshift
         }
         static void Building(Transform p, Vector3 pos)
         {
+            if (AuthoredYardProps.TryPlace("YardOffice", p, pos, out GameObject office))
+            {
+                var collider = office.AddComponent<BoxCollider>(); collider.center = new Vector3(0, 1.5f, 0); collider.size = new Vector3(8, 3, 6);
+                // The model faces negative Z; turn it toward the entry/workshop approach.
+                office.transform.localRotation = Quaternion.Euler(0, 180, 0);
+                YardGeometry.Sign(p, "SCRAPSHIFT / YARD OFFICE", pos + new Vector3(0, 2.55f, 3.18f), 180);
+                return;
+            }
             Box(p, "Yard office", pos + Vector3.up * 1.5f, new Vector3(8, 3, 6), RetroSurface.WeatheredWood);
             CozyYardDetails.Office(p, pos);
             Box(p, "Office door", pos + new Vector3(-2, 1.1f, 3.02f), new Vector3(1.2f, 2.2f, .04f), RetroSurface.RustPaint, false);

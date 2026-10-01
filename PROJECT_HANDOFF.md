@@ -2,6 +2,14 @@
 
 Updated: 2026-10-01 (UTC). Reinspect the checkout before continuing.
 
+## Latest milestone: original authored industrial props
+
+Following the user's criticism and Retro Rewind reference, authored ten original metre-scale props in Blender 4.3.2: worn/rusty hatchbacks, yard office, corrugated shipping container, broad trussed workshop canopy, sorting skip, salvage fan, workbench/vise, coiled-wire crate and bundled scrap pallet. These replace the matching primitive world/station visuals via `AuthoredYardProps`, keeping original station anchors, marker routing and explicit collision footprints. The fan mesh is prepared for the next repair milestone; no fan gameplay exists at this checkpoint.
+
+All models share a tracked 512px worn atlas and URP material. Scoped `AuthoredPropImport` sets readable metre/axis imports for regional batching, disables imported animation/lights/colliders/materials, and uses bilinear atlas/mips. Original Blender source, manifest, exported assets and an inspected rendered contact sheet are tracked; the contact sheet is a Blender asset preview, **not gameplay**. Roof/windshield slope issues found in the first preview were corrected and rerendered. No models or image assets from Retro Rewind are copied.
+
+Blender reimport audit passed for all ten FBX files: actual metre dimensions, matching triangle counts (308–1,684 per model), finite vertices and UVs within the shared atlas. Audit JSON records its exact scope. Ten new Unity cases require real imported meshes, correct vertical scale, readability, atlas/URP shader and no imported collision components; now 60 supplied engine cases, all unrun here. The existing 34 pure gameplay/control/guidance/business scenarios still pass. Unity import, shader/axis/material appearance, collisions/batching, saved-item accessibility and runtime FPS remain local checks. Source and regeneration instructions are in ArtSource/README.md. Continue the active work session toward the repair loop and presentation/performance settings; do not stop at this checkpoint unless the user says stop.
+
 ## Active work session: storage and customer orders
 
 The user authorized sustained autonomous development (two hours from 07:15:32 UTC on 2026-10-01, unless they say stop). They then rejected the primitive visuals and supplied Retro Rewind - Video Store Simulator as the aesthetic reference, choosing worn retro realism: believable industrial shapes, muted worn textures and warm lighting. SCRAPSHIFT remains a scrapyard game. Visual refinement and a more interesting repair loop now take priority alongside the following completed business systems.

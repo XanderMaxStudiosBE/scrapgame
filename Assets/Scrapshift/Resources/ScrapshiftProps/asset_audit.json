@@ -1,0 +1,115 @@
+{
+  "scope": "Blender FBX round-trip, metre dimensions, finite vertices, UVs and triangle budget; Unity import not run",
+  "assets": [
+    {
+      "name": "WornHatchback",
+      "triangles": 1176,
+      "metre_dimensions": [
+        2.364579916000366,
+        4.509999990463257,
+        1.5500000547617674
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
+    },
+    {
+      "name": "YardOffice",
+      "triangles": 650,
+      "metre_dimensions": [
+        8.812002182006836,
+        7.850000381469727,
+        4.695000281557441
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
+    },
+    {
+      "name": "ShippingContainer",
+      "triangles": 944,
+      "metre_dimensions": [
+        9.09000015258789,
+        4.246000051498413,
+        2.9000003673136234
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
+    },
+    {
+      "name": "WorkshopCanopy",
+      "triangles": 880,
+      "metre_dimensions": [
+        19.0,
+        7.507145643234253,
+        4.707595116511669
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
+    },
+    {
+      "name": "SortingSkip",
+      "triangles": 528,
+      "metre_dimensions": [
+        4.089999675750732,
+        4.0299999713897705,
+        1.7445428278297186
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
+    },
+    {
+      "name": "SalvageFan",
+      "triangles": 1092,
+      "metre_dimensions": [
+        0.5360000133514404,
+        0.34000006318092346,
+        0.917999931911476
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
+    },
+    {
+      "name": "Workbench",
+      "triangles": 640,
+      "metre_dimensions": [
+        2.5,
+        1.2999999523162842,
+        1.3700000438762814
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
+    },
+    {
+      "name": "WireCrate",
+      "triangles": 1684,
+      "metre_dimensions": [
+        2.320000171661377,
+        1.300000011920929,
+        1.0299999415874481
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
+    },
+    {
+      "name": "PalletBundle",
+      "triangles": 308,
+      "metre_dimensions": [
+        2.4399999380111694,
+        1.5999999046325684,
+        1.0200000413248347
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
+    },
+    {
+      "name": "RustyHatchback",
+      "triangles": 1176,
+      "metre_dimensions": [
+        2.364579916000366,
+        4.509999990463257,
+        1.5500000547617674
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
+    }
+  ]
+}
