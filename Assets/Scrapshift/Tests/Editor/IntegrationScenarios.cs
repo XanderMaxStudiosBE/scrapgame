@@ -37,9 +37,9 @@ namespace Scrapshift.Tests
         static long Material(YardModel m)
         {
             long total=(m.State.benchLoaded?m.Rules.copperPerWire:0)+m.State.benchOutput+m.State.machineOutput+m.State.machinePendingYield;
-            if(m.State.fanStage!=FanStage.Empty)total+=m.Rules.fanCopperYield;
+            if(m.State.fanStage!=FanStage.Empty)total+=m.State.benchAppliance==RepairAppliance.PortableRadio?m.Rules.radioCopperYield:m.Rules.fanCopperYield;
             foreach(var item in m.State.items)
-                total+=item.kind==MaterialKind.Copper?item.quantity:item.kind==MaterialKind.Wire?m.Rules.copperPerWire:m.Rules.fanCopperYield;
+                total+=item.kind==MaterialKind.Copper?item.quantity:item.kind==MaterialKind.Wire?m.Rules.copperPerWire:(item.kind==MaterialKind.BrokenRadio || item.kind==MaterialKind.RestoredRadio?m.Rules.radioCopperYield:m.Rules.fanCopperYield);
             return total;
         }
         static string Fingerprint(YardState state)
@@ -67,7 +67,7 @@ namespace Scrapshift.Tests
             long acquired=0,consumed=0,expectedMoney=0;
             for(int i=0;i<20000;i++)
             {
-                string before=Fingerprint(m.State);bool success=false;int action=random.Next(25);
+                string before=Fingerprint(m.State);bool success=false;int action=random.Next(26);
                 ScrapItem held=m.Carried;int money=m.State.money;
                 switch(action)
                 {
@@ -78,7 +78,7 @@ namespace Scrapshift.Tests
                     case 4:success=m.CollectBench();break;
                     case 5:success=m.FeedMachine();break;
                     case 6:success=m.CollectMachine();break;
-                    case 7:success=m.Sell();if(success){consumed+=held.kind==MaterialKind.Copper?held.quantity:m.Rules.fanCopperYield;expectedMoney+=held.kind==MaterialKind.Copper?held.quantity*m.Rules.copperUnitPrice:m.Rules.fanSalePrice;}break;
+                    case 7:success=m.Sell();if(success){bool radio=held.kind==MaterialKind.RestoredRadio;consumed+=held.kind==MaterialKind.Copper?held.quantity:radio?m.Rules.radioCopperYield:m.Rules.fanCopperYield;expectedMoney+=held.kind==MaterialKind.Copper?held.quantity*m.Rules.copperUnitPrice:radio?m.Rules.radioSalePrice:m.Rules.fanSalePrice;}break;
                     case 8:success=m.Drop(random.Next(-40,40),.1f,random.Next(-30,30));break;
                     case 9:success=m.PickUp(m.State.items.Count==0?0:m.State.items[random.Next(m.State.items.Count)].id);break;
                     case 10:success=m.Store(MaterialKind.Wire);break;
@@ -95,11 +95,16 @@ namespace Scrapshift.Tests
                         var upgrade=(YardUpgrade)(1<<random.Next(3));success=m.BuyUpgrade(upgrade);if(success)expectedMoney-=m.UpgradePrice(upgrade);break;
                     case 18:success=m.LoadFan();break;
                     case 19:success=m.InspectFan();break;
-                    case 20:success=m.BeginFanRepair();if(success)expectedMoney-=m.Rules.fanPartsPrice;break;
+                    case 20:
+                        int parts=m.State.benchAppliance==RepairAppliance.PortableRadio?m.Rules.radioPartsPrice:m.Rules.fanPartsPrice;
+                        if(m.State.benchFault==ApplianceFault.PowerLead)parts=Math.Max(1,parts/2);
+                        else if(m.State.benchFault==ApplianceFault.DirtyMechanism)parts=0;
+                        success=m.BeginFanRepair();if(success)expectedMoney-=parts;break;
                     case 21:success=m.BeginFanDismantle();break;
                     case 22:success=m.WorkFan();break;
                     case 23:success=m.TestFan();break;
                     case 24:success=m.CollectFan();break;
+                    case 25:success=m.AcquireRadio();if(success)acquired+=m.Rules.radioCopperYield;break;
                 }
                 Check(success || before==Fingerprint(m.State),"Rejected action mutated state at step "+i+" action "+action);
                 if(i%7==0)m.Tick(.5f);if(i%59==0)m.AdvanceDay();
@@ -129,7 +134,7 @@ namespace Scrapshift.Tests
                 for(int fan=0;fan<2;fan++)
                 {
                     Check(m.AcquireFan()&&m.LoadFan()&&m.InspectFan(),"daily fan delivery");
-                    if(m.State.money>=m.Rules.fanPartsPrice)
+                    if(m.State.money>=m.CurrentRepair.partsPrice)
                     {Check(m.BeginFanRepair(),"motor purchase");while(m.State.fanStage==FanStage.Repairing)Check(m.WorkFan(),"repair stroke");Check(m.TestFan(),"explicit test");}
                     else{Check(m.BeginFanDismantle(),"affordable salvage");while(m.State.fanStage==FanStage.Dismantling)Check(m.WorkFan(),"salvage stroke");}
                     Check(m.CollectFan()&&m.Sell(),"fan recovery/resale");

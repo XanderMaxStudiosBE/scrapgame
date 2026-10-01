@@ -42,6 +42,18 @@ class CoreRunner
             try { FanScenarios.Run(name); Console.WriteLine("PASS " + name); }
             catch (Exception ex) { failed++; Console.WriteLine("FAIL " + name + ": " + ex.Message); }
         }
+        foreach(var name in ApplianceScenarios.Names)
+        {
+            total++;
+            try{ApplianceScenarios.Run(name);Console.WriteLine("PASS "+name);}
+            catch(Exception ex){failed++;Console.WriteLine("FAIL "+name+": "+ex.Message);}
+        }
+        foreach(var name in JourneyScenarios.Names)
+        {
+            total++;
+            try{JourneyScenarios.Run(name);Console.WriteLine("PASS "+name);}
+            catch(Exception ex){failed++;Console.WriteLine("FAIL "+name+": "+ex.Message);}
+        }
         foreach (var name in UpgradeScenarios.Names)
         {
             total++;

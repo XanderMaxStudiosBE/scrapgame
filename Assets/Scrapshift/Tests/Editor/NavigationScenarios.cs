@@ -22,7 +22,7 @@ namespace Scrapshift.Tests
                         Check(YardNavigation.Get(destination.landmark).name==destination.name,"lookup identity");
                         Check(destination.Distance(destination.x,destination.z)==0,"metre coordinate");
                     }
-                    Check(seen.Count==13 && !seen.Contains(YardLandmark.Automatic),"all physical destinations");break;
+                    Check(seen.Count==14 && !seen.Contains(YardLandmark.Automatic),"all physical destinations");break;
                 case "NavigationBearings":
                     var bearingPoint=new YardDestination(YardLandmark.Bench,"North",0,10);
                     Check(bearingPoint.Distance(0,0)==10,"metres");

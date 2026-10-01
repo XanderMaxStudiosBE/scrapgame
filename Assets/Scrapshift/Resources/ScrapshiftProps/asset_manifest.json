@@ -182,6 +182,16 @@
         0.07999999821186066
       ],
       "materials": 1
+    },
+    "PortableRadio": {
+      "triangles": 1308,
+      "vertices": 744,
+      "dimensions_blender": [
+        0.6343862414360046,
+        0.2985000014305115,
+        0.6110051870346069
+      ],
+      "materials": 1
     }
   }
 }

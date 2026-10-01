@@ -10,7 +10,7 @@ Accept this milestone after the workshop, restoration bench and salvage rows sta
 
 ## 2. Make a full scrapyard day worth playing
 
-Planned: one additional repairable radio, a small set of inspectable faults and clear repair-versus-salvage outcomes. Keep bounded recipes, exactly-once payments/materials and additive old-save compatibility. Give yard districts useful distinct finds and customer demand. Keep the relaxed day loop and avoid fees/deadlines that punish experimentation.
+Source implemented: one repairable portable radio, three inspectable faults for fans and radios, and explicit repair-versus-salvage costs/work/outcomes. Electronics salvage makes the eastern district useful. Faults persist with items and partial jobs; legacy fan fields/defaults remain compatible. Customer requests currently remain copper orders. Keep bounded recipes, exactly-once payments/materials and additive old-save compatibility. Keep the relaxed day loop and avoid fees/deadlines that punish experimentation.
 
 Accept after a new player can find scrap, make a worthwhile repair choice, finish a contract, buy a useful improvement and understand what to try next. Verify partial jobs, rejected inputs, full hands, save/restart and all menu transitions.
 
@@ -22,7 +22,7 @@ Accept after the creator approves actual Unity images and gameplay, including sm
 
 ## 4. Finish the player-facing flow
 
-Planned: title screen with Continue/New game/Settings/Quit, a clear first-day introduction, help/credits, complete return-to-menu behavior and a clean desktop player build. Preserve settings separately from yard saves and archive resets. Distinguish shipping features from scenery; office/vehicles/crane/radio are currently scenery unless their gameplay milestone is implemented.
+Source implemented: title with Start/Continue/New yard/Settings/Help/Credits/Quit, first-yard introduction, dynamic control help and a six-goal persistent yard journal, Return to title and save-gated Quit. Actual Unity UI/pause/serialization validation and a clean desktop player build remain planned. Preserve settings separately from yard saves and archive resets. Distinguish shipping features from scenery; office/vehicles/crane remain scenery; electronics-salvage radios are now repairable while the shelf radio stays decorative.
 
 Accept after a player can install/open the build, start or continue, complete both processing/repair loops, save/quit/reopen and navigate every menu without editor tools.
 

@@ -6,11 +6,12 @@ namespace Scrapshift
         public static readonly Vector3 Position = YardBootstrap.StationPosition(YardLandmark.FanBench);
         public static readonly Vector3 SupplyPosition = YardBootstrap.StationPosition(YardLandmark.FanSupply);
         public static readonly Vector3 DiaryPosition = YardBootstrap.StationPosition(YardLandmark.Diary);
-        public readonly Transform display, rotor, copper, supplyStock;
+        public readonly Transform display, rotor, copper, supplyStock, radioDisplay, radioStock;
         float pulseAge = .22f;
+        int visibleJob;
         public void Pulse() { pulseAge = 0; }
-        FanWorkbenchVisual(Transform display, Transform rotor, Transform copper, Transform supplyStock)
-        { this.display = display; this.rotor = rotor; this.copper = copper; this.supplyStock = supplyStock; }
+        FanWorkbenchVisual(Transform display, Transform rotor, Transform copper, Transform supplyStock, Transform radioDisplay, Transform radioStock)
+        { this.display = display; this.rotor = rotor; this.copper = copper; this.supplyStock = supplyStock; this.radioDisplay=radioDisplay; this.radioStock=radioStock; }
         public static FanWorkbenchVisual Build(Transform parent)
         {
             var bench = YardProps.Workbench(parent, Position);
@@ -33,6 +34,8 @@ namespace Scrapshift
             }
             var fanHit = display.gameObject.AddComponent<BoxCollider>();
             fanHit.center = new Vector3(0,.46f,0); fanHit.size = new Vector3(.6f,.95f,.4f);
+            var radio=YardItemVisual.Create(MaterialKind.BrokenRadio,bench.root.transform);
+            radio.transform.localPosition=new Vector3(0,1.1f,-.05f);
             var copper = YardGeometry.Bundle(MaterialKind.Copper, bench.root.transform).transform;
             copper.localPosition = new Vector3(0,1.22f,-.05f);
             foreach(var collider in copper.GetComponentsInChildren<Collider>()) collider.enabled = false;
@@ -42,14 +45,27 @@ namespace Scrapshift
             // Aiming at the displayed fan resolves to the supply marker on its parent.
             foreach(var collider in stock.GetComponentsInChildren<Collider>()) collider.enabled = true;
             YardGeometry.MountedSign(supply.transform,"APPLIANCE SALVAGE",new Vector3(0,0,.7f));
+            var electronics=YardProps.Delivery(parent,YardBootstrap.StationPosition(YardLandmark.RadioSupply));
+            electronics.name="Electronics salvage crate";electronics.GetComponent<InteractionTarget>().kind=TargetKind.RadioSupply;
+            var radioStock=YardItemVisual.Create(MaterialKind.BrokenRadio,electronics.transform);radioStock.transform.localPosition=new Vector3(0,.6f,0);
+            YardGeometry.MountedSign(electronics.transform,"ELECTRONICS SALVAGE",new Vector3(0,0,.7f));
             var diary = YardGeometry.SurfaceBox("Yard diary stand",parent,DiaryPosition+new Vector3(0,.75f,0),new Vector3(1.3f,1.5f,.5f),RetroSurface.WeatheredWood);
             diary.AddComponent<InteractionTarget>().kind = TargetKind.DayBoard;
             YardGeometry.MountedSign(parent,"YARD DIARY",DiaryPosition+Vector3.forward*.28f,1.9f,1.65f);
-            return new FanWorkbenchVisual(display,rotor,copper,stock.transform);
+            return new FanWorkbenchVisual(display,rotor,copper,stock.transform,radio.transform,radioStock.transform);
         }
         public void Refresh(YardModel m)
         {
-            display.gameObject.SetActive(m.State.fanStage != FanStage.Empty && m.State.fanStage != FanStage.CopperReady);
+            bool job=m.State.fanStage!=FanStage.Empty && m.State.fanStage!=FanStage.CopperReady;
+            int nextJob=job?(m.State.benchAppliance==RepairAppliance.PortableRadio?2:1):0;
+            if(nextJob!=visibleJob)
+            {
+                pulseAge=.22f;display.localRotation=radioDisplay.localRotation=Quaternion.identity;
+                visibleJob=nextJob;
+            }
+            display.gameObject.SetActive(job && m.State.benchAppliance==RepairAppliance.DeskFan);
+            radioDisplay.gameObject.SetActive(job && m.State.benchAppliance==RepairAppliance.PortableRadio);
+            radioStock.gameObject.SetActive(m.State.radiosTakenToday<m.Rules.radioDailyLimit);
             supplyStock.gameObject.SetActive(m.State.fansTakenToday < m.Rules.fanDailyLimit);
             copper.gameObject.SetActive(m.State.fanStage == FanStage.CopperReady);
         }
@@ -59,9 +75,9 @@ namespace Scrapshift
             {
                 pulseAge = Mathf.Min(.22f,pulseAge+Mathf.Max(0,seconds));
                 float pulse = pulseAge >= .22f ? 0 : Mathf.Sin(pulseAge/.22f*Mathf.PI);
-                display.localRotation = Quaternion.Euler(0,0,-3*pulse);
+                (m.State.benchAppliance==RepairAppliance.PortableRadio?radioDisplay:display).localRotation = Quaternion.Euler(0,0,-3*pulse);
             }
-            if (rotor != null && m.State.fanStage == FanStage.Tested) rotor.Rotate(0,0,480*seconds,Space.Self);
+            if (rotor != null && m.State.fanStage == FanStage.Tested && m.State.benchAppliance==RepairAppliance.DeskFan) rotor.Rotate(0,0,480*seconds,Space.Self);
         }
     }
 }

@@ -17,3 +17,7 @@
 /Assets/Scrapshift/Generated/
 /Assets/Scrapshift/Generated.meta
 /TestResults*.xml
+
+# Python authoring caches
+__pycache__/
+*.py[cod]

@@ -2,7 +2,7 @@
 Metre scale, baked bevels, flat/weighted normals, shared 512px worn palette atlas.
 No downloaded models; renders are asset previews, not Unity gameplay captures.
 """
-import bpy, math, random, json
+import bpy, math, random, json, sys
 from pathlib import Path
 from mathutils import Vector
 ROOT=Path(__file__).resolve().parents[1]
@@ -154,6 +154,29 @@ def bin_model():
     for i in range(8):
         o=cube('Bent sorted metal',((i%3-1)*1.0,.55+(i//3)*.25,(i%2-.5)*2),(1.1,.16,1.4),'metal',.02);o.rotation_euler=(.08*i,.1*i,.35*i)
     cube('Skip faded label',(0,.44,-2.02),(1.5,.32,.02),'cream')
+def portable_radio():
+    # Original late-1980s portable set: rounded casing, grille, tuning scale, carrying handle.
+    for x in [-.23,.23]:cube('Radio rubber foot',(x,.018,0),(.08,.036,.18),'rubber',.008)
+    cube('Worn blue radio casing',(0,.19,0),(.62,.32,.23),'blue',.028)
+    cube('Cream face rim',(0,.19,-.118),(.57,.265,.018),'cream',.012)
+    cube('Speaker recess',(-.145,.19,-.13),(.26,.235,.016),'rubber',.008)
+    for i in range(9):cube('Speaker grille slat',(-.145,.087+i*.025,-.143),(.24,.009,.012),'metal',.003)
+    cube('Amber tuning scale',(.14,.26,-.137),(.235,.08,.015),'warmglass',.006)
+    for i in range(11):cube('Frequency scale tick',(.042+i*.019,.26,-.149),(.003,.014 if i%2 else .025,.004),'ivory')
+    cube('Red station needle',(.16,.26,-.151),(.004,.062,.004),'rust')
+    for x in [.078,.22]:
+        cyl('Knurled tuning knob',(x,.13,-.148),.038,.035,'rubber','Z',16)
+        cube('Knob marker',(x,.152,-.17),(.005,.021,.005),'cream')
+    cube('Brand plate',(.145,.069,-.145),(.20,.022,.006),'metal')
+    for x in [-.23,.23]:
+        cube('Handle upright',(x,.392,0),(.035,.12,.055),'metal',.012)
+        cyl('Handle pivot',(x,.35,-.045),.022,.012,'cream','Z',8)
+    cube('Carry handle',(0,.45,0),(.49,.038,.06),'rubber',.012)
+    cyl('Antenna foot',(.265,.352,.055),.018,.035,'metal')
+    beam('Telescopic aerial',(.265,.37,.055),(.32,.61,.055),.009,'cream')
+    for x in [-.18,-.10,-.02,.06,.14]:cube('Rear vent',(x,.20,.119),(.045,.085,.004),'metal')
+    cube('Battery cover',(0,.115,.12),(.40,.12,.012),'blue',.006)
+
 def fan(frame_only=False):
     cube('Fan weighted base',(0,.045,0),(.44,.09,.30),'sage',.035)
     cyl('Fan pedestal',(0,.30,.03),.055,.47,'metal')
@@ -319,22 +342,30 @@ def export(name,builder):
     tri=sum(max(0,len(p.vertices)-2) for p in o.data.polygons)
     stats[name]={'triangles':tri,'vertices':len(o.data.vertices),'dimensions_blender':list(o.dimensions),'materials':len(o.data.materials)}
     o.hide_render=True;o.hide_set(True);return o
-stats={}
-models=[export(n,f) for n,f in [('WornHatchback',hatchback),('YardOffice',office),('ShippingContainer',container),('WorkshopCanopy',workshop),('SortingSkip',bin_model),('SalvageFan',fan),('Workbench',workbench),('WireCrate',wire_crate),('PalletBundle',pallet_bundle),('RustyHatchback',lambda:hatchback(True)),('SalvageFanFrame',lambda:fan(True)),('FanRotor',fan_rotor),('StorageRack',storage_rack),('PoweredStripper',powered_stripper),('BuyingScale',buying_scale),('FeedRoller',feed_roller),('WireBundle',wire_bundle),('CopperBundle',copper_bundle)]]
+args=sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else []
+selected=set(args[args.index('--only')+1].split(',')) if '--only' in args else None
+manifest_path=OUT/'asset_manifest.json'
+stats=json.loads(manifest_path.read_text())['assets'] if selected and manifest_path.exists() else {}
+builders=[('WornHatchback',hatchback),('YardOffice',office),('ShippingContainer',container),('WorkshopCanopy',workshop),('SortingSkip',bin_model),('SalvageFan',fan),('Workbench',workbench),('WireCrate',wire_crate),('PalletBundle',pallet_bundle),('RustyHatchback',lambda:hatchback(True)),('SalvageFanFrame',lambda:fan(True)),('FanRotor',fan_rotor),('StorageRack',storage_rack),('PoweredStripper',powered_stripper),('BuyingScale',buying_scale),('FeedRoller',feed_roller),('WireBundle',wire_bundle),('CopperBundle',copper_bundle),('PortableRadio',portable_radio)]
+if selected and not selected.issubset({name for name,_ in builders}):raise ValueError('Unknown selected model')
+models=[export(name,builder) for name,builder in builders if selected is None or name in selected]
 (OUT/'asset_manifest.json').write_text(json.dumps({'source':'Original Blender-authored models; build_yard_assets.py','units':'metres','atlas':'ScrapshiftPropAtlas.png','assets':stats},indent=2))
-# A rendered contact sheet of the actual exported source meshes, not gameplay.
-for i,o in enumerate([o for o in models if o.name not in ['SalvageFanFrame','FanRotor','FeedRoller','WireBundle','CopperBundle']]):
-    o.hide_render=False;o.hide_set(False)
-    scale=.8 if i in [0,5,6,7,8,9,10,11,12] else .20
-    o.scale=(scale,)*3;o.location=((i%4-1.5)*3.8,(i//4)*4,0)
-# Ground for contact shadows.
-bpy.ops.mesh.primitive_plane_add(size=200);ground=bpy.context.object;ground.location.z=-.015
-m=bpy.data.materials.new('Preview ground');m.diffuse_color=(.19,.18,.15,1);ground.data.materials.append(m)
-bpy.ops.object.light_add(type='AREA',location=(2,-4,12));bpy.context.object.data.energy=1800;bpy.context.object.data.shape='DISK';bpy.context.object.data.size=8
-bpy.ops.object.light_add(type='AREA',location=(-8,5,8));bpy.context.object.data.energy=850;bpy.context.object.data.color=(.68,.77,1);bpy.context.object.data.size=6
-bpy.ops.object.camera_add(location=(12,-18,16));cam=bpy.context.object;target=Vector((0,5.8,0));cam.rotation_euler=(target-cam.location).to_track_quat('-Z','Y').to_euler();cam.data.type='ORTHO';cam.data.ortho_scale=19
-scene=bpy.context.scene;scene.camera=cam;scene.render.engine='CYCLES';scene.cycles.samples=48;scene.cycles.use_denoising=False
-scene.render.resolution_x=1600;scene.render.resolution_y=1200;scene.render.resolution_percentage=100
-scene.world.color=(.24,.25,.26);scene.view_settings.view_transform='AgX'
-scene.render.filepath=str(PREV/'WornRetroAssetSheet.png');bpy.ops.render.render(write_still=True)
-print('SCRAPSHIFT_ASSET_STATS '+json.dumps(stats))
+if selected is None:
+    # A rendered contact sheet of the actual exported source meshes, not gameplay.
+    for i,o in enumerate([o for o in models if o.name not in ['SalvageFanFrame','FanRotor','FeedRoller','WireBundle','CopperBundle']]):
+        o.hide_render=False;o.hide_set(False)
+        scale=.8 if i in [0,5,6,7,8,9,10,11,12] else .20
+        o.scale=(scale,)*3;o.location=((i%4-1.5)*3.8,(i//4)*4,0)
+    # Ground for contact shadows.
+    bpy.ops.mesh.primitive_plane_add(size=200);ground=bpy.context.object;ground.location.z=-.015
+    m=bpy.data.materials.new('Preview ground');m.diffuse_color=(.19,.18,.15,1);ground.data.materials.append(m)
+    bpy.ops.object.light_add(type='AREA',location=(2,-4,12));bpy.context.object.data.energy=1800;bpy.context.object.data.shape='DISK';bpy.context.object.data.size=8
+    bpy.ops.object.light_add(type='AREA',location=(-8,5,8));bpy.context.object.data.energy=850;bpy.context.object.data.color=(.68,.77,1);bpy.context.object.data.size=6
+    bpy.ops.object.camera_add(location=(12,-18,16));cam=bpy.context.object;target=Vector((0,5.8,0));cam.rotation_euler=(target-cam.location).to_track_quat('-Z','Y').to_euler();cam.data.type='ORTHO';cam.data.ortho_scale=19
+    scene=bpy.context.scene;scene.camera=cam;scene.render.engine='CYCLES';scene.cycles.samples=48;scene.cycles.use_denoising=False
+    scene.render.resolution_x=1600;scene.render.resolution_y=1200;scene.render.resolution_percentage=100
+    scene.world.color=(.24,.25,.26);scene.view_settings.view_transform='AgX'
+    scene.render.filepath=str(PREV/'WornRetroAssetSheet.png');bpy.ops.render.render(write_still=True)
+    print('SCRAPSHIFT_ASSET_STATS '+json.dumps(stats))
+
+print('SCRAPSHIFT_EXPORTED '+json.dumps({o.name:stats[o.name] for o in models}))

@@ -48,13 +48,18 @@ namespace Scrapshift
                 s.dayIndex < 0 || s.fansTakenToday < 0 || s.fansTakenToday > 100 || s.incomeToday < 0 ||
                 (s.fanStage != FanStage.Repairing && s.fanStage != FanStage.Dismantling && s.fanStrokes != 0))
                 throw new ArgumentException("Invalid repair or working-day state.");
+            if((int)s.benchAppliance<0 || (int)s.benchAppliance>1 || (int)s.benchFault<0 || (int)s.benchFault>2 ||
+                s.radiosTakenToday<0 || s.radiosTakenToday>100 || s.radiosRepaired<0 || s.radiosDismantled<0 ||
+                (s.fanStage==FanStage.Empty && (s.benchAppliance!=RepairAppliance.DeskFan || s.benchFault!=ApplianceFault.MainComponent)))
+                throw new ArgumentException("Invalid appliance metadata.");
             if ((s.upgrades & ~(YardUpgrade.StorageRack | YardUpgrade.HandTools | YardUpgrade.MachineTuning)) != 0 ||
-                ((s.upgrades & YardUpgrade.MachineTuning) != 0 && !s.machineOwned))
+                ((s.upgrades & YardUpgrade.MachineTuning) != 0 && !s.machineOwned) || (s.milestones & ~YardJourney.Known)!=0)
                 throw new ArgumentException("Invalid yard upgrade state.");
             var ids = new HashSet<int>();
             foreach (var item in s.items)
                 if (item == null || item.id < 1 || item.id >= s.nextId || !ids.Add(item.id) ||
-                    (item.kind != MaterialKind.Wire && item.kind != MaterialKind.Copper && item.kind != MaterialKind.BrokenFan && item.kind != MaterialKind.RestoredFan) || item.quantity < 1 || item.quantity > 100 ||
+                    ((int)item.kind<0 || (int)item.kind>(int)MaterialKind.RestoredRadio) || item.quantity < 1 || item.quantity > 100 ||
+                    ((int)item.applianceFault<0 || (int)item.applianceFault>2) || (!ApplianceRecipe.IsAppliance(item.kind) && item.applianceFault!=ApplianceFault.MainComponent) ||
                     (item.kind != MaterialKind.Copper && item.quantity != 1) ||
                     (item.storage != StorageSlot.None && item.storage != StorageSlot.Wire && item.storage != StorageSlot.Copper) ||
                     (item.storage == StorageSlot.Wire && item.kind != MaterialKind.Wire) ||
@@ -112,6 +117,7 @@ namespace Scrapshift
         void CompleteBenchWork()
         {
             State.benchLoaded = false; State.benchStrokes = 0; State.benchOutput = Rules.copperPerWire;
+            State.milestones|=YardMilestone.RecoveredCopper;
         }
         public bool CollectBench()
         {
@@ -121,8 +127,8 @@ namespace Scrapshift
         public bool Sell()
         {
             var item = Carried;
-            if (item == null || (item.kind != MaterialKind.Copper && item.kind != MaterialKind.RestoredFan)) return false;
-            long value = item.kind == MaterialKind.Copper ? (long)item.quantity * Rules.copperUnitPrice : Rules.fanSalePrice;
+            if (item == null || (item.kind != MaterialKind.Copper && !ApplianceRecipe.IsRestored(item.kind))) return false;
+            long value = SaleValue(item);
             long money = (long)State.money + value;
             if (money > int.MaxValue) return false;
             RecordIncome((int)value);
@@ -185,6 +191,7 @@ namespace Scrapshift
             {
                 RecordIncome(order.reward);
                 State.money = (int)payment; State.orderIndex++;
+                State.milestones|=YardMilestone.ServedCustomer;
                 State.orderAccepted = false; State.orderDelivered = 0;
             }
             else State.orderDelivered += delivered;
@@ -193,7 +200,7 @@ namespace Scrapshift
         public bool BuyMachine()
         {
             if (State.machineOwned || State.money < Rules.machinePrice) return false;
-            State.money -= Rules.machinePrice; State.machineOwned = true; return true;
+            State.money -= Rules.machinePrice; State.machineOwned = true; State.milestones|=YardMilestone.PoweredYard; return true;
         }
         public bool FeedMachine()
         {
@@ -207,6 +214,7 @@ namespace Scrapshift
             if (State.machineRemaining == 0)
             {
                 State.machineOutput = State.machinePendingYield; State.machinePendingYield = 0;
+                State.milestones|=YardMilestone.RecoveredCopper;
             }
         }
         public bool CollectMachine()

@@ -5,7 +5,7 @@ namespace Scrapshift.Tests
     public sealed class PresentationVisualTests
     {
         [TestCase("GravelStep")][TestCase("ToolStroke")][TestCase("Pickup")][TestCase("Sale")]
-        [TestCase("StripperLoop")][TestCase("FanLoop")][TestCase("YardAmbience")]
+        [TestCase("StripperLoop")][TestCase("FanLoop")][TestCase("RadioTest")][TestCase("YardAmbience")]
         public void OriginalSoundsImportAtBoundedMonoSize(string name)
         {
             var clip=Resources.Load<AudioClip>("ScrapshiftAudio/"+name);

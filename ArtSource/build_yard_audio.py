@@ -78,7 +78,22 @@ def ambience(n):
         value*=min(1,t/.3,(16-t)/.3)
         data.append(value)
     return data
+def radio_test(n):
+    # Original eight-second instrumental listening-test phrase, not a sampled broadcast.
+    notes=[(0,261.63),(.5,329.63),(1,392),(1.75,329.63),(2.5,293.66),(3.25,349.23),(4,440),(4.75,392),(5.5,329.63),(6.25,293.66),(7,261.63)]
+    data=[]
+    for i in range(n):
+        t=i/RATE;value=0
+        for start,freq in notes:
+            u=t-start
+            if 0<=u<.9:
+                env=min(1,u/.02)*math.exp(-4*u)*min(1,(.9-u)/.08)
+                value+=(math.sin(2*math.pi*freq*u)+.22*math.sin(2*math.pi*freq*2*u))*.075*env
+        data.append(value)
+    data[0]=data[-1]=0
+    return data
 export('GravelStep',.2,step);export('ToolStroke',.28,tool);export('Pickup',.18,pickup);export('Sale',.48,sale)
 export('StripperLoop',2,lambda n:motor(n));export('FanLoop',2,lambda n:motor(n,True));export('YardAmbience',16,ambience)
+export('RadioTest',8,radio_test)
 (OUT/'audio_manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
 print(json.dumps(manifest))

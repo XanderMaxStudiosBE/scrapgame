@@ -18,13 +18,14 @@ namespace Scrapshift
             }
             if (target == TargetKind.FanBench)
             {
+                var recipe=model.CurrentRepair;
                 switch (s.fanStage)
                 {
-                    case FanStage.Repairing: return new StationProgress("FITTING MOTOR / " + s.fanStrokes + " of " + model.FanRepairSteps + " steps", s.fanStrokes, model.FanRepairSteps);
+                    case FanStage.Repairing: return new StationProgress(recipe.workAction.ToUpperInvariant()+" / " + s.fanStrokes + " of " + model.FanRepairSteps + " steps", s.fanStrokes, model.FanRepairSteps);
                     case FanStage.Dismantling: return new StationProgress("RECOVERING COPPER / " + s.fanStrokes + " of " + model.FanSalvageSteps + " steps", s.fanStrokes, model.FanSalvageSteps);
-                    case FanStage.ReadyToTest: return new StationProgress("MOTOR FITTED / Power-on test still required", 1, 1);
-                    case FanStage.Tested: return new StationProgress("TEST PASSED / Resale value EUR " + model.Rules.fanSalePrice, 1, 1);
-                    case FanStage.CopperReady: return new StationProgress("SALVAGE READY / " + model.Rules.fanCopperYield + " copper", 1, 1);
+                    case FanStage.ReadyToTest: return new StationProgress("REPAIR COMPLETE / Power-on test still required", 1, 1);
+                    case FanStage.Tested: return new StationProgress("TEST PASSED / Resale value EUR " + recipe.salePrice, 1, 1);
+                    case FanStage.CopperReady: return new StationProgress("SALVAGE READY / " + recipe.copperYield + " copper", 1, 1);
                 }
             }
             return default(StationProgress);

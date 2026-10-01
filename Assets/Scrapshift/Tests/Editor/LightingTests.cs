@@ -87,12 +87,15 @@ namespace Scrapshift.Tests
             try
             {
                 YardProps.Workbench(root.transform,new Vector3(-2.5f,0,4));YardProps.Delivery(root.transform,new Vector3(-7,0,2));
+                var electronics=YardProps.Delivery(root.transform,YardBootstrap.StationPosition(YardLandmark.RadioSupply));
+                electronics.GetComponent<InteractionTarget>().kind=TargetKind.RadioSupply;
                 GameObject car;Assert.IsTrue(AuthoredYardProps.TryPlace("WornHatchback",root.transform,new Vector3(5,0,0),out car));
                 var shade=YardContactShadows.Build(root.transform);
                 Assert.NotNull(shade);Assert.IsEmpty(shade.GetComponentsInChildren<Collider>());Assert.IsEmpty(shade.GetComponentsInChildren<Light>());
                 Assert.AreEqual(1,shade.GetComponentsInChildren<MeshRenderer>().Length);
                 var renderer=shade.GetComponent<MeshRenderer>();Assert.AreEqual(ShadowCastingMode.Off,renderer.shadowCastingMode);Assert.IsFalse(renderer.receiveShadows);
-                var mesh=shade.GetComponent<MeshFilter>().sharedMesh;Assert.Less(mesh.vertexCount,200);Assert.AreEqual(mesh.vertexCount,mesh.colors.Length);
+                var mesh=shade.GetComponent<MeshFilter>().sharedMesh;Assert.Less(mesh.vertexCount,225);Assert.AreEqual(mesh.vertexCount,mesh.colors.Length);
+                Assert.IsTrue(mesh.bounds.Contains(YardBootstrap.StationPosition(YardLandmark.RadioSupply)+Vector3.up*.006f),"Electronics crate receives contact grounding");
                 foreach(var vertex in mesh.vertices){Assert.IsFalse(float.IsNaN(vertex.x));Assert.AreEqual(.006f,vertex.y,.00001f);}
                 foreach(var color in mesh.colors){Assert.GreaterOrEqual(color.a,0);Assert.LessOrEqual(color.a,.25f);}
                 Assert.AreSame(mesh,shade.GetComponent<ProceduralMeshOwner>().mesh);

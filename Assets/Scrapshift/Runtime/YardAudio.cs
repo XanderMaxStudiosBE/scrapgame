@@ -8,7 +8,7 @@ namespace Scrapshift
     {
         readonly GameObject root;
         readonly AudioSource effects, machine, fan, ambience;
-        readonly AudioClip pickup, stroke, sale, step;
+        readonly AudioClip pickup, stroke, sale, step, fanLoop, radioTest;
         readonly FirstPersonController player;
         readonly PresentationSettings settings;
         Vector3 previousPosition;
@@ -20,10 +20,10 @@ namespace Scrapshift
             root=new GameObject("Yard soundscape"); root.transform.SetParent(parent,false);
             effects=Source("Tools and footsteps",Vector3.zero,false);
             machine=Source("Stripper motor",YardBootstrap.StationPosition(YardLandmark.Machine)+Vector3.up,true);
-            fan=Source("Tested fan",FanWorkbenchVisual.Position+Vector3.up*1.5f,true);
+            fan=Source("Tested appliance",FanWorkbenchVisual.Position+Vector3.up*1.5f,true);
             ambience=Source("Outdoor breeze",Vector3.zero,false);
             pickup=Clip("Pickup");stroke=Clip("ToolStroke");sale=Clip("Sale");step=Clip("GravelStep");
-            machine.clip=Clip("StripperLoop"); fan.clip=Clip("FanLoop");ambience.clip=Clip("YardAmbience");
+            machine.clip=Clip("StripperLoop");fanLoop=Clip("FanLoop");radioTest=Clip("RadioTest");fan.clip=fanLoop;ambience.clip=Clip("YardAmbience");
             machine.loop=fan.loop=ambience.loop=true;
             ApplyVolumes();if(ambience.clip!=null)ambience.Play();
         }
@@ -59,6 +59,8 @@ namespace Scrapshift
         }
         public void Step(YardModel model)
         {
+            var repairClip=model.State.benchAppliance==RepairAppliance.PortableRadio?radioTest:fanLoop;
+            if(fan.clip!=repairClip){fan.Stop();fan.clip=repairClip;}
             Loop(machine,model.State.machineRemaining>0);Loop(fan,model.State.fanStage==FanStage.Tested);
             Vector3 pos=player.transform.position,delta=pos-previousPosition;previousPosition=pos;delta.y=0;
             float distance=delta.magnitude;

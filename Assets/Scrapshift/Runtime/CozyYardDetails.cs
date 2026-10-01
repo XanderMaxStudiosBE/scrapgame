@@ -65,9 +65,12 @@ namespace Scrapshift
             }
             Accent(parent, "Workshop shelf", new Vector3(-2.5f, 1.22f, 5.18f), new Vector3(3.8f, .10f, .42f), Sage);
             Accent(parent, "Workshop coffee mug", new Vector3(-3.9f, 1.37f, 5.15f), new Vector3(.14f, .2f, .14f), YardGeometry.Ivory);
-            Accent(parent, "Workshop radio", new Vector3(-1.2f, 1.43f, 5.14f), new Vector3(.6f, .3f, .22f), DustyBlue);
-            Accent(parent, "Radio speaker", new Vector3(-1.35f, 1.43f, 5.01f), new Vector3(.24f, .21f, .02f), YardGeometry.Charcoal);
-            Accent(parent, "Radio dial", new Vector3(-1.04f, 1.43f, 5.0f), new Vector3(.15f, .1f, .025f), WarmWindow);
+            if(!AuthoredYardProps.TryPlace("PortableRadio",parent,new Vector3(-1.2f,1.27f,5.1f),out GameObject shelfRadio))
+            {
+                Accent(parent,"Workshop radio",new Vector3(-1.2f,1.43f,5.14f),new Vector3(.6f,.3f,.22f),DustyBlue);
+                Accent(parent,"Radio speaker",new Vector3(-1.35f,1.43f,5.01f),new Vector3(.24f,.21f,.02f),YardGeometry.Charcoal);
+                Accent(parent,"Radio dial",new Vector3(-1.04f,1.43f,5.0f),new Vector3(.15f,.1f,.025f),WarmWindow);
+            }
             Plant(parent, new Vector3(-5.4f, 0, 5.8f));
         }
 

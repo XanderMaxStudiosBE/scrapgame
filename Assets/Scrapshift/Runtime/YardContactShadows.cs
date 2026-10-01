@@ -22,7 +22,7 @@ namespace Scrapshift
                         Patch(vertices,colors,triangles,p,1.25f,.75f,.08f);
                         foreach(float x in new[]{-.97f,.97f})foreach(float z in new[]{-.47f,.47f})Patch(vertices,colors,triangles,p+new Vector3(x,0,z),.22f,.22f,.23f);
                         break;
-                    case TargetKind.Supply:case TargetKind.FanSupply:Patch(vertices,colors,triangles,p,1.3f,.85f,.17f);break;
+                    case TargetKind.Supply:case TargetKind.FanSupply:case TargetKind.RadioSupply:Patch(vertices,colors,triangles,p,1.3f,.85f,.17f);break;
                     case TargetKind.Machine:Patch(vertices,colors,triangles,p,1.3f,.83f,.16f);break;
                     case TargetKind.Sell:Patch(vertices,colors,triangles,p,1.45f,.85f,.13f);break;
                     case TargetKind.WireStorage:case TargetKind.CopperStorage:Patch(vertices,colors,triangles,p,1.25f,.9f,.14f);break;

@@ -1,7 +1,7 @@
 using System;
 namespace Scrapshift
 {
-    public enum YardLandmark { Automatic, Delivery, Bench, Buyer, Machine, WireStorage, CopperStorage, Orders, FanSupply, FanBench, Diary, VehicleWire, SalvageWire, SortingWire }
+    public enum YardLandmark { Automatic, Delivery, Bench, Buyer, Machine, WireStorage, CopperStorage, Orders, FanSupply, FanBench, Diary, VehicleWire, SalvageWire, SortingWire, RadioSupply }
     public struct YardDestination
     {
         public readonly YardLandmark landmark;
@@ -39,7 +39,8 @@ namespace Scrapshift
             new YardDestination(YardLandmark.Diary,"Yard diary",6,-27),
             new YardDestination(YardLandmark.VehicleWire,"Vehicle wire crate",YardWorldLayout.SalvageSites[0].x,YardWorldLayout.SalvageSites[0].z),
             new YardDestination(YardLandmark.SalvageWire,"Salvage wire crate",YardWorldLayout.SalvageSites[1].x,YardWorldLayout.SalvageSites[1].z),
-            new YardDestination(YardLandmark.SortingWire,"Sorting wire crate",YardWorldLayout.SalvageSites[2].x,YardWorldLayout.SalvageSites[2].z)
+            new YardDestination(YardLandmark.SortingWire,"Sorting wire crate",YardWorldLayout.SalvageSites[2].x,YardWorldLayout.SalvageSites[2].z),
+            new YardDestination(YardLandmark.RadioSupply,"Electronics salvage",33,-19)
         };
         public static YardDestination Get(YardLandmark landmark)
         {
@@ -57,8 +58,8 @@ namespace Scrapshift
         public static YardDestination Recommend(YardModel m, float x, float z)
         {
             var s=m.State;var c=m.Carried;
-            if(c!=null && c.kind==MaterialKind.BrokenFan)return Get(YardLandmark.FanBench);
-            if(c!=null && c.kind==MaterialKind.RestoredFan)return Get(YardLandmark.Buyer);
+            if(c!=null && ApplianceRecipe.IsBroken(c.kind))return Get(YardLandmark.FanBench);
+            if(c!=null && ApplianceRecipe.IsRestored(c.kind))return Get(YardLandmark.Buyer);
             if(c!=null && c.kind==MaterialKind.Copper)return Get(s.orderAccepted?YardLandmark.Orders:YardLandmark.Buyer);
             if(!s.machineOwned && s.money>=m.Rules.machinePrice)return Get(YardLandmark.Machine);
             if(c!=null)

@@ -216,6 +216,18 @@
       "uv": "within shared atlas",
       "status": "passed",
       "sha256": "7d32d5a02a3f690154bb8a748e890ab6ecdacb6e885a04941b8c9407072a8349"
+    },
+    {
+      "name": "PortableRadio",
+      "triangles": 1308,
+      "metre_dimensions": [
+        0.6343862414360046,
+        0.2985000014305115,
+        0.6110051932254343
+      ],
+      "uv": "within shared atlas",
+      "status": "passed",
+      "sha256": "00394f73a89bbb4d2b817715d791b7ccabc10bd589f5ee3ff3cf86ec022714df"
     }
   ]
 }

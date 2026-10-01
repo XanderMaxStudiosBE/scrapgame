@@ -17,6 +17,12 @@ namespace Scrapshift
             Fill(ref rules.storageUpgradePrice,defaults.storageUpgradePrice,ref changed);
             Fill(ref rules.toolsUpgradePrice,defaults.toolsUpgradePrice,ref changed);
             Fill(ref rules.tuningUpgradePrice,defaults.tuningUpgradePrice,ref changed);
+            Fill(ref rules.radioPartsPrice,defaults.radioPartsPrice,ref changed);
+            Fill(ref rules.radioSalePrice,defaults.radioSalePrice,ref changed);
+            Fill(ref rules.radioCopperYield,defaults.radioCopperYield,ref changed);
+            Fill(ref rules.radioRepairStrokes,defaults.radioRepairStrokes,ref changed);
+            Fill(ref rules.radioDismantleStrokes,defaults.radioDismantleStrokes,ref changed);
+            Fill(ref rules.radioDailyLimit,defaults.radioDailyLimit,ref changed);
             return changed;
         }
         static void Fill(ref int value,int fallback,ref bool changed){if(value==0){value=fallback;changed=true;}}
