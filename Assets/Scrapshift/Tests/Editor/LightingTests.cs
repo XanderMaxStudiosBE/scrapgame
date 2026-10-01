@@ -81,6 +81,21 @@ namespace Scrapshift.Tests
             finally{Object.DestroyImmediate(pipeline);Object.DestroyImmediate(renderer);}
         }
         [Test]
+        public void ApplianceGroundingFollowsRotatedRowsInOneOwnedMesh()
+        {
+            var root=new GameObject("Rotated grounding test");
+            try
+            {
+                Assert.IsTrue(YardWorldDressing.TryPlace("ApplianceRow",root.transform,new Vector3(12,0,-3),out GameObject row));
+                row.transform.localRotation=Quaternion.Euler(0,90,0);
+                var shade=YardContactShadows.Build(root.transform);var mesh=shade.GetComponent<MeshFilter>().sharedMesh;
+                Assert.AreEqual(25,mesh.vertexCount);Assert.That(mesh.bounds.size.x,Is.InRange(1.6f,1.8f));Assert.That(mesh.bounds.size.z,Is.InRange(4.5f,4.7f));
+                Assert.IsEmpty(shade.GetComponentsInChildren<Collider>());Assert.IsEmpty(shade.GetComponentsInChildren<Light>());
+                Assert.AreSame(mesh,shade.GetComponent<ProceduralMeshOwner>().mesh);
+            }
+            finally{Object.DestroyImmediate(root);}
+        }
+        [Test]
         public void ContactGroundingIsOneSmallMeshWithoutCollisionOrLights()
         {
             var root=new GameObject("Contact grounding test");

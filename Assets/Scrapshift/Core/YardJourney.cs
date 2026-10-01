@@ -37,6 +37,14 @@ namespace Scrapshift
             if(s.upgrades!=YardUpgrade.None)result|=YardMilestone.InvestedYard;
             return result;
         }
+        public static bool OpeningComplete(YardState s)
+        {return (Completed(s)&Known)==Known;}
+        public static bool PresentOpeningCompletion(YardState s)
+        {
+            if(s.openingChapterSeen || !OpeningComplete(s))return false;
+            // Persist the established legacy facts before inventory/day changes can hide their evidence.
+            s.milestones|=Known;s.openingChapterSeen=true;return true;
+        }
         public static bool HasProgress(YardState s)
         {
             return s.money>0 || s.items.Count>0 || s.benchLoaded || s.benchOutput>0 || s.machineOwned ||

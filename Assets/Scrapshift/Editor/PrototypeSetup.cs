@@ -22,6 +22,7 @@ namespace Scrapshift
         public static void UpdateExistingVisuals()
         {
             RetroMaterialSetup.EnsureMaterials();
+            YardMaterialRecovery.Recover();
             PresetShadowSupport.EnsureGenerated();
             Debug.Log("Tracked materials ready. Existing YardBootstrap scenes use the updated props and Settings automatically on next Play; scene and balance edits were preserved.");
         }
@@ -30,6 +31,7 @@ namespace Scrapshift
         {
             Directory.CreateDirectory(Folder); AssetDatabase.Refresh();
             RetroMaterialSetup.EnsureMaterials();
+            YardMaterialRecovery.Recover();
             var balance = AssetDatabase.LoadAssetAtPath<PrototypeBalance>(Folder + "/Balance.asset");
             if (balance == null)
             {

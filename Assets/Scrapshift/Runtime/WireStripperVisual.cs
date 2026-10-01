@@ -163,7 +163,7 @@ namespace Scrapshift
             obj.transform.SetParent(parent, false); obj.transform.localPosition = position;
             obj.AddComponent<MeshFilter>().sharedMesh = mesh;
             obj.AddComponent<ProceduralMeshOwner>().mesh = mesh;
-            obj.AddComponent<MeshRenderer>().sharedMaterial = RetroMaterialLibrary.Get(surface);
+            obj.AddComponent<MeshRenderer>().sharedMaterial = YardMaterialBindings.Load("ScrapshiftMaterials/"+surface,parent);
         }
 
         static void Label(Transform parent, string text, Vector3 position)

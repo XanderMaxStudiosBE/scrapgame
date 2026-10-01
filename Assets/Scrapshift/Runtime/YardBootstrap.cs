@@ -29,9 +29,9 @@ namespace Scrapshift
             YardProps.Buyer(root, StationPosition(YardLandmark.Buyer));
             var stripper = WireStripperVisual.Build(root, StationPosition(YardLandmark.Machine));
             YardGeometry.MountedSign(root, "WIRE DELIVERY", StationPosition(YardLandmark.Delivery) + Vector3.forward * .7f);
-            YardGeometry.MountedSign(root, "STRIPPING BENCH", StationPosition(YardLandmark.Bench) + Vector3.forward * .7f);
+            YardGeometry.MountedSign(root, "HAND BENCH", StationPosition(YardLandmark.Bench) + Vector3.forward * .7f);
             YardGeometry.MountedSign(root, "SCRAP BUYER", StationPosition(YardLandmark.Buyer) + Vector3.forward * .7f);
-            YardGeometry.MountedSign(root, "POWERED STRIPPER", StationPosition(YardLandmark.Machine) + Vector3.forward * .7f);
+            YardGeometry.MountedSign(root, "WIRE STRIPPER", StationPosition(YardLandmark.Machine) + Vector3.forward * .7f);
 
             var playerObject = new GameObject("Player"); playerObject.transform.SetParent(root, false); playerObject.layer = 2;
             var controller = playerObject.AddComponent<CharacterController>(); controller.height = 1.8f; controller.radius = .3f; controller.stepOffset = .25f;
@@ -51,7 +51,6 @@ namespace Scrapshift
             var profile=lightingProfile!=null?lightingProfile:Resources.Load<YardLightingProfile>("ScrapshiftLighting/CozyAfternoon");
             if(profile!=null)game.lighting=YardLighting.Build(root,camera,profile);
             else Debug.LogError("Missing CozyAfternoon lighting profile. Reimport tracked lighting resources.");
-            YardContactShadows.Build(root);
         }
     }
 }

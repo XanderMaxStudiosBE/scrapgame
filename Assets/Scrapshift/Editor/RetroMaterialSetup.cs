@@ -26,19 +26,7 @@ namespace Scrapshift
                 if (importer == null)
                     throw new InvalidOperationException("Missing tracked retro texture: " + texturePath);
 
-                if (importer.filterMode != FilterMode.Point || importer.wrapMode != TextureWrapMode.Repeat ||
-                    importer.mipmapEnabled || importer.textureCompression != TextureImporterCompression.Uncompressed ||
-                    !importer.sRGBTexture || importer.maxTextureSize != 64)
-                {
-                    importer.textureType = TextureImporterType.Default;
-                    importer.filterMode = FilterMode.Point;
-                    importer.wrapMode = TextureWrapMode.Repeat;
-                    importer.mipmapEnabled = false;
-                    importer.textureCompression = TextureImporterCompression.Uncompressed;
-                    importer.sRGBTexture = true;
-                    importer.maxTextureSize = 64;
-                    importer.SaveAndReimport();
-                }
+                if(SurfaceTextureSampling.Configure(importer))importer.SaveAndReimport();
 
                 string materialPath = MaterialRoot + "/" + surface + ".mat";
                 var material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);

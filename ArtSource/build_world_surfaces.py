@@ -2,6 +2,7 @@
 Run python3 ArtSource/build_world_surfaces.py. Only this new pack's textures are regenerated.
 Existing material files and all legacy textures are preserved.
 """
+from material_compatibility import migration_safe
 from pathlib import Path
 import math,random,struct,zlib,json,hashlib,uuid
 ROOT=Path(__file__).resolve().parents[1]
@@ -87,7 +88,7 @@ def material(name,texture,keywords=(),metallic=0,smoothness=.08,transparent=Fals
     if clip:s=s.replace('- _AlphaClip: 0','- _AlphaClip: 1').replace('- _Cull: 2','- _Cull: 0').replace('m_CustomRenderQueue: -1','m_CustomRenderQueue: 2450').replace('    - _Blend: 0','    - _Cutoff: 0.5\n    - _Blend: 0')
     if transparent:
         s=s.replace('- _Surface: 0','- _Surface: 1').replace('- _SrcBlend: 1','- _SrcBlend: 5').replace('- _DstBlend: 0','- _DstBlend: 10').replace('- _ZWrite: 1','- _ZWrite: 0').replace('m_CustomRenderQueue: -1','m_CustomRenderQueue: 3000').replace('stringTagMap: {}','stringTagMap:\n    RenderType: Transparent').replace('disabledShaderPasses: []','disabledShaderPasses:\n  - ShadowCaster\n  - DepthOnly')
-    path.write_text(s);meta(path)
+    path.write_text(migration_safe(s));meta(path)
 material('WorldProps','WorldAtlas',('_METALLICSPECGLOSSMAP','_EMISSION'),1,1,emission=True)
 material('GroundWear','GroundLayers',('_SURFACE_TYPE_TRANSPARENT',),smoothness=.04,transparent=True)
 material('RoughPuddles','GroundLayers',('_SURFACE_TYPE_TRANSPARENT',),smoothness=.42,transparent=True)

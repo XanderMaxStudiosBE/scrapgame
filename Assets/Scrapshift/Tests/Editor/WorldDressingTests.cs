@@ -101,6 +101,34 @@ namespace Scrapshift.Tests
             finally { UnityEngine.Object.DestroyImmediate(root); }
         }
         [Test]
+        public void ForecourtRowsHaveCoarseCollisionAndSheltersKeepTheirOpenFront()
+        {
+            var root=new GameObject("Workshop surroundings");
+            try
+            {
+                YardWorldDressing.BuildDistrict(root.transform);Physics.SyncTransforms();
+                var footprints=root.GetComponentsInChildren<AddedSceneryFootprint>();Assert.AreEqual(6,footprints.Length);
+                foreach(var prop in footprints)
+                {
+                    Assert.IsEmpty(prop.GetComponentsInChildren<InteractionTarget>());Assert.IsEmpty(prop.GetComponentsInChildren<Rigidbody>());Assert.IsEmpty(prop.GetComponentsInChildren<Light>());
+                    var boxes=prop.GetComponents<BoxCollider>();Assert.AreEqual(prop.name=="ApplianceRow"?1:5,boxes.Length);
+                    if(prop.name=="SalvageShelter")
+                    {
+                        Vector3 doorway=prop.transform.TransformPoint(new Vector3(0,1,-1.8f));
+                        Assert.IsFalse(Physics.CheckCapsule(doorway+Vector3.down*.6f,doorway+Vector3.up*.6f,.3f),"open front between corner posts");
+                    }
+                }
+            }
+            finally{UnityEngine.Object.DestroyImmediate(root);}
+        }
+        [Test]
+        public void SolidFlagRejectsModelsWithoutAnAuthoredCollisionPolicy()
+        {
+            var data=JsonUtility.FromJson<YardSceneryLayout>(Resources.Load<TextAsset>("ScrapshiftWorld/WorldDressing").text);
+            var tools=Array.Find(data.props,p=>p.model=="RepairTools");tools.solid=true;
+            Assert.Throws<ArgumentException>(data.Validate);
+        }
+        [Test]
         public void IntegratedWorldKeepsSourcesAndCoarseCollisionVolumes()
         {
             var root = new GameObject("Integrated dressing test");
@@ -112,7 +140,7 @@ namespace Scrapshift.Tests
                 Assert.AreEqual(new Vector3(8,3,6),office.GetComponent<BoxCollider>().size);
                 Assert.AreEqual(new Vector3(-16,0,-30),office.localPosition);
                 foreach (var mesh in root.GetComponentsInChildren<MeshRenderer>())
-                    if (mesh.sharedMaterial==Resources.Load<Material>("ScrapshiftWorld/WorldProps") && mesh.name!="TealContainer")
+                    if (mesh.sharedMaterial==Resources.Load<Material>("ScrapshiftWorld/WorldProps") && mesh.name!="TealContainer" && mesh.GetComponentInParent<AddedSceneryFootprint>()==null)
                         Assert.IsEmpty(mesh.GetComponentsInChildren<Collider>(),mesh.name+" dressing must not obstruct old saves/items");
                 var teal=root.transform.Find("North loading district/TealContainer"); Assert.NotNull(teal);
                 Assert.AreEqual(new Vector3(9,2.8f,4),teal.GetComponent<BoxCollider>().size);

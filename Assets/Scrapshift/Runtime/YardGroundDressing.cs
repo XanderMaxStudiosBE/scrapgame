@@ -39,8 +39,8 @@ namespace Scrapshift
         }
         public static void Build(Transform parent)
         {
-            var wear = Resources.Load<Material>("ScrapshiftWorld/GroundWear");
-            var wet = Resources.Load<Material>("ScrapshiftWorld/RoughPuddles");
+            var wear = YardMaterialBindings.Load("ScrapshiftWorld/GroundWear",parent);
+            var wet = YardMaterialBindings.Load("ScrapshiftWorld/RoughPuddles",parent);
             for (int region=0; region<4; region++)
             {
                 var root = new GameObject("Ground detail region " + region).transform; root.SetParent(parent,false);

@@ -15,7 +15,7 @@ def texturemat(name,path,rough=.82,alpha=False,repeat=1):
     if alpha:m.node_tree.links.new(tex.outputs['Alpha'],bs.inputs['Alpha'])
     if repeat!=1:
         uv=m.node_tree.nodes.new('ShaderNodeTexCoord');scale=m.node_tree.nodes.new('ShaderNodeVectorMath');scale.operation='SCALE';scale.inputs[3].default_value=repeat
-        m.node_tree.links.new(uv.outputs['UV'],scale.inputs[0]);m.node_tree.links.new(scale.outputs['Vector'],tex.inputs['Vector']);tex.interpolation='Closest'
+        m.node_tree.links.new(uv.outputs['UV'],scale.inputs[0]);m.node_tree.links.new(scale.outputs['Vector'],tex.inputs['Vector']);tex.interpolation='Linear'
     return m
 legacy=texturemat('Actual unchanged legacy atlas',MODELS/'ScrapshiftPropAtlas.png')
 worldmat=texturemat('Actual additive WorldProps atlas',WORLD/'WorldAtlas.png')
@@ -106,7 +106,7 @@ bpy.ops.object.camera_add();camera=bpy.context.object;scene.camera=camera
 # Camera-relative authored label makes provenance visible in every standalone preview.
 labelmat=bpy.data.materials.new('Preview label');labelmat.use_nodes=True;lb=labelmat.node_tree.nodes.get('Principled BSDF');lb.inputs['Emission Color'].default_value=(.85,.87,.8,1);lb.inputs['Emission Strength'].default_value=1
 bpy.ops.object.text_add();label=bpy.context.object;label.parent=camera;label.location=(-.58,.325,-1);label.data.body='BLENDER WORLD PREVIEW / NOT UNITY GAMEPLAY';label.data.size=.021;label.data.materials.append(labelmat)
-shots=[('WorldOverview',(6,-7,1.8),(-3,7,1.7),25),('WorkshopWorldDetails',(-5.5,1.45,1.75),(-2.4,5.3,1.65),27),('ApplianceLane',(-42,-11,1.75),(-43,8,1.7),28),('OfficeWorldDetails',(-23,-20,1.8),(-16,-30,1.8),28)]
+shots=[('EyeHeightForecourt',(0,-20,1.7),(0,4,1.7),25),('WorldOverview',(6,-7,1.8),(-3,7,1.7),25),('WorkshopWorldDetails',(-5.5,1.45,1.75),(-2.4,5.3,1.65),27),('ApplianceLane',(-42,-11,1.75),(-43,8,1.7),28),('OfficeWorldDetails',(-23,-20,1.8),(-16,-30,1.8),28)]
 args=sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else []
 for name,position,target,lens in shots:
     if args and name not in args:continue

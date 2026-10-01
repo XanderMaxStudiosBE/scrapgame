@@ -61,7 +61,7 @@ namespace Scrapshift
             var buyer=YardBootstrap.StationPosition(YardLandmark.Buyer);
             var fan=YardBootstrap.StationPosition(YardLandmark.FanBench);
             WorkLights=new[]{Spot("Stripping bench task light",bench+new Vector3(0,2.68f,-.35f),profile),Spot("Buyer task light",buyer+new Vector3(0,2.68f,-.35f),profile),Spot("Restoration task light",fan+new Vector3(0,2.5f,-.25f),profile)};
-            var trackedBulb=Resources.Load<Material>("ScrapshiftMaterials/PropAtlas");
+            var trackedBulb=YardMaterialBindings.Load("ScrapshiftMaterials/PropAtlas",transform);
             if(trackedBulb!=null)
             {
                 bulbMaterial=new Material(trackedBulb){name="Private warm lamp diffuser",hideFlags=HideFlags.DontSave};

@@ -200,7 +200,7 @@ namespace Scrapshift
             mesh.RecalculateNormals(); mesh.RecalculateBounds();
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             go.AddComponent<ProceduralMeshOwner>().mesh = mesh;
-            go.AddComponent<MeshRenderer>().sharedMaterial = RetroMaterialLibrary.Get(surface);
+            go.AddComponent<MeshRenderer>().sharedMaterial = YardMaterialBindings.Load("ScrapshiftMaterials/"+surface,parent);
             return go;
         }
 

@@ -40,10 +40,16 @@ namespace Scrapshift
                 switch(prop.name)
                 {
                     case "WornHatchback":case "RustyHatchback":Patch(vertices,colors,triangles,p,1.28f,2.5f,.19f);break;
-                    case "ShippingContainer":Patch(vertices,colors,triangles,p,4.75f,2.25f,.15f);break;
+                    case "TealContainer":case "ShippingContainer":Patch(vertices,colors,triangles,p,4.75f,2.25f,.15f);break;
                     case "SortingSkip":Patch(vertices,colors,triangles,p,2.2f,2.2f,.15f);break;
                     case "YardOffice":Patch(vertices,colors,triangles,p,4.3f,3.3f,.14f);break;
                     case "PalletBundle":Patch(vertices,colors,triangles,p,1.4f,1,.16f);break;
+                    case "ApplianceRow":
+                        Patch(vertices,colors,triangles,p,2.32f*prop.lossyScale.x,.84f*prop.lossyScale.z,.19f,prop.eulerAngles.y-parent.eulerAngles.y);break;
+                    case "SalvageShelter":
+                        foreach(float x in new[]{-4.1f,4.1f})foreach(float z in new[]{-1.6f,1.6f})
+                            Patch(vertices,colors,triangles,parent.InverseTransformPoint(prop.TransformPoint(new Vector3(x,0,z))),.18f,.18f,.23f);
+                        break;
                 }
             }
             var mesh=new Mesh{name="Static yard contact grounding"};mesh.SetVertices(vertices);mesh.SetColors(colors);mesh.SetTriangles(triangles,0);mesh.RecalculateBounds();
@@ -54,13 +60,15 @@ namespace Scrapshift
             renderer.lightProbeUsage=LightProbeUsage.Off;renderer.reflectionProbeUsage=ReflectionProbeUsage.Off;
             return root;
         }
-        static void Patch(List<Vector3> vertices,List<Color> colors,List<int> triangles,Vector3 center,float radiusX,float radiusZ,float opacity)
+        static void Patch(List<Vector3> vertices,List<Color> colors,List<int> triangles,Vector3 center,float radiusX,float radiusZ,float opacity,float yaw=0)
         {
+            float c=Mathf.Cos(yaw*Mathf.Deg2Rad),s=Mathf.Sin(yaw*Mathf.Deg2Rad);
             center.y+=.006f;int start=vertices.Count;vertices.Add(center);colors.Add(new Color(1,1,1,opacity));
             for(int ring=0;ring<2;ring++)for(int i=0;i<Segments;i++)
             {
                 float angle=i*Mathf.PI*2/Segments,radius=ring==0?.58f:1;
-                vertices.Add(center+new Vector3(Mathf.Cos(angle)*radiusX*radius,0,Mathf.Sin(angle)*radiusZ*radius));
+                float dx=Mathf.Cos(angle)*radiusX*radius,dz=Mathf.Sin(angle)*radiusZ*radius;
+                vertices.Add(center+new Vector3(c*dx+s*dz,0,-s*dx+c*dz));
                 colors.Add(new Color(1,1,1,ring==0?opacity*.65f:0));
             }
             for(int i=0;i<Segments;i++)

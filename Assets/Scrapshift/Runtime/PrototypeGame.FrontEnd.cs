@@ -4,7 +4,7 @@ namespace Scrapshift
 {
     public sealed partial class PrototypeGame
     {
-        bool titleOpen, helpOpen, introOpen, creditsOpen, sessionStarted, hasYardSave;
+        bool titleOpen, helpOpen, introOpen, creditsOpen, chapterOpen, chapterReview, chapterCheckPending, sessionStarted, hasYardSave;
         int helpPage;
         Vector2 helpScroll;
         void InitializeFrontEnd()
@@ -17,7 +17,33 @@ namespace Scrapshift
             titleOpen=false;sessionStarted=true;
             if(!Model.State.introSeen && !YardJourney.HasProgress(Model.State))
             { introOpen=true;SetPaused(true);return; }
+            if(TryShowOpeningCompletion())return;
             SetPaused(false);Save();
+        }
+        bool TryShowOpeningCompletion()
+        {
+            if(!sessionStarted || saveBlocked)return false;
+            chapterCheckPending=false;
+            if(!YardJourney.PresentOpeningCompletion(Model.State))return false;
+            OpenChapterRecap();Save();return true;
+        }
+        void OpenChapterRecap(){chapterReview=false;chapterOpen=true;SetPaused(true);}
+        void CloseOpeningChapter()
+        {
+            if(chapterReview){chapterOpen=chapterReview=false;helpOpen=true;SetPaused(true);}
+            else SetPaused(false);
+        }
+        void DrawOpeningCompletion(float width,float height)
+        {
+            var panel=FrontPanel(width,height,"CHAPTER ONE / A YARD OF YOUR OWN",650,510);
+            float x=panel.x+28,w=panel.width-56;
+            GUI.Label(new Rect(x,panel.y+66,w,55),"THE YARD IS ESTABLISHED",wrappedLabel);
+            GUI.Label(new Rect(x,panel.y+129,w,100),"You recovered copper, earned your first income, helped a neighbour, powered the workshop, restored an appliance and invested in your yard.",wrappedLabel);
+            GUI.Label(new Rect(x,panel.y+253,w,85),"Keep the gates open. Finish the customer requests, try different repairs and build the workshop at your own pace. The diary brings fresh salvage each day.",wrappedLabel);
+            GUI.Label(new Rect(x,panel.y+353,w,38),"DAY "+((long)Model.State.dayIndex+1)+"   /   €"+Model.State.money+" in the till",controlLegend);
+            if(Time.unscaledTime<messageUntil && message!=null && message.StartsWith("SAVE FAILED",System.StringComparison.Ordinal))
+                GUI.Label(new Rect(x,panel.yMax-112,w,32),message,controlLegend);
+            if(GUI.Button(new Rect(x,panel.yMax-74,w,44),chapterReview?"Back to journal / Escape":"Keep working / Free play / Escape"))CloseOpeningChapter();
         }
         void FinishIntroduction()
         {
@@ -28,7 +54,7 @@ namespace Scrapshift
         void ReturnToTitle()
         {
             Save();settings.Close();SetPaused(true);
-            mapOpen=ordersOpen=repairOpen=dayOpen=dayReportOpen=helpOpen=introOpen=creditsOpen=false;
+            mapOpen=ordersOpen=repairOpen=dayOpen=dayReportOpen=helpOpen=introOpen=creditsOpen=chapterOpen=chapterReview=false;
             titleOpen=true;confirmNew=false;
         }
         void QuitFromMenu()
@@ -134,7 +160,12 @@ namespace Scrapshift
                 GUI.color=Color.white;
                 GUI.Label(new Rect(panel.x+20,y+28,panel.width-40,43),goal.detail,controlLegend);
             }
-            GUI.Label(new Rect(panel.x+20,panel.y+600,panel.width-40,45),"The journal records your progress. Keep building, experimenting and finding new uses for old things.",controlLegend);
+            if(YardJourney.OpeningComplete(Model.State))
+            {
+                if(GUI.Button(new Rect(panel.x+20,panel.y+600,panel.width-40,38),"Yard established / Review chapter one")){helpOpen=false;OpenChapterRecap();chapterReview=true;}
+                return;
+            }
+            GUI.Label(new Rect(panel.x+20,panel.y+600,panel.width-40,45),"The journal records your progress. Complete all six goals to establish your yard, then keep working in free play.",controlLegend);
         }
         void DrawCredits(float width,float height)
         {

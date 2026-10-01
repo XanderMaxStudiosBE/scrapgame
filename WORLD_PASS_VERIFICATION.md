@@ -1,5 +1,7 @@
 # Concept-world integration — 2026-10-01
 
+This records the original concept-world milestone. The subsequent [screenshot-driven finishing pass](FINISHING_PASS_VERIFICATION.md) adds material recovery, 81 total placements, optional foreground collision with saved-access safeguards, a contextual HUD and chapter completion. Use that document for current validation requirements.
+
 The creator adopted the uploaded world brief for the existing game. The three supplied images are AI concept art, retained with their supplied provenance under `Campaign/Scrapshift/references/world-2026-10-01/`. They guide warmth, recognizable subjects and industrial context; their layout is not substituted for saved gameplay coordinates.
 
 ## Integrated areas

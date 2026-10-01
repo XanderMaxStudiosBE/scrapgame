@@ -52,6 +52,7 @@ namespace Scrapshift
         public ApplianceFault benchFault;
         public int radiosTakenToday, radiosRepaired, radiosDismantled;
         public bool introSeen;
+        public bool openingChapterSeen;
         public YardMilestone milestones;
         public bool commissionAccepted;
         public int commissionIndex, commissionDelivered, commissionReward;

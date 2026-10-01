@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 668f8dc29d724ac28ec170c8fa82e481, type: 3}
+  m_Name: Materials
+  m_EditorClassIdentifier:
+  entries:
+  - resource: ScrapshiftMaterials/RustPaint
+    material: {fileID: 2100000, guid: f2346c4339a838d8646c708b5747d61c, type: 2}
+    albedo: {fileID: 2800000, guid: bcbb09ce8152a384e41e0dc712faf74e, type: 3}
+    metallicGloss: {fileID: 0}
+    emission: {fileID: 0}
+    straightAlpha: 0
+  - resource: ScrapshiftMaterials/DarkMetal
+    material: {fileID: 2100000, guid: d9c18a4ac3e30e88c4833e2afb9288ec, type: 2}
+    albedo: {fileID: 2800000, guid: 919acc073b4c57d320bf8e3e3739fe85, type: 3}
+    metallicGloss: {fileID: 0}
+    emission: {fileID: 0}
+    straightAlpha: 0
+  - resource: ScrapshiftMaterials/CorrugatedMetal
+    material: {fileID: 2100000, guid: 93263a21926d9e667609768af2e06b68, type: 2}
+    albedo: {fileID: 2800000, guid: 5b890ab9e0a837e0850f65f06fdaac8a, type: 3}
+    metallicGloss: {fileID: 0}
+    emission: {fileID: 0}
+    straightAlpha: 0
+  - resource: ScrapshiftMaterials/WeatheredWood
+    material: {fileID: 2100000, guid: 9c24fac9c64eceb6ba3576dde2cc7ba1, type: 2}
+    albedo: {fileID: 2800000, guid: 91ac6febf7a4d399b9b3952bd534a93a, type: 3}
+    metallicGloss: {fileID: 0}
+    emission: {fileID: 0}
+    straightAlpha: 0
+  - resource: ScrapshiftMaterials/Gravel
+    material: {fileID: 2100000, guid: 8b0f8e048e85d257dc055bd32329bd8b, type: 2}
+    albedo: {fileID: 2800000, guid: 1a1e8ef0752bea0321af1ad654cd8f0b, type: 3}
+    metallicGloss: {fileID: 0}
+    emission: {fileID: 0}
+    straightAlpha: 0
+  - resource: ScrapshiftMaterials/Copper
+    material: {fileID: 2100000, guid: 225a1b647fd97c5076c739a8537c12e8, type: 2}
+    albedo: {fileID: 2800000, guid: 77574b2dd07ef62cf675124a65287716, type: 3}
+    metallicGloss: {fileID: 0}
+    emission: {fileID: 0}
+    straightAlpha: 0
+  - resource: ScrapshiftMaterials/WireInsulation
+    material: {fileID: 2100000, guid: e30ac233216190b89adc1c2e3fcd3ef4, type: 2}
+    albedo: {fileID: 2800000, guid: 0aa024788091266cd1730483e2555ee9, type: 3}
+    metallicGloss: {fileID: 0}
+    emission: {fileID: 0}
+    straightAlpha: 0
+  - resource: ScrapshiftMaterials/PropAtlas
+    material: {fileID: 2100000, guid: 6deae42f64454505bd18cbeb49d8ab7c, type: 2}
+    albedo: {fileID: 2800000, guid: 2aae9f63e35c48059df30872f60b10ba, type: 3}
+    metallicGloss: {fileID: 0}
+    emission: {fileID: 0}
+    straightAlpha: 0
+  - resource: ScrapshiftWorld/WorldProps
+    material: {fileID: 2100000, guid: 4a5c8934a7ed4be69b2489262d898b77, type: 2}
+    albedo: {fileID: 2800000, guid: c76c7be327654ceea12c4690e5376372, type: 3}
+    metallicGloss: {fileID: 2800000, guid: cfafe8f4344a4042a129211403e40f32, type: 3}
+    emission: {fileID: 2800000, guid: 7f0a2f58603e4c45b4b5f74a02cc068e, type: 3}
+    straightAlpha: 0
+  - resource: ScrapshiftWorld/GroundWear
+    material: {fileID: 2100000, guid: edc243e4837d40daa2b070e78b93ad73, type: 2}
+    albedo: {fileID: 2800000, guid: 0132aa6e8c8d4f31a7eb52d838e11004, type: 3}
+    metallicGloss: {fileID: 0}
+    emission: {fileID: 0}
+    straightAlpha: 1
+  - resource: ScrapshiftWorld/RoughPuddles
+    material: {fileID: 2100000, guid: 105e04b29e1449bd8b61dfa4bbe93516, type: 2}
+    albedo: {fileID: 2800000, guid: 0132aa6e8c8d4f31a7eb52d838e11004, type: 3}
+    metallicGloss: {fileID: 0}
+    emission: {fileID: 0}
+    straightAlpha: 1
+  - resource: ScrapshiftWorld/WireFence
+    material: {fileID: 2100000, guid: e731f7d4d9004563860742d2d8b45d7b, type: 2}
+    albedo: {fileID: 2800000, guid: be425c347335451ba551e9296bcf8380, type: 3}
+    metallicGloss: {fileID: 0}
+    emission: {fileID: 0}
+    straightAlpha: 0

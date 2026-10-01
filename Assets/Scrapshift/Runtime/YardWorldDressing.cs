@@ -8,6 +8,7 @@ namespace Scrapshift
     {
         public string model, district;
         public int anchor;
+        public bool solid;
         public float x, y, z, yaw, sx, sy, sz;
         public Vector3 Position
         {
@@ -32,7 +33,7 @@ namespace Scrapshift
             if (version != 1 || props == null || props.Length > 128) throw new ArgumentException("Invalid scenery layout size/version");
             foreach (var p in props)
             {
-                if (p == null || !YardWorldDressing.IsWorldModel(p.model) || !YardWorldDressing.IsDistrict(p.district) || p.anchor < 0 || p.anchor > YardNavigation.Destinations.Length)
+                if (p == null || (p.solid && p.model!="ApplianceRow" && p.model!="SalvageShelter") || !YardWorldDressing.IsWorldModel(p.model) || !YardWorldDressing.IsDistrict(p.district) || p.anchor < 0 || p.anchor > YardNavigation.Destinations.Length)
                     throw new ArgumentException("Invalid scenery model, district or anchor");
                 foreach (float n in new[] { p.x, p.y, p.z, p.yaw, p.sx, p.sy, p.sz })
                     if (float.IsNaN(n) || float.IsInfinity(n)) throw new ArgumentException("Non-finite scenery transform");
@@ -42,10 +43,9 @@ namespace Scrapshift
             }
         }
     }
-    // Data-driven, startup-only scenery. It has no inventory, physics, interaction or light components.
+    // Startup-only scenery. Optional foreground rows/shelter walls use coarse static collision; no inventory, rigidbodies or lights.
     public static class YardWorldDressing
     {
-        static Material material;
         static YardSceneryLayout layout;
         static bool triedLayout;
         public static bool IsWorldModel(string name)
@@ -85,7 +85,7 @@ namespace Scrapshift
         {
             instance = null;
             if (!IsWorldModel(name)) return false;
-            if (material == null) material = Resources.Load<Material>("ScrapshiftWorld/WorldProps");
+            var material = YardMaterialBindings.Load("ScrapshiftWorld/WorldProps",parent);
             if (material == null || !AuthoredYardProps.TryPlace(name, parent, position, out instance)) return false;
             foreach (var renderer in instance.GetComponentsInChildren<Renderer>())
             {
@@ -103,11 +103,24 @@ namespace Scrapshift
                 {
                     prop.transform.localRotation = Quaternion.Euler(0, p.yaw, 0);
                     prop.transform.localScale = new Vector3(p.sx, p.sy, p.sz);
+                    if(p.solid){AddSceneryCollision(prop,p.model);prop.AddComponent<AddedSceneryFootprint>();}
                 }
+        }
+        static void AddSceneryCollision(GameObject prop,string model)
+        {
+            if(model=="ApplianceRow")
+            {
+                var collider=prop.AddComponent<BoxCollider>();collider.center=new Vector3(0,1.08f,0);collider.size=new Vector3(4.22f,2.16f,1.3f);
+                return;
+            }
+            // Preserve the open front and aisle under the canopy. No collider on the overhead gutter.
+            foreach(float x in new[]{-4.1f,4.1f})foreach(float z in new[]{-1.6f,1.6f})
+            {var post=prop.AddComponent<BoxCollider>();post.center=new Vector3(x,1.55f,z);post.size=new Vector3(.11f,3.1f,.11f);}
+            var rear=prop.AddComponent<BoxCollider>();rear.center=new Vector3(0,1.5f,1.66f);rear.size=new Vector3(8.3f,3,.06f);
         }
         public static void FenceVisual(GameObject boundary, Vector3 size)
         {
-            var wire = Resources.Load<Material>("ScrapshiftWorld/WireFence");
+            var wire = YardMaterialBindings.Load("ScrapshiftWorld/WireFence",boundary.transform);
             if (wire == null) return;
             bool alongX = size.x > size.z; float width = alongX ? size.x : size.z;
             var go = new GameObject("Open chain-link mesh"); go.transform.SetParent(boundary.transform, false);

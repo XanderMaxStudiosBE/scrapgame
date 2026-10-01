@@ -38,10 +38,11 @@ print('PASS URP material links, cutout fence and transparent ground depth settin
 nav=(ROOT/'Assets/Scrapshift/Core/YardNavigation.cs').read_text();enum=re.search(r'enum YardLandmark \{([^}]+)',nav)[1].split(',');ids={name.strip():i for i,name in enumerate(enum)}
 anchors={ids[name]:(float(x),float(z)) for name,x,z in re.findall(r'new YardDestination\(YardLandmark\.(\w+),"[^"]+",(-?[\d.]+)f?,(-?[\d.]+)f?\)',nav)}
 layout=json.loads((WORLD/'WorldDressing.json').read_text());assert layout['version']==1 and 0<len(layout['props'])<=128
-routes=[(0,z) for z in range(-36,26)]+[(x,-13) for x in range(-44,45)]+[(-42,z) for z in range(-13,20)]+[(x,17) for x in range(-42,-32)]+[(31,z) for z in range(-20,-12)]
+routes=[(0,z) for z in range(-36,26)]+[(x,-13) for x in range(-44,45)]+[(-42,z) for z in range(-13,20)]+[(x,17) for x in range(-42,-32)]+[(31,z) for z in range(-20,-12)]+[(-30,z) for z in range(-13,-7)]
 supplies=[(-33,-20.8),(33,-20.8),(-30,-7.8),(-33,17.2),(31,-23.8)]
 for p in layout['props']:
     assert p['model'] in pack
+    assert isinstance(p.get('solid',False),bool) and (not p.get('solid') or p['model'] in ['ApplianceRow','SalvageShelter'])
     assert p['district'] in ['Workshop surroundings','Restoration surroundings','North loading district','West vehicle salvage','East metal sorting','South entry district','Distant landscape']
     assert all(math.isfinite(p[k]) for k in ['x','y','z','yaw','sx','sy','sz']) and all(.1<=p[k]<=3 for k in ['sx','sy','sz'])
     ax,az=anchors[p['anchor']] if p['anchor'] else (0,0);x=p['x']+ax;z=p['z']+az

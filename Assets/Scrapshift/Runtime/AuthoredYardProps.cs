@@ -8,7 +8,6 @@ namespace Scrapshift
     {
         static readonly Dictionary<string, GameObject> Models = new Dictionary<string, GameObject>();
         static readonly HashSet<string> Missing = new HashSet<string>();
-        static Material atlas;
         public static bool TryPlace(string name, Transform parent, Vector3 position, out GameObject instance)
         {
             instance = null;
@@ -17,7 +16,7 @@ namespace Scrapshift
                 model = Resources.Load<GameObject>("ScrapshiftProps/" + name);
                 if (model != null) Models[name] = model;
             }
-            if (atlas == null) atlas = Resources.Load<Material>("ScrapshiftMaterials/PropAtlas");
+            var atlas = YardMaterialBindings.Load("ScrapshiftMaterials/PropAtlas",parent);
             if (model == null || atlas == null)
             {
                 if (Missing.Add(name)) Debug.LogWarning("Authored yard prop unavailable: " + name + ". Allow the tracked FBX/material assets to import; using procedural fallback.");

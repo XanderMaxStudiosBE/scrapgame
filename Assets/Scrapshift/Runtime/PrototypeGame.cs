@@ -41,7 +41,7 @@ namespace Scrapshift
         StationHint hudHint;
         StationProgress hudProgress;
         InteractionTarget hudTarget;
-        string hudObjective, hudHeld, hudLegend, hudArea, hudRoute, hudDay, hudOrder;
+        string hudObjective, hudHeld, hudArea, hudRoute, hudDay, hudOrder;
         float nextHudRefresh;
         bool hudDirty = true;
         string SavePath { get { return Path.Combine(Application.persistentDataPath, "yard-v1.json"); } }
@@ -61,6 +61,8 @@ namespace Scrapshift
                 Model = new YardModel(balance.PreparedRules); saveBlocked = true;
                 message = "Save could not load: " + ex.Message; Debug.LogWarning(message);
             }
+            AddedSceneryFootprint.PreserveSavedAccess(transform,Model.State);
+            YardContactShadows.Build(transform);
             player.Restore(Model.State); messageUntil = Time.unscaledTime + 10;
             InitializeFrontEnd(); SyncViews(); nextAutosave = Time.unscaledTime + 15;
         }
@@ -70,7 +72,7 @@ namespace Scrapshift
             if (sounds != null) sounds.Pause(value);
             paused = value; Time.timeScale = value ? 0 : 1;
             if (!value && settings != null) settings.Close();
-            if (!value) { mapOpen = false; ordersOpen = false; repairOpen = false; dayOpen = false; dayReportOpen=false; titleOpen=false;helpOpen=false;introOpen=false;creditsOpen=false; }
+            if (!value) { mapOpen = false; ordersOpen = false; repairOpen = false; dayOpen = false; dayReportOpen=false; titleOpen=false;helpOpen=false;introOpen=false;creditsOpen=false;chapterOpen=false;chapterReview=false; }
             if (controls != null) controls.SuppressUntilRelease();
             Cursor.lockState = value ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = value;
@@ -87,6 +89,7 @@ namespace Scrapshift
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 if(settings.IsOpen)settings.HandleEscape();
+                else if(chapterOpen)CloseOpeningChapter();
                 else if(introOpen)FinishIntroduction();
                 else if(helpOpen)helpOpen=false;
                 else if(creditsOpen)creditsOpen=false;
@@ -101,6 +104,7 @@ namespace Scrapshift
             }
             if (settings.IsOpen) settings.UpdateCapture();
             if (paused || settings.IsOpen) return;
+            if(chapterCheckPending && TryShowOpeningCompletion())return;
             frameElapsed += Time.unscaledDeltaTime; frameSamples++;
             if (frameElapsed >= .5f)
             {
@@ -217,7 +221,7 @@ namespace Scrapshift
         {
             using (ViewsMarker.Auto())
             {
-                hudDirty = true;
+                hudDirty = true;chapterCheckPending=true;
                 removedViews.Clear();
                 foreach (var pair in itemViews) if (Model.Find(pair.Key) == null || Model.Find(pair.Key).storage != StorageSlot.None) { Destroy(pair.Value); removedViews.Add(pair.Key); }
                 foreach (int id in removedViews) itemViews.Remove(id);
@@ -287,14 +291,6 @@ namespace Scrapshift
                 return new StationHint(hint.canUse, hint.text.Replace("DELIVERY", target.displayName));
             return hint;
         }
-        string PrimaryLabel(ControlAction action) { return ControlPreferences.CodeLabel(controls.Preferences.Binding(action)); }
-        string ControlHints()
-        {
-            return "Move " + PrimaryLabel(ControlAction.MoveForward) + "/" + PrimaryLabel(ControlAction.MoveBackward) + "/" +
-                PrimaryLabel(ControlAction.MoveLeft) + "/" + PrimaryLabel(ControlAction.MoveRight) + " • Mouse look • " +
-                controls.Label(ControlAction.Interact) + " interact • " + controls.Label(ControlAction.ManualWork) + " work • " +
-                controls.Label(ControlAction.Drop) + " drop • Esc pause";
-        }
         void LateUpdate()
         {
             if (Model == null) return;
@@ -311,7 +307,6 @@ namespace Scrapshift
                 hudProgress = target == null ? default(StationProgress) : StationProgress.Read(Model,target.kind);
                 hudObjective = YardGuidance.Objective(Model,controls.Label(ControlAction.Interact),controls.Label(ControlAction.ManualWork),controls.Label(ControlAction.Drop));
                 hudHeld = Model.Carried == null ? "Hands empty" : "Carrying " + YardItemVisual.Label(Model.Carried.kind) + " ×" + Model.Carried.quantity + "   /   " + controls.Label(ControlAction.Drop) + ": drop";
-                hudLegend = ControlHints();
                 hudDay = "DAY " + ((long)Model.State.dayIndex+1) + "    •    €" + Model.State.money;
                 hudOrder = Model.State.orderAccepted ? Model.CurrentOrder.customer+"\n"+Model.State.orderDelivered+" / "+Model.CurrentOrder.copper+" copper • €"+Model.CurrentOrder.reward : "";
                 if(Model.State.commissionAccepted)hudOrder+=(hudOrder.Length>0?"\n\n":"")+Model.CurrentCommission.customer+"\n"+Model.State.commissionDelivered+" / "+Model.CurrentCommission.quantity+" "+Model.CurrentCommission.ItemName+" • €"+Model.CommissionReward;
@@ -343,6 +338,7 @@ namespace Scrapshift
                 }
                 GUI.color = Color.white;
                 if (settings.IsOpen) { settings.Draw(width, height); return; }
+                if(chapterOpen){DrawOpeningCompletion(width,height);return;}
                 if(introOpen){DrawIntroduction(width,height);return;}
                 if(helpOpen){DrawHelp(width,height);return;}
                 if(creditsOpen){DrawCredits(width,height);return;}
@@ -352,51 +348,8 @@ namespace Scrapshift
                 if (repairOpen) { DrawRepair(width, height); return; }
                 if(dayReportOpen){DrawDayReport(width,height);return;}
                 if (dayOpen) { DrawDay(width, height); return; }
-                float objectiveWidth = Mathf.Min(width - 40, 420);
-                GUI.Box(new Rect(20,20,objectiveWidth,152), "");
-                GUI.Label(new Rect(34,27,objectiveWidth-28,26), hudDay);
-                GUI.Label(new Rect(34,58,objectiveWidth-28,68),hudObjective,controlLegend);
-                GUI.Label(new Rect(34,137,objectiveWidth-28,28),hudRoute,controlLegend);
-                GUI.Label(new Rect(24,178,objectiveWidth,24),hudArea,controlLegend);
-                if ((Model.State.orderAccepted || Model.State.commissionAccepted) && width > 900)
-                {
-                    GUI.Box(new Rect(width-310,20,290,180),"ACTIVE REQUESTS");
-                    GUI.Label(new Rect(width-296,48,262,138),hudOrder,controlLegend);
-                }
-                if (presentation.Preferences.showFrameRate)
-                    GUI.Label(new Rect(width-250,height-175,230,28),frameReadout,controlLegend);
-                float promptWidth=Mathf.Min(width-40,720);
-                var hint=hudHint;
-                GUI.Box(new Rect((width-promptWidth)/2,height-139,promptWidth,93),"");
-                GUI.Label(new Rect((width-promptWidth)/2+14,height-134,promptWidth-28,25),hudHeld,controlLegend);
-                GUI.Label(new Rect((width-promptWidth)/2+14,height-106,promptWidth-28,55),hint.text,wrappedLabel);
-                if (!paused && target != null)
-                {
-                    var progress = hudProgress;
-                    if (progress.Visible)
-                    {
-                        float progressWidth = Mathf.Min(promptWidth,460);
-                        float x = (width-progressWidth)/2, y = height-205;
-                        GUI.Box(new Rect(x,y,progressWidth,56), "");
-                        GUI.Label(new Rect(x+12,y+3,progressWidth-24,25),progress.label,controlLegend);
-                        GUI.color = new Color(.2f,.22f,.2f);
-                        GUI.DrawTexture(new Rect(x+12,y+34,progressWidth-24,8),Texture2D.whiteTexture);
-                        GUI.color = new Color(.78f,.64f,.37f);
-                        GUI.DrawTexture(new Rect(x+12,y+34,(progressWidth-24)*progress.fraction,8),Texture2D.whiteTexture);
-                        GUI.color = Color.white;
-                    }
-                }
-                GUI.Label(new Rect(24,height-40,width-48,35),hudLegend,controlLegend);
-                GUI.color=hint.canUse?new Color(.77f,.86f,.62f):YardGeometry.Ivory;
-                GUI.DrawTexture(new Rect(width/2-2,height/2-2,4,4),Texture2D.whiteTexture);
-                GUI.color=Color.white;
-                if(Time.unscaledTime<messageUntil)
-                {
-                    GUI.Box(new Rect((width-promptWidth)/2,218,promptWidth,76),"");
-                    GUI.Label(new Rect((width-promptWidth)/2+14,228,promptWidth-28,56),message,wrappedLabel);
-                }
-                if (!paused) return;
-                DrawPause(width,height);
+                if(paused){DrawPause(width,height);return;}
+                DrawGameplayHud(width,height);
             }
         }
         void DrawRepair(float width, float height)
