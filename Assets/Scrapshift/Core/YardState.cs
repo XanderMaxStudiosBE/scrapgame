@@ -4,6 +4,7 @@ using System.Collections.Generic;
 namespace Scrapshift
 {
     public enum MaterialKind { Wire, Copper }
+    public enum StorageSlot { None, Wire, Copper }
 
     [Serializable]
     public sealed class ScrapItem
@@ -12,6 +13,7 @@ namespace Scrapshift
         public MaterialKind kind;
         public int quantity;
         public float x, y, z;
+        public StorageSlot storage;
     }
 
     // Plain data is the authoritative inventory, including carried and dropped bundles.
@@ -32,6 +34,9 @@ namespace Scrapshift
         public int machineOutput;
         public float playerX = 0, playerY = 1.1f, playerZ = -6;
         public float yaw, pitch;
+        // Additive version-one fields: absent fields in older saves mean empty storage/no order.
+        public bool orderAccepted;
+        public int orderIndex, orderDelivered;
     }
 
     [Serializable]

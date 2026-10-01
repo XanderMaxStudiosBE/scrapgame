@@ -2,6 +2,16 @@
 
 Updated: 2026-10-01 (UTC). Reinspect the checkout before continuing.
 
+## Active work session: storage and customer orders
+
+The user authorized sustained autonomous development (two hours from 07:15:32 UTC on 2026-10-01, unless they say stop). They then rejected the primitive visuals and supplied Retro Rewind - Video Store Simulator as the aesthetic reference, choosing worn retro realism: believable industrial shapes, muted worn textures and warm lighting. SCRAPSHIFT remains a scrapyard game. Visual refinement and a more interesting repair loop now take priority alongside the following completed business systems.
+
+`ScrapItem.storage` retains the same item ID/quantity in wire/copper bins, counts toward the existing yard capacity, rejects wrong material/full hands and prevents pickup through a stored ID. `YardBusinessVisual` creates two physical bins east of the hub and a customer board north. Stored views are removed; bin stock displays refresh only on transactions. `CustomerOrders` defines five repeating no-deadline copper contracts. Accept/partial delivery/completion are guarded in YardModel; only required copper is consumed, final payment is checked before consuming the last material, surplus remains carried, and completion pays/advances once. Additive version-one fields preserve old saves (default zero/None/no active order). Orders/storage have dynamic binding prompts, physical interactions, map labels, live board notes, optional HUD status and a paused journal; the existing input release/escape gates remain.
+
+Verification: 34 pure C# scenarios pass, zero failed. Eight new core cases cover storage/order conservation, capacity, partial/surplus delivery, resume, invalid states, overflow and prompts. Three Unity tests cover actual JSON/legacy saves and business markers; total Unity suite now 50 cases before the authored-asset milestone, all engine tests unrun here. No Unity performance/playability claim. Existing controls, saves, balance asset and processing loop are preserved. Local README checks cover all new interactions and persistence.
+
+Original Blender-authored prop meshes and a shared atlas are under development in the current workspace, with a rendered asset preview (not Unity gameplay). Do not describe them as engine-verified; finish importer/runtime integration, asset audit and visual checks before the next milestone. No Retro Rewind assets/screenshots are imported into the game.
+
 ## Latest continuation: cozy retro visual refinement
 
 User requested better visuals and asked to begin. Added `CozyYardDetails`: shared sage/blue/ochre/warm-window palette, pitched office roof/fascia/ridge, window framing, porch/door details and potted vegetation; workshop tool board/shelf/radio/mug/plant/lamp housing; original sixteen-triangle faceted tree/shrub meshes with metre UVs, outward flat faces and owned-mesh cleanup. `YardGeometry.PaletteMaterial` exposes its existing shared material cache without temporary objects. The world now uses faceted two-tier tree crowns, round twelve-sided vehicle tyres (existing Cylinder helper made public), painted vehicle roofs/windows/handles/headlights, container rails/stencil plates, delivery wheel ruts, dock markings and gate nameboard. Lighting uses a lighter haze and explicit sky/equator/ground ambient fill under the existing warm sun.

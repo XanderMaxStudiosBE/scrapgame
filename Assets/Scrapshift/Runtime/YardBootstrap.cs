@@ -47,6 +47,7 @@ namespace Scrapshift
             RenderSettings.fog = true; RenderSettings.fogColor = ScrapyardWorld.SkyColor; RenderSettings.fogMode = FogMode.Linear; RenderSettings.fogStartDistance = 45; RenderSettings.fogEndDistance = 135;
 
             var game = root.gameObject.AddComponent<PrototypeGame>(); game.balance = balance; game.player = player; game.logo = logo;
+            game.business = YardBusinessVisual.Build(root);
             game.benchDisplay = bench.materialDisplay;
             game.machineDisplay = stripper.outputDisplay;
             game.rotor = stripper.rotor; game.additionalRoller = stripper.additionalRoller;

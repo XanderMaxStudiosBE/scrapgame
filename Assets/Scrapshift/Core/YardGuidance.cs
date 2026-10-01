@@ -1,6 +1,6 @@
 namespace Scrapshift
 {
-    public enum TargetKind { Supply, Bench, Machine, Sell, LooseItem }
+    public enum TargetKind { Supply, Bench, Machine, Sell, LooseItem, WireStorage, CopperStorage, OrderBoard }
 
     public sealed class StationHint
     {
@@ -19,6 +19,26 @@ namespace Scrapshift
             string emptyHands = "Put down or sell your carried bundle first.";
             switch (target)
             {
+                case TargetKind.WireStorage:
+                case TargetKind.CopperStorage:
+                    MaterialKind storedKind = target == TargetKind.WireStorage ? MaterialKind.Wire : MaterialKind.Copper;
+                    string bin = storedKind == MaterialKind.Wire ? "WIRE STORAGE" : "COPPER STORAGE";
+                    int stored = m.StoredBundles(storedKind);
+                    if (carried != null)
+                        return new StationHint(carried.kind == storedKind, bin + " • " +
+                            (carried.kind == storedKind ? use + "store carried bundle • " + stored + " stored" : "This bin holds " + storedKind.ToString().ToLowerInvariant() + "."));
+                    return new StationHint(stored > 0, bin + " • " + (stored > 0 ? use + "take one bundle • " + m.StoredQuantity(storedKind) + " units stored" : "Empty. Bring " + storedKind.ToString().ToLowerInvariant() + " here to store it."));
+                case TargetKind.OrderBoard:
+                    var order = m.CurrentOrder;
+                    if (!s.orderAccepted)
+                        return new StationHint(s.orderIndex < int.MaxValue, "CUSTOMER BOARD • " + use + "accept " + order.copper + " copper for €" + order.reward + " • no deadline");
+                    int remaining = order.copper - s.orderDelivered;
+                    if (carried == null || carried.kind != MaterialKind.Copper)
+                        return new StationHint(false, "CUSTOMER BOARD • " + order.customer + " needs " + remaining + " more copper. Carry a copper bundle here.");
+                    int amount = System.Math.Min(remaining, carried.quantity);
+                    if (amount == remaining && (long)s.money + order.reward > int.MaxValue)
+                        return new StationHint(false, "CUSTOMER BOARD • Balance limit reached; copper retained.");
+                    return new StationHint(true, "CUSTOMER BOARD • " + use + "deliver " + amount + " copper • " + s.orderDelivered + "/" + order.copper + " • €" + order.reward + " on completion");
                 case TargetKind.Supply:
                     if (carried != null) return new StationHint(false, "DELIVERY • Hands full. " + emptyHands);
                     int occupied = s.items.Count + (s.benchLoaded || s.benchOutput > 0 ? 1 : 0) + (s.machineRemaining > 0 || s.machineOutput > 0 ? 1 : 0);
@@ -66,6 +86,7 @@ namespace Scrapshift
         public static string Objective(YardModel m, string interact, string work, string drop)
         {
             var s = m.State; var c = m.Carried; var r = m.Rules;
+            if (s.orderAccepted && c != null && c.kind == MaterialKind.Copper) return "Deliver copper to the CUSTOMER BOARD [" + interact + "] • " + s.orderDelivered + "/" + m.CurrentOrder.copper + ".";
             if (c != null && c.kind == MaterialKind.Copper) return "Sell your copper at the BUYER [" + interact + "].";
             if (!s.machineOwned && s.money >= r.machinePrice) return "Buy the POWERED STRIPPER for €" + r.machinePrice + " [" + interact + "].";
             if (c != null)
@@ -78,6 +99,9 @@ namespace Scrapshift
             if (s.machineOutput > 0) return "Collect copper from the STRIPPER output tray [" + interact + "], then sell it.";
             if (s.benchLoaded) return "Strip the loaded wire at the WORKBENCH [" + work + "] • " + s.benchStrokes + "/" + r.manualStrokes + ".";
             if (s.machineRemaining > 0) return "The STRIPPER is working. Wait for copper or use the manual bench.";
+            if (s.orderAccepted && m.StoredBundles(MaterialKind.Copper) > 0) return "Take copper from COPPER STORAGE [" + interact + "] for your customer order.";
+            if (m.StoredBundles(MaterialKind.Wire) > 0) return "Take wire from WIRE STORAGE [" + interact + "] to process it.";
+            if (s.orderAccepted) return "Strip wire for " + m.CurrentOrder.customer + " • " + s.orderDelivered + "/" + m.CurrentOrder.copper + " copper delivered.";
             if (s.machineOwned) return "Take wire from DELIVERY [" + interact + "] to feed your powered stripper.";
             return "Take wire from DELIVERY [" + interact + "]. Strip and sell it; €" + (r.machinePrice - s.money) + " to your first machine.";
         }

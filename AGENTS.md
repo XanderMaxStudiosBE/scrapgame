@@ -8,6 +8,7 @@ Read `PROJECT_HANDOFF.md` before starting work. It records the design and verifi
 - Core loop: acquire scrap, inspect it, repair or dismantle it, sell items/materials, and upgrade the yard.
 - Prioritize one complete wire-processing loop: collect wire, strip it manually, sell copper, buy a powered wire stripper, feed it, collect output, and sell again.
 - The earlier video-store concept was rejected in favor of the scrapyard. Do not introduce a video-rental business.
+- Visual reference chosen by the user: Retro Rewind - Video Store Simulator. Use believable, recognizable props, worn surfaces, warm practical lighting and a compact readable HUD in an original scrapyard setting; do not copy that game's assets, characters or video-store business. The user dislikes the current primitive-box look and requests worn retro realism.
 - Aim for a cozy retro simulator: chunky low-poly assets, coarse restrained textures, worn industrial surfaces, soft fog and warm workshop lighting. Favor welcoming colors, satisfying tool/machine sounds and relaxed pacing; keep controls and UI crisp and readable.
 
 ## Technical direction

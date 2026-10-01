@@ -189,3 +189,14 @@ The latest pass replaces cube tree crowns with original sixteen-triangle faceted
 These are static visual details; the radio, office and vehicles gain no new interactions. Palette materials are shared, new vegetation owns/cleans up its generated meshes, signs stay outside static batches, and accents do not add active colliders, rigidbodies, realtime lights or frame updates. Existing station anchors, save data and materials remain intact.
 
 26 core checks still pass in Cloud. The 39-case Unity suite now includes faceted mesh winding and decoration collider checks, but is unrun here. Pull and Play in the existing scene, then inspect roof joins, window/sign facing, tyre orientation, tree silhouettes, workshop/tool visibility, saved-item accessibility and shadow readability. Compare frame time against the previous yard version in Editor and desktop player; neither visual quality nor a performance gain has been verified in Unity here.
+
+
+## Customer orders and working storage
+
+Two labeled bins east of the workshop now store/retrieve wire and copper. Deposit uses your carried bundle; retrieving with empty hands returns the same original bundle ID. Stored bundles count toward the existing yard limit and disappear from loose-world item views. Store wrong material or retrieve with full hands and nothing is consumed.
+
+The customer board north of the workshop offers five repeating, optional copper orders. Accept a request with your interaction binding, then bring copper back. Partial deliveries are saved and the reward arrives exactly once on completion. Only the amount needed is consumed; surplus remains carried. Orders have no deadline or penalty. Ordinary copper sales still work. Escape → Orders & storage shows the current request, reward, completed contracts and stored quantities; all world processing stays paused there.
+
+The gameplay save remains `yard-v1.json`: additive storage/order fields default to no storage/no contract in older version-one saves. Input preferences remain separate. Core storage/order tests cover conservation, capacity, partial completion, surplus, completion payment, overflow, invalid states and rebound guidance. The 34 engine-independent scenarios pass in Cloud. Unity adds JSON round-trip, legacy-file and station/marker tests; these remain unrun here.
+
+Local checks: load an older save; store/retrieve at both bins; save/restart with stored stock and a half-delivered order; complete and retry an order; deliver an oversized copper bundle and sell its surplus; verify the map and journal; pause a running stripper while reading the journal. Keep the existing full wire-loop and binding/menu checks.

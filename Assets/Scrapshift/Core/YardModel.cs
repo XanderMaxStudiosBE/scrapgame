@@ -31,11 +31,19 @@ namespace Scrapshift
                 (s.machineRemaining > 0 && s.machineOutput != 0) ||
                 (!s.machineOwned && (s.machineRemaining != 0 || s.machineOutput != 0)))
                 throw new ArgumentException("Inconsistent station state.");
+            if (s.orderIndex < 0 || s.orderDelivered < 0 ||
+                (!s.orderAccepted && s.orderDelivered != 0) ||
+                (s.orderAccepted && (s.orderIndex == int.MaxValue || s.orderDelivered >= CustomerOrders.At(s.orderIndex).copper)))
+                throw new ArgumentException("Inconsistent customer order.");
             var ids = new HashSet<int>();
             foreach (var item in s.items)
                 if (item == null || item.id < 1 || item.id >= s.nextId || !ids.Add(item.id) ||
                     (item.kind != MaterialKind.Wire && item.kind != MaterialKind.Copper) || item.quantity < 1 || item.quantity > 100 ||
-                    (item.kind == MaterialKind.Wire && item.quantity != 1) || !Finite(item.x) || !Finite(item.y) || !Finite(item.z))
+                    (item.kind == MaterialKind.Wire && item.quantity != 1) ||
+                    (item.storage != StorageSlot.None && item.storage != StorageSlot.Wire && item.storage != StorageSlot.Copper) ||
+                    (item.storage == StorageSlot.Wire && item.kind != MaterialKind.Wire) ||
+                    (item.storage == StorageSlot.Copper && item.kind != MaterialKind.Copper) ||
+                    (item.id == s.carriedId && item.storage != StorageSlot.None) || !Finite(item.x) || !Finite(item.y) || !Finite(item.z))
                     throw new ArgumentException("Invalid item state.");
             if (s.carriedId != 0 && !ids.Contains(s.carriedId)) throw new ArgumentException("Missing carried item.");
         }
@@ -55,7 +63,7 @@ namespace Scrapshift
         }
         public bool PickUp(int id)
         {
-            if (Carried != null || Find(id) == null) return false;
+            if (Carried != null || Find(id) == null || Find(id).storage != StorageSlot.None) return false;
             State.carriedId = id; return true;
         }
         public bool Drop(float x, float y, float z)
@@ -97,6 +105,63 @@ namespace Scrapshift
             long money = (long)State.money + (long)item.quantity * Rules.copperUnitPrice;
             if (money > int.MaxValue) return false;
             State.money = (int)money; State.items.Remove(item); State.carriedId = 0; return true;
+        }
+        public int StoredBundles(MaterialKind kind)
+        {
+            StorageSlot slot = kind == MaterialKind.Wire ? StorageSlot.Wire : StorageSlot.Copper;
+            int count = 0;
+            foreach (var item in State.items) if (item.storage == slot) count++;
+            return count;
+        }
+        public int StoredQuantity(MaterialKind kind)
+        {
+            StorageSlot slot = kind == MaterialKind.Wire ? StorageSlot.Wire : StorageSlot.Copper;
+            int total = 0;
+            foreach (var item in State.items) if (item.storage == slot) total += item.quantity;
+            return total;
+        }
+        public bool Store(MaterialKind kind)
+        {
+            var item = Carried;
+            if (item == null || item.kind != kind) return false;
+            item.storage = kind == MaterialKind.Wire ? StorageSlot.Wire : StorageSlot.Copper;
+            State.carriedId = 0;
+            return true;
+        }
+        public bool Retrieve(MaterialKind kind)
+        {
+            if (Carried != null) return false;
+            StorageSlot slot = kind == MaterialKind.Wire ? StorageSlot.Wire : StorageSlot.Copper;
+            var item = State.items.Find(candidate => candidate.storage == slot);
+            if (item == null) return false;
+            item.storage = StorageSlot.None; State.carriedId = item.id;
+            return true;
+        }
+        public CustomerOrder CurrentOrder { get { return CustomerOrders.At(State.orderIndex); } }
+        public bool AcceptOrder()
+        {
+            if (State.orderAccepted || State.orderIndex == int.MaxValue) return false;
+            State.orderAccepted = true; return true;
+        }
+        public bool DeliverOrder()
+        {
+            var item = Carried;
+            if (!State.orderAccepted || item == null || item.kind != MaterialKind.Copper) return false;
+            var order = CurrentOrder;
+            int delivered = System.Math.Min(item.quantity, order.copper - State.orderDelivered);
+            bool complete = State.orderDelivered + delivered == order.copper;
+            long payment = (long)State.money + order.reward;
+            // A failed payment never consumes the final material or advances the order.
+            if (complete && payment > int.MaxValue) return false;
+            item.quantity -= delivered;
+            if (item.quantity == 0) { State.items.Remove(item); State.carriedId = 0; }
+            if (complete)
+            {
+                State.money = (int)payment; State.orderIndex++;
+                State.orderAccepted = false; State.orderDelivered = 0;
+            }
+            else State.orderDelivered += delivered;
+            return true;
         }
         public bool BuyMachine()
         {

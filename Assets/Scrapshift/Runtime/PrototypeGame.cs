@@ -13,6 +13,7 @@ namespace Scrapshift
         public Transform benchDisplay, machineDisplay, rotor, additionalRoller, feedDisplay;
         public Renderer machineLamp;
         public Texture2D logo;
+        public YardBusinessVisual business;
         public YardModel Model { get; private set; }
         readonly Dictionary<int, GameObject> itemViews = new Dictionary<int, GameObject>();
         readonly List<int> removedViews = new List<int>();
@@ -20,7 +21,7 @@ namespace Scrapshift
         static readonly ProfilerMarker SaveMarker = new ProfilerMarker("Scrapshift.Save");
         Material benchMaterial, lampMaterial;
         GUIStyle wrappedLabel, controlLegend, mapLabel;
-        bool paused, confirmNew, saveBlocked, mapOpen;
+        bool paused, confirmNew, saveBlocked, mapOpen, ordersOpen;
         PlayerInputSettings controls;
         SettingsMenu settings;
         Vector3 benchRestPosition;
@@ -56,7 +57,7 @@ namespace Scrapshift
         {
             paused = value; Time.timeScale = value ? 0 : 1;
             if (!value && settings != null) settings.Close();
-            if (!value) mapOpen = false;
+            if (!value) { mapOpen = false; ordersOpen = false; }
             if (controls != null) controls.SuppressUntilRelease();
             Cursor.lockState = value ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = value;
@@ -71,7 +72,8 @@ namespace Scrapshift
             // Escape is permanently reserved for cancellation/back. Never process gameplay on a menu transition frame.
             if (Input.GetKeyDown(KeyCode.Escape))
             {
-                if (mapOpen) mapOpen = false;
+                if (ordersOpen) ordersOpen = false;
+                else if (mapOpen) mapOpen = false;
                 else if (settings.IsOpen) settings.HandleEscape();
                 else { SetPaused(!paused); confirmNew = false; if (paused) Save(); }
                 return;
@@ -112,9 +114,14 @@ namespace Scrapshift
             if (!before.canUse) { Tell(before.text); return; }
             int oldMoney = Model.State.money;
             bool ownedBefore = Model.State.machineOwned;
+            int oldOrder = Model.State.orderIndex;
+            bool orderAcceptedBefore = Model.State.orderAccepted;
             bool changed = false;
             switch (target.kind)
             {
+                case TargetKind.WireStorage: changed = Model.Carried == null ? Model.Retrieve(MaterialKind.Wire) : Model.Store(MaterialKind.Wire); break;
+                case TargetKind.CopperStorage: changed = Model.Carried == null ? Model.Retrieve(MaterialKind.Copper) : Model.Store(MaterialKind.Copper); break;
+                case TargetKind.OrderBoard: changed = Model.State.orderAccepted ? Model.DeliverOrder() : Model.AcceptOrder(); break;
                 case TargetKind.Supply: changed = Model.AcquireWire(); break;
                 case TargetKind.LooseItem: changed = Model.PickUp(target.itemId); break;
                 case TargetKind.Sell: changed = Model.Sell(); break;
@@ -126,7 +133,11 @@ namespace Scrapshift
             }
             if (changed)
             {
-                if (Model.State.money > oldMoney) { Tell("Sold copper • +€" + (Model.State.money - oldMoney)); Beep(1.6f); }
+                if (Model.State.orderIndex > oldOrder) { Tell("Order complete • +€" + (Model.State.money - oldMoney) + ". A new customer request is on the board."); Beep(1.6f); }
+                else if (!orderAcceptedBefore && Model.State.orderAccepted) { Tell(Model.CurrentOrder.customer + " order accepted. Deliver " + Model.CurrentOrder.copper + " copper for €" + Model.CurrentOrder.reward + ". No rush."); Beep(); }
+                else if (target.kind == TargetKind.OrderBoard) { Tell("Copper delivered • " + Model.State.orderDelivered + "/" + Model.CurrentOrder.copper + ". The order pays when complete."); Beep(1.2f); }
+                else if (target.kind == TargetKind.WireStorage || target.kind == TargetKind.CopperStorage) { Tell(Model.Carried == null ? "Bundle stored safely. Use this bin with empty hands to retrieve it." : "Bundle retrieved from storage."); Beep(); }
+                else if (Model.State.money > oldMoney) { Tell("Sold copper • +€" + (Model.State.money - oldMoney)); Beep(1.6f); }
                 else if (!ownedBefore && Model.State.machineOwned) { Tell("Powered stripper installed • -€" + Model.Rules.machinePrice + ". Feed wire into the front opening."); Beep(.8f); }
                 else if (target.kind == TargetKind.Machine && Model.State.machineRemaining > 0) { Tell("Wire accepted. Rollers are stripping; collect copper from the output tray when ready."); Beep(.9f); }
                 else { Tell(YardGuidance.Objective(Model, controls.Label(ControlAction.Interact), controls.Label(ControlAction.ManualWork), controls.Label(ControlAction.Drop))); Beep(); }
@@ -155,10 +166,11 @@ namespace Scrapshift
             using (ViewsMarker.Auto())
             {
                 removedViews.Clear();
-                foreach (var pair in itemViews) if (Model.Find(pair.Key) == null) { Destroy(pair.Value); removedViews.Add(pair.Key); }
+                foreach (var pair in itemViews) if (Model.Find(pair.Key) == null || Model.Find(pair.Key).storage != StorageSlot.None) { Destroy(pair.Value); removedViews.Add(pair.Key); }
                 foreach (int id in removedViews) itemViews.Remove(id);
                 foreach (var item in Model.State.items)
                 {
+                    if (item.storage != StorageSlot.None) continue;
                     if (!itemViews.TryGetValue(item.id, out GameObject view))
                     {
                         view = YardGeometry.Bundle(item.kind, transform);
@@ -179,6 +191,7 @@ namespace Scrapshift
                 benchDisplay.localPosition = benchRestPosition + (Time.time < workPulseUntil ? Vector3.up * .025f : Vector3.zero);
                 machineDisplay.gameObject.SetActive(Model.State.machineOutput > 0);
                 if (feedDisplay != null) feedDisplay.gameObject.SetActive(Model.State.machineRemaining > 0);
+                if (business != null) business.Refresh(Model);
                 lampMaterial.color = !Model.State.machineOwned ? Color.gray : Model.State.machineRemaining > 0 ? YardGeometry.Rust : Model.State.machineOutput > 0 ? Color.green : YardGeometry.Ivory;
             }
         }
@@ -246,11 +259,17 @@ namespace Scrapshift
             GUI.color = YardGeometry.Ivory;
             if (settings.IsOpen) { settings.Draw(width, height); return; }
             if (mapOpen) { DrawYardMap(width, height); return; }
+            if (ordersOpen) { DrawOrders(width, height); return; }
             GUI.Box(new Rect(20, 20, Mathf.Min(width - 40, 490), 140), "");
             GUI.Label(new Rect(35, 28, 440, 30), "SCRAPSHIFT   /   €" + Model.State.money);
             GUI.Label(new Rect(25, 162, width - 50, 28), YardWorldLayout.Area(player.transform.position.x, player.transform.position.z));
             string objective = YardGuidance.Objective(Model, controls.Label(ControlAction.Interact), controls.Label(ControlAction.ManualWork), controls.Label(ControlAction.Drop));
             GUI.Label(new Rect(35, 64, Mathf.Min(width - 70, 455), 85), objective, wrappedLabel);
+            if (Model.State.orderAccepted && width > 980)
+            {
+                GUI.Box(new Rect(width - 320, 20, 300, 105), "CUSTOMER ORDER");
+                GUI.Label(new Rect(width - 305, 48, 270, 65), Model.CurrentOrder.customer + "\n" + Model.State.orderDelivered + " / " + Model.CurrentOrder.copper + " copper • €" + Model.CurrentOrder.reward, controlLegend);
+            }
             string held = Model.Carried == null ? "Hands empty" : "Carrying " + Model.Carried.kind + " ×" + Model.Carried.quantity + "   /   " + controls.Label(ControlAction.Drop) + ": drop";
             GUI.Label(new Rect(25, height - 144, width - 50, 28), held);
             var hint = CurrentHint();
@@ -261,7 +280,7 @@ namespace Scrapshift
             GUI.color = YardGeometry.Ivory;
             if (Time.unscaledTime < messageUntil) GUI.Label(new Rect(25, 198, width - 50, 85), message, wrappedLabel);
             if (!paused) return;
-            GUI.Box(new Rect(width / 2 - 235, height / 2 - 190, 470, 470), "PAUSED");
+            GUI.Box(new Rect(width / 2 - 235, height / 2 - 215, 470, 495), "PAUSED");
             if (logo != null) GUI.DrawTexture(new Rect(width / 2 - 140, height / 2 - 155, 280, 85), logo, ScaleMode.ScaleToFit);
             if (GUI.Button(new Rect(width / 2 - 180, height / 2 - 50, 360, 40), "Resume")) SetPaused(false);
             if (GUI.Button(new Rect(width / 2 - 180, height / 2, 360, 40), "Save yard")) { Save(); }
@@ -269,7 +288,23 @@ namespace Scrapshift
             if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 100, 360, 40), confirmNew ? "Confirm: reset yard (old save archived)" : "New game"))
             { if (confirmNew) NewGame(); else confirmNew = true; }
             if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 150, 360, 40), "Yard map")) { mapOpen = true; confirmNew = false; }
-            if (saveBlocked) GUI.Label(new Rect(width / 2 - 215, height / 2 + 198, 430, 65), "Saving blocked to protect unreadable data.\nChoose New game to archive it and restart.");
+            if (GUI.Button(new Rect(width / 2 - 180, height / 2 + 198, 360, 40), "Orders & storage")) { ordersOpen = true; confirmNew = false; }
+            if (saveBlocked) GUI.Label(new Rect(width / 2 - 215, height / 2 - 210, 430, 65), "Saving blocked to protect unreadable data.\nChoose New game to archive it and restart.");
+        }
+        void DrawOrders(float width, float height)
+        {
+            float w = Mathf.Min(width - 30, 640), h = Mathf.Min(height - 30, 530);
+            var panel = new Rect((width - w) / 2, (height - h) / 2, w, h);
+            GUI.Box(panel, "ORDERS & STORAGE");
+            var order = Model.CurrentOrder;
+            GUI.Label(new Rect(panel.x + 20, panel.y + 40, w - 40, 75),
+                (Model.State.orderAccepted ? "ACTIVE ORDER" : "AVAILABLE AT THE CUSTOMER BOARD") + "\n" + order.customer + " / " + order.title, wrappedLabel);
+            GUI.Label(new Rect(panel.x + 20, panel.y + 125, w - 40, 100), order.note + "\n" + Model.State.orderDelivered + " / " + order.copper + " copper • €" + order.reward + " on completion • No deadline", wrappedLabel);
+            GUI.Label(new Rect(panel.x + 20, panel.y + 240, w - 40, 105),
+                "Completed orders: " + Model.State.orderIndex + "\nWire storage: " + Model.StoredBundles(MaterialKind.Wire) + " bundles\nCopper storage: " + Model.StoredQuantity(MaterialKind.Copper) + " units in " + Model.StoredBundles(MaterialKind.Copper) + " bundles", wrappedLabel);
+            GUI.Label(new Rect(panel.x + 20, panel.y + 355, w - 40, 80),
+                "Use the CUSTOMER BOARD north of the workshop to accept and deliver. Storage bins east of the workshop store your carried bundle; use them with empty hands to retrieve one.", controlLegend);
+            if (GUI.Button(new Rect(panel.x + 20, panel.yMax - 55, w - 40, 40), "Back / Escape")) ordersOpen = false;
         }
         void DrawYardMap(float width, float height)
         {
@@ -290,12 +325,14 @@ namespace Scrapshift
             MapLabel(map, 0, 4, "WORKSHOP\nWIRE / BUYER");
             MapLabel(map, -16, -30, "OFFICE");
             MapLabel(map, 0, -37, "ENTRY GATE");
+            MapLabel(map, 7, 12, "ORDERS");
+            MapLabel(map, 14, -1, "STORAGE");
             foreach (var site in YardWorldLayout.SalvageSites) MapLabel(map, site.x, site.z, "WIRE");
             GUI.color = new Color(.6f, 1, .55f);
             MapLabel(map, player.transform.position.x, player.transform.position.z, "+ YOU");
             GUI.color = YardGeometry.Ivory;
             GUI.Label(new Rect(panel.x + 20, map.yMax + 10, panel.width - 40, 70),
-                "Explore the salvage crates for free wire. Bring it back to the workshop to strip and sell. " +
+                "Explore salvage crates for wire. Store bundles near the workshop or deliver copper to the customer board. " +
                 "Pale gravel lanes connect the districts.\nCurrent area: " + YardWorldLayout.Area(player.transform.position.x, player.transform.position.z), controlLegend);
             if (GUI.Button(new Rect(panel.x + 20, panel.yMax - 55, panel.width - 40, 40), "Back / Escape")) mapOpen = false;
         }
