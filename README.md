@@ -223,3 +223,7 @@ The choice stays saved, including paid parts and partial strokes. Wrong inputs/f
 The **YARD DIARY** near the entrance reviews earnings and progress. Finish a day there to replenish fan stock and finish the current stripper load overnight. Inventory, partial repairs and customer orders are kept. There are no deadlines, daily fees or automatic time pressure. Day and income appear in the save; the input/preferences format remains unchanged.
 
 44 core scenarios pass in Cloud; 74 Unity cases are supplied but unrun, including partial paid-fan JSON restore, head-ray marker routing and zero-delta rotor behavior. Twelve authored FBX files passed Blender round-trip/scale/UV/budget audits. Local checks: play both fan branches, save/restart after paying and one stroke, verify the motor is not charged twice, test/collect/sell exactly once, collect both daily fans and return tomorrow, preserve stored bundles/partial contracts, pause while a tested fan spins, and press interaction/work together while opening a menu. Check actual bindings, fan-held visibility/drop height and source/head ray reachability in Unity.
+
+### Yard investments
+
+Use the yard diary near the entry, then Investments. Buy a storage rack (€60, twelve extra bundle slots), hand tools (€75, one fewer work stroke per job) or machine tuning (€120, requires the stripper and speeds future loads). Existing saves retain inventory and active machine timers. Verify each purchase, repeat-purchase prevention, dynamic hints and save/reload in Unity.

@@ -14,7 +14,7 @@ namespace Scrapshift
         void RecordIncome(int amount) { State.incomeToday = (int)Math.Min(int.MaxValue, (long)State.incomeToday + amount); }
         public bool AcquireFan()
         {
-            if (Carried != null || OccupiedBundles >= Rules.maxBundles || State.nextId == int.MaxValue || State.fansTakenToday >= Rules.fanDailyLimit) return false;
+            if (Carried != null || OccupiedBundles >= Capacity || State.nextId == int.MaxValue || State.fansTakenToday >= Rules.fanDailyLimit) return false;
             Create(MaterialKind.BrokenFan, 1); State.fansTakenToday++; return true;
         }
         public bool LoadFan()
@@ -43,7 +43,7 @@ namespace Scrapshift
             if (Carried != null || (State.fanStage != FanStage.Repairing && State.fanStage != FanStage.Dismantling)) return false;
             bool repairing = State.fanStage == FanStage.Repairing;
             State.fanStrokes++;
-            if (State.fanStrokes >= (repairing ? Rules.fanRepairStrokes : Rules.fanDismantleStrokes))
+            if (State.fanStrokes >= (repairing ? FanRepairSteps : FanSalvageSteps))
             {
                 State.fanStage = repairing ? FanStage.ReadyToTest : FanStage.CopperReady;
                 State.fanStrokes = 0;
@@ -59,7 +59,7 @@ namespace Scrapshift
         }
         public bool CollectFan()
         {
-            if (Carried != null || State.items.Count >= Rules.maxBundles || State.nextId == int.MaxValue ||
+            if (Carried != null || State.items.Count >= Capacity || State.nextId == int.MaxValue ||
                 (State.fanStage != FanStage.Tested && State.fanStage != FanStage.CopperReady)) return false;
             bool restored = State.fanStage == FanStage.Tested;
             Create(restored ? MaterialKind.RestoredFan : MaterialKind.Copper, restored ? 1 : Rules.fanCopperYield);

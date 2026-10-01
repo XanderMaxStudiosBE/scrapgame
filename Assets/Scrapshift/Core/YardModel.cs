@@ -40,6 +40,9 @@ namespace Scrapshift
                 s.dayIndex < 0 || s.fansTakenToday < 0 || s.fansTakenToday > 100 || s.incomeToday < 0 ||
                 (s.fanStage != FanStage.Repairing && s.fanStage != FanStage.Dismantling && s.fanStrokes != 0))
                 throw new ArgumentException("Invalid repair or working-day state.");
+            if ((s.upgrades & ~(YardUpgrade.StorageRack | YardUpgrade.HandTools | YardUpgrade.MachineTuning)) != 0 ||
+                ((s.upgrades & YardUpgrade.MachineTuning) != 0 && !s.machineOwned))
+                throw new ArgumentException("Invalid yard upgrade state.");
             var ids = new HashSet<int>();
             foreach (var item in s.items)
                 if (item == null || item.id < 1 || item.id >= s.nextId || !ids.Add(item.id) ||
@@ -62,7 +65,7 @@ namespace Scrapshift
         }
         public bool AcquireWire()
         {
-            if (Carried != null || OccupiedBundles >= Rules.maxBundles || State.nextId == int.MaxValue) return false;
+            if (Carried != null || OccupiedBundles >= Capacity || State.nextId == int.MaxValue) return false;
             Create(MaterialKind.Wire, 1); return true;
         }
         public bool PickUp(int id)
@@ -91,7 +94,7 @@ namespace Scrapshift
         {
             if (!State.benchLoaded || Carried != null) return false;
             State.benchStrokes++;
-            if (State.benchStrokes >= Rules.manualStrokes)
+            if (State.benchStrokes >= WireWorkSteps)
             {
                 State.benchLoaded = false; State.benchStrokes = 0; State.benchOutput = Rules.copperPerWire;
             }
@@ -99,7 +102,7 @@ namespace Scrapshift
         }
         public bool CollectBench()
         {
-            if (Carried != null || State.benchOutput == 0 || State.items.Count >= Rules.maxBundles || State.nextId == int.MaxValue) return false;
+            if (Carried != null || State.benchOutput == 0 || State.items.Count >= Capacity || State.nextId == int.MaxValue) return false;
             Create(MaterialKind.Copper, State.benchOutput); State.benchOutput = 0; return true;
         }
         public bool Sell()
@@ -182,7 +185,7 @@ namespace Scrapshift
         public bool FeedMachine()
         {
             if (!State.machineOwned || State.machineRemaining > 0 || State.machineOutput != 0 || !ConsumeWire()) return false;
-            State.machineRemaining = Rules.machineSeconds; State.machinePendingYield = Rules.copperPerWire; return true;
+            State.machineRemaining = MachineSeconds; State.machinePendingYield = Rules.copperPerWire; return true;
         }
         public void Tick(float seconds)
         {
@@ -195,7 +198,7 @@ namespace Scrapshift
         }
         public bool CollectMachine()
         {
-            if (Carried != null || State.machineOutput == 0 || State.items.Count >= Rules.maxBundles || State.nextId == int.MaxValue) return false;
+            if (Carried != null || State.machineOutput == 0 || State.items.Count >= Capacity || State.nextId == int.MaxValue) return false;
             Create(MaterialKind.Copper, State.machineOutput); State.machineOutput = 0; return true;
         }
     }

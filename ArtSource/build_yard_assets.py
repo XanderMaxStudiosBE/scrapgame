@@ -208,6 +208,15 @@ def pallet_bundle():
         o.rotation_euler[2]=(.025 if i%2==0 else -.035)
     for x in [-.72,.72]:cube('Salvage stack binding',(x,.67,-.69),(.06,.7,.03),'cream')
 
+def storage_rack():
+    for x in [-1.1,1.1]:
+        for z in [-.53,.53]:cube('Rack upright',(x,1.3,z),(.085,2.6,.085),'blue',.008)
+    for y in [.25,1.35,2.45]:
+        cube('Rack shelf',(0,y,0),(2.4,.075,1.2),'wood',.012)
+        for z in [-.58,.58]:cube('Shelf steel beam',(0,y-.075,z),(2.4,.10,.065),'rust')
+    for x in [-1.1,1.1]:beam('Rack diagonal brace',(x,.3,.55),(x,2.5,-.55),.045,'metal')
+    cube('Rack upper plaque',(0,2.52,-.62),(.9,.20,.02),'cream')
+
 def atlas_uv(objects):
     for o in objects:
         if o.type!='MESH':continue
@@ -237,7 +246,7 @@ def export(name,builder):
     stats[name]={'triangles':tri,'vertices':len(o.data.vertices),'dimensions_blender':list(o.dimensions),'materials':len(o.data.materials)}
     o.hide_render=True;o.hide_set(True);return o
 stats={}
-models=[export(n,f) for n,f in [('WornHatchback',hatchback),('YardOffice',office),('ShippingContainer',container),('WorkshopCanopy',workshop),('SortingSkip',bin_model),('SalvageFan',fan),('Workbench',workbench),('WireCrate',wire_crate),('PalletBundle',pallet_bundle),('RustyHatchback',lambda:hatchback(True)),('SalvageFanFrame',lambda:fan(True)),('FanRotor',fan_rotor)]]
+models=[export(n,f) for n,f in [('WornHatchback',hatchback),('YardOffice',office),('ShippingContainer',container),('WorkshopCanopy',workshop),('SortingSkip',bin_model),('SalvageFan',fan),('Workbench',workbench),('WireCrate',wire_crate),('PalletBundle',pallet_bundle),('RustyHatchback',lambda:hatchback(True)),('SalvageFanFrame',lambda:fan(True)),('FanRotor',fan_rotor),('StorageRack',storage_rack)]]
 (OUT/'asset_manifest.json').write_text(json.dumps({'source':'Original Blender-authored models; build_yard_assets.py','units':'metres','atlas':'ScrapshiftPropAtlas.png','assets':stats},indent=2))
 # A rendered contact sheet of the actual exported source meshes, not gameplay.
 for i,o in enumerate([o for o in models if o.name not in ['SalvageFanFrame','FanRotor']]):

@@ -2,6 +2,12 @@
 
 Updated: 2026-10-01 (UTC). Reinspect the checkout before continuing.
 
+## Latest milestone: useful yard investments
+
+The diary now has an Investments page: €60 storage rack adds twelve item slots (bounded at 100), €75 hand tools shorten each wire/repair/salvage job by one stroke (minimum one), and €120 tuning after stripper ownership shortens future machine loads to 60% duration. Existing running loads retain their saved timer. Purchases validate a single known upgrade, prerequisites and money, charge once, and persist additive version-one flags. A new original 416-triangle rack appears beside the storage bins after purchase; no new blocking collider can strand previously dropped inventory. Effective progress/capacity hints update immediately.
+
+50 pure C# scenarios pass; six new investment checks cover purchases, prerequisites, capacity, work/yield, active timers, bounds and resumed flags. Thirteen Blender FBX round-trip audits pass. The Unity suite supplies 81 cases including storage-rack import, all unrun here. Unity still needs checks for Investments layout, rack appearance, serialization, input isolation and runtime rendering. Continue the active session with audio/presentation/laptop settings.
+
 ## Latest milestone: fan restoration, salvage and a relaxed day loop
 
 Implemented a second complete scrap loop. Appliance salvage west/south supplies up to two broken desk fans per day. Carry/drop/pickup uses original fan meshes and version-one item IDs. Load the separate restoration bench north/west of the hub; inspect the seized motor, then choose a replacement (€8) or dismantling. Three rebound manual-work strokes fit the motor, then an explicit power-on test enables collection/resale (€42). Four salvage strokes instead produce three copper. Choice/parts charge, outputs, test counters and resale are exactly-once guarded; full hands/capacity/overflow/ID limits never consume protected material. Fan head/source colliders resolve to their station markers; the tested bench fan has a separately pivoted authored rotor. Repair menu transitions now stop the rest of the same Update frame before simultaneous work input can leak through.

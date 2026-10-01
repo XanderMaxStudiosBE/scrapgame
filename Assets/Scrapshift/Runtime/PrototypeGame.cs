@@ -22,7 +22,7 @@ namespace Scrapshift
         static readonly ProfilerMarker SaveMarker = new ProfilerMarker("Scrapshift.Save");
         Material benchMaterial, lampMaterial;
         GUIStyle wrappedLabel, controlLegend, mapLabel;
-        bool paused, confirmNew, saveBlocked, mapOpen, ordersOpen, repairOpen, dayOpen;
+        bool paused, confirmNew, saveBlocked, mapOpen, ordersOpen, repairOpen, dayOpen, investmentsOpen;
         PlayerInputSettings controls;
         SettingsMenu settings;
         Vector3 benchRestPosition;
@@ -103,7 +103,7 @@ namespace Scrapshift
                     Beep(1.25f);
                     Tell(target.kind == TargetKind.FanBench ?
                         (Model.State.fanStage == FanStage.ReadyToTest ? "Motor fitted. Power on and test the fan." : Model.State.fanStage == FanStage.CopperReady ? "Fan dismantled. Collect the recovered copper." : "Working on the fan • " + Model.State.fanStrokes + " steps complete") :
-                        Model.State.benchOutput > 0 ? "Insulation removed. Collect the copper." : "Stripping stroke " + Model.State.benchStrokes + "/" + Model.Rules.manualStrokes);
+                        Model.State.benchOutput > 0 ? "Insulation removed. Collect the copper." : "Stripping stroke " + Model.State.benchStrokes + "/" + Model.WireWorkSteps);
                     SyncViews(); Save();
                 }
                 else Tell(CurrentHint().text);
@@ -130,7 +130,7 @@ namespace Scrapshift
             bool changed = false;
             switch (target.kind)
             {
-                case TargetKind.DayBoard: SetPaused(true); dayOpen = true; Save(); return;
+                case TargetKind.DayBoard: SetPaused(true); dayOpen = true; investmentsOpen = false; Save(); return;
                 case TargetKind.FanSupply: changed = Model.AcquireFan(); break;
                 case TargetKind.FanBench:
                     if (Model.State.fanStage == FanStage.Empty) changed = Model.LoadFan();
@@ -206,7 +206,7 @@ namespace Scrapshift
                     foreach (var collider in view.GetComponentsInChildren<Collider>()) collider.enabled = !held;
                 }
                 benchDisplay.gameObject.SetActive(Model.State.benchLoaded || Model.State.benchOutput > 0);
-                float progress = Model.State.benchLoaded ? (float)Model.State.benchStrokes / Model.Rules.manualStrokes : 1;
+                float progress = Model.State.benchLoaded ? (float)Model.State.benchStrokes / Model.WireWorkSteps : 1;
                 benchDisplay.localScale = new Vector3(.75f, .12f + .15f * progress, .35f);
                 benchMaterial.color = Model.State.benchOutput > 0 ? YardGeometry.Copper : Color.Lerp(YardGeometry.Charcoal, YardGeometry.Copper, progress);
                 benchDisplay.localPosition = benchRestPosition + (Time.time < workPulseUntil ? Vector3.up * .025f : Vector3.zero);
@@ -347,18 +347,41 @@ namespace Scrapshift
         }
         void DrawDay(float width,float height)
         {
-            float w=Mathf.Min(width-30,640),h=Mathf.Min(height-30,520);
+            float w=Mathf.Min(width-30,640),h=Mathf.Min(height-30,620);
             var panel=new Rect((width-w)/2,(height-h)/2,w,h);
             GUI.Box(panel,"YARD DIARY / DAY "+((long)Model.State.dayIndex+1));
-            GUI.Label(new Rect(panel.x+20,panel.y+50,w-40,190),"Sales and contract income today: €"+Model.State.incomeToday+"\nCash on hand: €"+Model.State.money+"\nCompleted customer orders: "+Model.State.orderIndex+"\nFans restored: "+Model.State.fansRepaired+" / dismantled: "+Model.State.fansDismantled+"\nSalvage fans left today: "+Mathf.Max(0,Model.Rules.fanDailyLimit-Model.State.fansTakenToday),wrappedLabel);
-            GUI.Label(new Rect(panel.x+20,panel.y+255,w-40,110),"Return tomorrow for a fresh appliance-salvage delivery. Inventory, repairs and customer orders are kept; the powered stripper finishes its current load overnight. There are no deadlines or daily fees.",wrappedLabel);
+            if(GUI.Button(new Rect(panel.x+20,panel.y+42,(w-50)/2,35),"Day review"))investmentsOpen=false;
+            if(GUI.Button(new Rect(panel.center.x+5,panel.y+42,(w-50)/2,35),"Invest in the yard"))investmentsOpen=true;
+            if(investmentsOpen){DrawInvestments(panel);return;}
+            GUI.Label(new Rect(panel.x+20,panel.y+100,w-40,190),"Sales and contract income today: €"+Model.State.incomeToday+"\nCash on hand: €"+Model.State.money+"\nCompleted customer orders: "+Model.State.orderIndex+"\nFans restored: "+Model.State.fansRepaired+" / dismantled: "+Model.State.fansDismantled+"\nSalvage fans left today: "+Mathf.Max(0,Model.Rules.fanDailyLimit-Model.State.fansTakenToday),wrappedLabel);
+            GUI.Label(new Rect(panel.x+20,panel.y+315,w-40,110),"Return tomorrow for a fresh appliance-salvage delivery. Inventory, repairs and customer orders are kept; the powered stripper finishes its current load overnight. There are no deadlines or daily fees.",wrappedLabel);
             GUI.enabled=Model.State.dayIndex<int.MaxValue;
-            if (GUI.Button(new Rect(panel.x+20,panel.y+385,w-40,45),"Finish day / return on day "+((long)Model.State.dayIndex+2)))
+            if (GUI.Button(new Rect(panel.x+20,panel.y+475,w-40,45),"Finish day / return on day "+((long)Model.State.dayIndex+2)))
             {
                 if (Model.AdvanceDay()) { SyncViews();Save();SetPaused(false);Tell("A fresh day at the yard. New salvage fans have arrived.");Beep(1.3f); }
             }
             GUI.enabled=true;
             if (GUI.Button(new Rect(panel.x+20,panel.yMax-55,w-40,40),"Keep working / Back (Escape)")) dayOpen=false;
+        }
+        void DrawInvestments(Rect panel)
+        {
+            GUI.Label(new Rect(panel.x+20,panel.y+87,panel.width-40,30),"Cash available: €"+Model.State.money);
+            DrawInvestment(panel,120,YardUpgrade.StorageRack,"Storage rack","Add up to 12 yard bundle slots. Stored material stays in its existing bins.");
+            DrawInvestment(panel,245,YardUpgrade.HandTools,"Better hand tools","One fewer hand-work step for wire stripping, fan repair and fan dismantling; material yields stay the same.");
+            DrawInvestment(panel,370,YardUpgrade.MachineTuning,"Stripper tune-up","New wire loads finish 40% faster. Requires your powered stripper; its current load stays consistent.");
+            if(GUI.Button(new Rect(panel.x+20,panel.yMax-55,panel.width-40,40),"Back / Escape"))dayOpen=false;
+        }
+        void DrawInvestment(Rect panel,float y,YardUpgrade upgrade,string title,string description)
+        {
+            GUI.Label(new Rect(panel.x+20,panel.y+y,panel.width-40,55),title+" • €"+Model.UpgradePrice(upgrade)+"\n"+description,controlLegend);
+            bool owned=Model.Owns(upgrade);
+            GUI.enabled=Model.CanBuyUpgrade(upgrade);
+            string caption=owned?"Installed":upgrade==YardUpgrade.MachineTuning&&!Model.State.machineOwned?"Buy a powered stripper first":"Buy "+title.ToLowerInvariant();
+            if(GUI.Button(new Rect(panel.x+20,panel.y+y+66,panel.width-40,38),caption))
+            {
+                if(Model.BuyUpgrade(upgrade)){SyncViews();Save();Beep(1.2f);Tell(title+" installed.");}
+            }
+            GUI.enabled=true;
         }
         void DrawOrders(float width, float height)
         {
@@ -370,7 +393,7 @@ namespace Scrapshift
                 (Model.State.orderAccepted ? "ACTIVE ORDER" : "AVAILABLE AT THE CUSTOMER BOARD") + "\n" + order.customer + " / " + order.title, wrappedLabel);
             GUI.Label(new Rect(panel.x + 20, panel.y + 125, w - 40, 100), order.note + "\n" + Model.State.orderDelivered + " / " + order.copper + " copper • €" + order.reward + " on completion • No deadline", wrappedLabel);
             GUI.Label(new Rect(panel.x + 20, panel.y + 240, w - 40, 105),
-                "Completed orders: " + Model.State.orderIndex + "\nWire storage: " + Model.StoredBundles(MaterialKind.Wire) + " bundles\nCopper storage: " + Model.StoredQuantity(MaterialKind.Copper) + " units in " + Model.StoredBundles(MaterialKind.Copper) + " bundles", wrappedLabel);
+                "Completed orders: " + Model.State.orderIndex + " / Yard occupancy: " + Model.OccupiedBundles + "/" + Model.Capacity + "\nWire storage: " + Model.StoredBundles(MaterialKind.Wire) + " bundles\nCopper storage: " + Model.StoredQuantity(MaterialKind.Copper) + " units in " + Model.StoredBundles(MaterialKind.Copper) + " bundles", wrappedLabel);
             GUI.Label(new Rect(panel.x + 20, panel.y + 355, w - 40, 80),
                 "Use the CUSTOMER BOARD north of the workshop to accept and deliver. Storage bins east of the workshop store your carried bundle; use them with empty hands to retrieve one.", controlLegend);
             if (GUI.Button(new Rect(panel.x + 20, panel.yMax - 55, w - 40, 40), "Back / Escape")) ordersOpen = false;

@@ -122,6 +122,16 @@
         0.37141019105911255
       ],
       "materials": 1
+    },
+    "StorageRack": {
+      "triangles": 416,
+      "vertices": 240,
+      "dimensions_blender": [
+        2.4000000953674316,
+        1.2424999475479126,
+        2.619999885559082
+      ],
+      "materials": 1
     }
   }
 }

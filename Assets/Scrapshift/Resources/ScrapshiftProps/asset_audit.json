@@ -132,6 +132,17 @@
       ],
       "uv": "within shared atlas",
       "status": "passed"
+    },
+    {
+      "name": "StorageRack",
+      "triangles": 416,
+      "metre_dimensions": [
+        2.400000214576721,
+        1.2424999475479126,
+        2.6199999281776414
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
     }
   ]
 }

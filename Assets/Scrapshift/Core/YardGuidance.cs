@@ -24,7 +24,7 @@ namespace Scrapshift
                 case TargetKind.FanSupply:
                     if (carried != null) return new StationHint(false, "APPLIANCE SALVAGE • Hands full. " + emptyHands);
                     if (s.fansTakenToday >= r.fanDailyLimit) return new StationHint(false, "APPLIANCE SALVAGE • Today's fans collected. More arrive tomorrow; wire remains available.");
-                    if (m.OccupiedBundles >= r.maxBundles || s.nextId == int.MaxValue) return new StationHint(false, "APPLIANCE SALVAGE • Yard capacity reached. Process, sell or finish existing work.");
+                    if (m.OccupiedBundles >= m.Capacity || s.nextId == int.MaxValue) return new StationHint(false, "APPLIANCE SALVAGE • Yard capacity reached. Process, sell or finish existing work.");
                     return new StationHint(true, "APPLIANCE SALVAGE • " + use + "take broken desk fan • " + (r.fanDailyLimit - s.fansTakenToday) + " available today");
                 case TargetKind.FanBench:
                     if (s.fanStage == FanStage.Empty)
@@ -33,12 +33,12 @@ namespace Scrapshift
                     if (s.fanStage == FanStage.ReadyToTest)
                         return new StationHint(carried == null, "RESTORATION BENCH • " + (carried == null ? use + "power on and test repaired fan" : emptyHands));
                     if (s.fanStage == FanStage.Tested || s.fanStage == FanStage.CopperReady)
-                        return new StationHint(carried == null && s.items.Count < r.maxBundles && s.nextId < int.MaxValue, "RESTORATION BENCH • " +
+                        return new StationHint(carried == null && s.items.Count < m.Capacity && s.nextId < int.MaxValue, "RESTORATION BENCH • " +
                             (carried == null ? use + (s.fanStage == FanStage.Tested ? "collect tested fan • worth €" + r.fanSalePrice : "collect " + r.fanCopperYield + " copper") : emptyHands));
                     if (s.fanStage == FanStage.Repairing || s.fanStage == FanStage.Dismantling)
                         return new StationHint(carried == null, "RESTORATION BENCH • " + (carried == null ? "[" + work + "] " +
                             (s.fanStage == FanStage.Repairing ? "fit motor" : "dismantle") + " • " + s.fanStrokes + "/" +
-                            (s.fanStage == FanStage.Repairing ? r.fanRepairStrokes : r.fanDismantleStrokes) + " • " + use + "inspect job" : emptyHands));
+                            (s.fanStage == FanStage.Repairing ? m.FanRepairSteps : m.FanSalvageSteps) + " • " + use + "inspect job" : emptyHands));
                     return new StationHint(true, "RESTORATION BENCH • " + use + (s.fanStage == FanStage.AwaitingInspection ? "inspect broken fan" : "choose repair or salvage"));
                 case TargetKind.WireStorage:
                 case TargetKind.CopperStorage:
@@ -62,7 +62,7 @@ namespace Scrapshift
                     return new StationHint(true, "CUSTOMER BOARD • " + use + "deliver " + amount + " copper • " + s.orderDelivered + "/" + order.copper + " • €" + order.reward + " on completion");
                 case TargetKind.Supply:
                     if (carried != null) return new StationHint(false, "DELIVERY • Hands full. " + emptyHands);
-                    if (m.OccupiedBundles >= r.maxBundles || s.nextId == int.MaxValue) return new StationHint(false, "DELIVERY • Yard storage full. Process or sell existing bundles.");
+                    if (m.OccupiedBundles >= m.Capacity || s.nextId == int.MaxValue) return new StationHint(false, "DELIVERY • Yard storage full. Process or sell existing bundles.");
                     return new StationHint(true, "DELIVERY • " + use + "take free scrap wire");
                 case TargetKind.LooseItem:
                     var item = m.Find(itemId);
@@ -81,7 +81,7 @@ namespace Scrapshift
                 case TargetKind.Bench:
                     if (s.benchOutput > 0) return OutputHint(m, "WORKBENCH", s.benchOutput, use, emptyHands);
                     if (s.benchLoaded)
-                        return carried == null ? new StationHint(true, "WORKBENCH • [" + work + "] strip wire • " + s.benchStrokes + "/" + r.manualStrokes + " strokes") :
+                        return carried == null ? new StationHint(true, "WORKBENCH • [" + work + "] strip wire • " + s.benchStrokes + "/" + m.WireWorkSteps + " strokes") :
                             new StationHint(false, "WORKBENCH • Wire loaded. Empty your hands before stripping.");
                     if (carried == null) return new StationHint(false, "WORKBENCH • Get wire from DELIVERY, then place it here.");
                     if (carried.kind != MaterialKind.Wire) return new StationHint(false, "WORKBENCH • Copper is already stripped. Take it to the buyer.");
@@ -103,7 +103,7 @@ namespace Scrapshift
         static StationHint OutputHint(YardModel m, string station, int quantity, string use, string emptyHands)
         {
             if (m.Carried != null) return new StationHint(false, station + " • Copper ready. " + emptyHands);
-            if (m.State.items.Count >= m.Rules.maxBundles || m.State.nextId == int.MaxValue) return new StationHint(false, station + " • Storage full. Sell an existing copper bundle first.");
+            if (m.State.items.Count >= m.Capacity || m.State.nextId == int.MaxValue) return new StationHint(false, station + " • Storage full. Sell an existing copper bundle first.");
             return new StationHint(true, station + " • " + use + "collect " + quantity + " copper");
         }
         public static string Objective(YardModel m, string interact, string work, string drop)
@@ -122,7 +122,7 @@ namespace Scrapshift
             }
             if (s.benchOutput > 0) return "Collect copper from the WORKBENCH [" + interact + "], then sell it.";
             if (s.machineOutput > 0) return "Collect copper from the STRIPPER output tray [" + interact + "], then sell it.";
-            if (s.benchLoaded) return "Strip the loaded wire at the WORKBENCH [" + work + "] • " + s.benchStrokes + "/" + r.manualStrokes + ".";
+            if (s.benchLoaded) return "Strip the loaded wire at the WORKBENCH [" + work + "] • " + s.benchStrokes + "/" + m.WireWorkSteps + ".";
             if (s.machineRemaining > 0) return "The STRIPPER is working. Wait for copper or use the manual bench.";
             if (s.fanStage == FanStage.ReadyToTest) return "Power on and test your repaired fan at the RESTORATION BENCH [" + interact + "].";
             if (s.fanStage == FanStage.Tested || s.fanStage == FanStage.CopperReady) return "Collect your finished restoration-bench output [" + interact + "].";

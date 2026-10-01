@@ -4,14 +4,14 @@ namespace Scrapshift
 {
     public sealed class YardBusinessVisual
     {
-        public readonly Transform wireStock, copperStock;
+        public readonly Transform wireStock, copperStock, rack;
         public readonly TextMesh orderText;
         public static readonly Vector3 WirePosition = new Vector3(14, 0, 2);
         public static readonly Vector3 CopperPosition = new Vector3(14, 0, 7);
         public static readonly Vector3 OrderPosition = new Vector3(7, 0, 12);
 
-        YardBusinessVisual(Transform wire, Transform copper, TextMesh text)
-        { wireStock = wire; copperStock = copper; orderText = text; }
+        YardBusinessVisual(Transform wire, Transform copper, TextMesh text, Transform rack)
+        { wireStock = wire; copperStock = copper; orderText = text; this.rack = rack; }
 
         public static YardBusinessVisual Build(Transform parent)
         {
@@ -32,7 +32,13 @@ namespace Scrapshift
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); text.fontSize = 48; text.characterSize = .028f;
             text.anchor = TextAnchor.MiddleCenter; text.alignment = TextAlignment.Center; text.color = YardGeometry.Charcoal;
             text.GetComponent<MeshRenderer>().sharedMaterial = text.font.material;
-            return new YardBusinessVisual(wire, copper, text);
+            var rack=new GameObject("Storage upgrade rack").transform; rack.SetParent(parent,false);rack.localPosition=new Vector3(14,0,12);
+            if(!AuthoredYardProps.TryPlace("StorageRack",rack,Vector3.zero,out GameObject rackModel))
+            {
+                foreach(float x in new[]{-1.1f,1.1f})YardGeometry.SurfaceBox("Rack upright",rack,new Vector3(x,1.3f,0),new Vector3(.12f,2.6f,1.2f),RetroSurface.DarkMetal,false);
+                foreach(float y in new[]{.25f,1.35f,2.45f})YardGeometry.SurfaceBox("Rack shelf",rack,new Vector3(0,y,0),new Vector3(2.4f,.10f,1.2f),RetroSurface.WeatheredWood,false);
+            }
+            return new YardBusinessVisual(wire, copper, text,rack);
         }
         static Transform Storage(Transform parent, Vector3 pos, MaterialKind kind)
         {
@@ -58,6 +64,7 @@ namespace Scrapshift
         }
         public void Refresh(YardModel model)
         {
+            rack.gameObject.SetActive(model.Owns(YardUpgrade.StorageRack));
             UpdateStock(wireStock, model.StoredBundles(MaterialKind.Wire));
             UpdateStock(copperStock, model.StoredBundles(MaterialKind.Copper));
             var order = model.CurrentOrder;

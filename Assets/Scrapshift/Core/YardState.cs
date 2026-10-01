@@ -5,6 +5,8 @@ namespace Scrapshift
 {
     public enum MaterialKind { Wire, Copper, BrokenFan, RestoredFan }
     public enum FanStage { Empty, AwaitingInspection, Diagnosed, Repairing, ReadyToTest, Tested, Dismantling, CopperReady }
+    [Flags]
+    public enum YardUpgrade { None = 0, StorageRack = 1, HandTools = 2, MachineTuning = 4 }
     public enum StorageSlot { None, Wire, Copper }
 
     [Serializable]
@@ -41,6 +43,7 @@ namespace Scrapshift
         public FanStage fanStage;
         public int fanStrokes, fansRepaired, fansDismantled;
         public int dayIndex, fansTakenToday, incomeToday;
+        public YardUpgrade upgrades;
     }
 
     [Serializable]
@@ -54,6 +57,7 @@ namespace Scrapshift
         public int maxBundles = 24;
         public int fanPartsPrice = 8, fanSalePrice = 42, fanCopperYield = 3;
         public int fanRepairStrokes = 3, fanDismantleStrokes = 4, fanDailyLimit = 2;
+        public int storageUpgradePrice = 60, toolsUpgradePrice = 75, tuningUpgradePrice = 120;
 
         public void Validate()
         {
@@ -62,7 +66,8 @@ namespace Scrapshift
                 float.IsNaN(machineSeconds) || float.IsInfinity(machineSeconds) || machineSeconds <= 0 || maxBundles < 1 || maxBundles > 100 ||
                 fanPartsPrice < 1 || fanPartsPrice > 10000 || fanSalePrice < 1 || fanSalePrice > 10000 ||
                 fanCopperYield < 1 || fanCopperYield > 100 || fanRepairStrokes < 1 || fanRepairStrokes > 100 ||
-                fanDismantleStrokes < 1 || fanDismantleStrokes > 100 || fanDailyLimit < 1 || fanDailyLimit > 100)
+                fanDismantleStrokes < 1 || fanDismantleStrokes > 100 || fanDailyLimit < 1 || fanDailyLimit > 100 || storageUpgradePrice < 1 || storageUpgradePrice > 10000 ||
+                toolsUpgradePrice < 1 || toolsUpgradePrice > 10000 || tuningUpgradePrice < 1 || tuningUpgradePrice > 10000)
                 throw new ArgumentException("Invalid prototype balance values.");
         }
     }
