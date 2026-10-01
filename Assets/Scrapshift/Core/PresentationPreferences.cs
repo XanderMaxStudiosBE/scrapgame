@@ -11,6 +11,7 @@ namespace Scrapshift
         public float fieldOfView = 72;
         public float masterVolume = .8f, effectsVolume = .8f, ambienceVolume = .45f;
         public bool warmGrade = true;
+        public bool showFrameRate;
         public float RenderScale { get { return graphics == GraphicsPreset.Laptop ? .75f : graphics == GraphicsPreset.Balanced ? .9f : 1; } }
         public float ShadowDistance { get { return graphics == GraphicsPreset.Laptop ? 20 : graphics == GraphicsPreset.Balanced ? 35 : 50; } }
         public void Validate()

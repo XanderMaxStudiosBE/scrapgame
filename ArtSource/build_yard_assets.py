@@ -217,6 +217,80 @@ def storage_rack():
     for x in [-1.1,1.1]:beam('Rack diagonal brace',(x,.3,.55),(x,2.5,-.55),.045,'metal')
     cube('Rack upper plaque',(0,2.52,-.62),(.9,.20,.02),'cream')
 
+def powered_stripper():
+    cube('Worn heavy chassis',(0,.6,.04),(2.35,1.2,1.22),'sage',.055)
+    cube('Rounded top casting',(0,1.26,.04),(2.48,.10,1.36),'metal',.025)
+    cube('Lower plinth',(0,.12,.04),(2.54,.22,1.44),'metal',.03)
+    cube('Service door',(-.61,.69,-.618),(.92,.84,.045),'blue',.02)
+    cube('Input panel',(.58,.8,-.626),(1.14,.99,.055),'sage',.025)
+    for i in range(4):cube('Vent slat',(-.60,.69+i*.11,-.651),(.59,.035,.022),'metal')
+    cube('Service latch',(-.99,.72,-.675),(.05,.14,.06),'metal',.012)
+    for x in [-1.02,1.02]:
+        for z in [-.51,.57]:cube('Rubber mount',(x,.055,z),(.3,.11,.29),'rubber',.025)
+    cube('Black feed opening',(.58,1.03,-.672),(.92,.38,.05),'rubber')
+    for x in [.07,1.09]:cube('Feed funnel rail',(x,1.05,-.75),(.09,.50,.23),'metal',.015)
+    cube('Feed lip',(.58,.82,-.80),(1.1,.055,.4),'metal',.014)
+    cyl('Side motor',(-1.35,.83,.14),.25,.6,'metal','Z',16)
+    cyl('Motor end cap',(-1.35,.83,-.19),.29,.06,'blue','Z',16)
+    for i in range(6):cyl('Motor cooling fin',(-1.35,.83,-.1+i*.09),.275,.025,'metal','Z',16)
+    cube('Motor bracket',(-1.3,.51,.14),(.5,.12,.73),'metal',.015)
+    cube('Electrical box',(-.82,1.4,.30),(.33,.22,.36),'blue',.035)
+    beam('Rubber power lead',(-1.03,1.34,.25),(-1.03,.89,.25),.035,'rubber')
+    beam('Rubber power lead',(-1.03,.89,.25),(-1.35,.89,.25),.035,'rubber')
+    cube('Output chute',(-.61,.81,-.68),(.66,.10,.22),'metal',.015)
+    cube('Collection tray',(-.61,.66,-.96),(.91,.07,.72),'metal',.016)
+    for x in [-1.04,-.18]:cube('Tray side',(x,.74,-.96),(.045,.16,.72),'sage',.012)
+    cube('Tray front',(-.61,.72,-1.3),(.91,.11,.045),'sage',.012)
+    cube('Status bezel',(.90,1.43,-.45),(.27,.20,.16),'metal',.02)
+    cube('Power label plaque',(.40,1.44,-.536),(.62,.135,.018),'cream')
+    for x in [-.98,1.07]:
+        for y in [.33,1.19]:cyl('Front fixing bolt',(x,y,-.672),.032,.025,'metal','Z',6)
+    # Painted scars on the outer casing; retain dynamic roller/lamp/output positions.
+    for x,z in [(-.7,-.2),(.7,.35),(.2,.56)]:cube('Chipped top paint',(x,1.317,z),(.18,.007,.07),'rust')
+    cube('Faded maker plate',(-.6,.40,-.654),(.5,.12,.02),'cream')
+
+def buying_scale():
+    cube('Corrugated buying counter',(-.45,.52,0),(1.3,1.04,1.1),'blue',.04)
+    for x in [-1.05,-.75,-.45,-.15,.15]:cube('Counter reinforcement',(x,.51,-.565),(.05,.9,.055),'metal',.008)
+    cube('Heavy counter top',(-.45,1.08,0),(1.5,.12,1.3),'wood',.025)
+    cube('Vintage scale housing',(-.45,1.23,-.05),(.78,.2,.65),'sage',.04)
+    cube('Brushed steel weighing pan',(-.45,1.36,-.05),(.95,.06,.78),'metal',.025)
+    cyl('Scale display stem',(-.45,1.49,.39),.045,.65,'metal')
+    cube('Scale display housing',(-.45,1.78,.34),(.55,.3,.14),'sage',.03)
+    cube('Dark scale readout',(-.45,1.78,.257),(.44,.20,.025),'rubber',.014)
+    # Original coarse green seven-segment marks; static decor, never a promised live weight.
+    for x in [-.60,-.45,-.30]:
+        for y in [1.72,1.78,1.84]:cube('Readout horizontal segment',(x,y,.24),(.07,.012,.007),'leaflight')
+        for dx in [-.041,.041]:
+            for y in [1.75,1.81]:cube('Readout vertical segment',(x+dx,y,.24),(.011,.045,.007),'leaflight')
+    for x in [-.65,-.45,-.25]:cyl('Scale button',(x,1.23,-.389),.022,.014,'cream','Z',8)
+    cube('Receipt notebook',(-.98,1.151,-.30),(.24,.014,.32),'cream')
+    cyl('Counter pencil',(-1.16,1.16,-.30),.008,.28,'ochre','Z',6)
+    cube('Buyer bin base',(.8,.09,.08),(.9,.18,1),'metal',.015)
+    for x in [.37,1.23]:cube('Buyer bin wall',(x,.45,.08),(.08,.75,1),'rust',.015)
+    for z in [-.38,.54]:cube('Buyer bin end',(.8,.45,z),(.9,.75,.08),'rust',.015)
+    for i in range(6):
+        o=cube('Recovered copper stock',(.8+(i%3-1)*.23,.55+(i//3)*.10,.08+(i//3-.5)*.28),(.16,.10,.5),'copper',.015)
+        o.rotation_euler[2]=math.radians(-18 if i%2==0 else 18)
+
+def feed_roller():
+    cyl('Steel feed roller',(0,0,0),.15,.17,'metal','Z',16)
+    for i in range(8):
+        a=i*math.tau/8
+        tooth=cube('Machined roller notch',(.15*math.cos(a),.15*math.sin(a),-.09),(.045,.045,.035),'cream' if i%2==0 else 'metal',.004)
+        tooth.rotation_euler[1]=-a
+    cyl('Axle copper bush',(0,0,-.103),.043,.025,'copper','Z',12)
+
+def wire_bundle():
+    for y in [-.035,0,.035]:ring('Insulated wire coil',(0,y,0),.22,.018,'rubber')
+    for x in [-.035,.035]:cube('Bundle fabric tie',(x,0,-.15),(.035,.14,.23),'cream',.006)
+    for x in [-.04,.04]:
+        cyl('Loose cable end',(x,.03,-.24),.019,.13,'rubber','Z',8)
+        cyl('Exposed wire end',(x,.03,-.315),.012,.03,'copper','Z',8)
+def copper_bundle():
+    for x in [-.15,-.05,.05,.15]:cyl('Recovered copper rod',(x,0,0),.033,.55,'copper','Z',12)
+    cube('Copper bundle tie',(0,0,-.06),(.40,.08,.04),'cream',.008)
+
 def atlas_uv(objects):
     for o in objects:
         if o.type!='MESH':continue
@@ -246,19 +320,19 @@ def export(name,builder):
     stats[name]={'triangles':tri,'vertices':len(o.data.vertices),'dimensions_blender':list(o.dimensions),'materials':len(o.data.materials)}
     o.hide_render=True;o.hide_set(True);return o
 stats={}
-models=[export(n,f) for n,f in [('WornHatchback',hatchback),('YardOffice',office),('ShippingContainer',container),('WorkshopCanopy',workshop),('SortingSkip',bin_model),('SalvageFan',fan),('Workbench',workbench),('WireCrate',wire_crate),('PalletBundle',pallet_bundle),('RustyHatchback',lambda:hatchback(True)),('SalvageFanFrame',lambda:fan(True)),('FanRotor',fan_rotor),('StorageRack',storage_rack)]]
+models=[export(n,f) for n,f in [('WornHatchback',hatchback),('YardOffice',office),('ShippingContainer',container),('WorkshopCanopy',workshop),('SortingSkip',bin_model),('SalvageFan',fan),('Workbench',workbench),('WireCrate',wire_crate),('PalletBundle',pallet_bundle),('RustyHatchback',lambda:hatchback(True)),('SalvageFanFrame',lambda:fan(True)),('FanRotor',fan_rotor),('StorageRack',storage_rack),('PoweredStripper',powered_stripper),('BuyingScale',buying_scale),('FeedRoller',feed_roller),('WireBundle',wire_bundle),('CopperBundle',copper_bundle)]]
 (OUT/'asset_manifest.json').write_text(json.dumps({'source':'Original Blender-authored models; build_yard_assets.py','units':'metres','atlas':'ScrapshiftPropAtlas.png','assets':stats},indent=2))
 # A rendered contact sheet of the actual exported source meshes, not gameplay.
-for i,o in enumerate([o for o in models if o.name not in ['SalvageFanFrame','FanRotor']]):
+for i,o in enumerate([o for o in models if o.name not in ['SalvageFanFrame','FanRotor','FeedRoller','WireBundle','CopperBundle']]):
     o.hide_render=False;o.hide_set(False)
-    scale=.8 if i in [0,5,6,7,8] else .20
-    o.scale=(scale,)*3;o.location=((i%3-1)*3.6,(i//3)*4,0)
+    scale=.8 if i in [0,5,6,7,8,9,10,11,12] else .20
+    o.scale=(scale,)*3;o.location=((i%4-1.5)*3.8,(i//4)*4,0)
 # Ground for contact shadows.
 bpy.ops.mesh.primitive_plane_add(size=200);ground=bpy.context.object;ground.location.z=-.015
 m=bpy.data.materials.new('Preview ground');m.diffuse_color=(.19,.18,.15,1);ground.data.materials.append(m)
 bpy.ops.object.light_add(type='AREA',location=(2,-4,12));bpy.context.object.data.energy=1800;bpy.context.object.data.shape='DISK';bpy.context.object.data.size=8
 bpy.ops.object.light_add(type='AREA',location=(-8,5,8));bpy.context.object.data.energy=850;bpy.context.object.data.color=(.68,.77,1);bpy.context.object.data.size=6
-bpy.ops.object.camera_add(location=(12,-18,16));cam=bpy.context.object;target=Vector((0,5,0));cam.rotation_euler=(target-cam.location).to_track_quat('-Z','Y').to_euler();cam.data.type='ORTHO';cam.data.ortho_scale=17
+bpy.ops.object.camera_add(location=(12,-18,16));cam=bpy.context.object;target=Vector((0,5.8,0));cam.rotation_euler=(target-cam.location).to_track_quat('-Z','Y').to_euler();cam.data.type='ORTHO';cam.data.ortho_scale=19
 scene=bpy.context.scene;scene.camera=cam;scene.render.engine='CYCLES';scene.cycles.samples=48;scene.cycles.use_denoising=False
 scene.render.resolution_x=1600;scene.render.resolution_y=1200;scene.render.resolution_percentage=100
 scene.world.color=(.24,.25,.26);scene.view_settings.view_transform='AgX'

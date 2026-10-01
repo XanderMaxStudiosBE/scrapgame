@@ -1,0 +1,125 @@
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Text;
+namespace Scrapshift.Tests
+{
+    public static class IntegrationScenarios
+    {
+        public static readonly string[] Names={"MixedYardConservation", "BusinessProgressionFromZero"};
+        static void Check(bool value,string message){if(!value)throw new Exception(message);}
+        public static void Run(string name)
+        {
+            if(name=="MixedYardConservation")Fuzz();
+            else if(name=="BusinessProgressionFromZero")Progression();
+            else throw new Exception(name);
+        }
+        static long Material(YardModel m)
+        {
+            long total=(m.State.benchLoaded?m.Rules.copperPerWire:0)+m.State.benchOutput+m.State.machineOutput+m.State.machinePendingYield;
+            if(m.State.fanStage!=FanStage.Empty)total+=m.Rules.fanCopperYield;
+            foreach(var item in m.State.items)
+                total+=item.kind==MaterialKind.Copper?item.quantity:item.kind==MaterialKind.Wire?m.Rules.copperPerWire:m.Rules.fanCopperYield;
+            return total;
+        }
+        static string Fingerprint(YardState state)
+        {
+            var text=new StringBuilder();
+            foreach(var field in typeof(YardState).GetFields())if(field.Name!="items")text.Append(field.Name).Append('=').Append(field.GetValue(state)).Append(';');
+            foreach(var item in state.items)foreach(var field in typeof(ScrapItem).GetFields())text.Append(field.GetValue(item)).Append(';');
+            return text.ToString();
+        }
+        static YardState Copy(YardState state)
+        {
+            var copy=new YardState();
+            foreach(var field in typeof(YardState).GetFields())if(field.Name!="items")field.SetValue(copy,field.GetValue(state));
+            copy.items=new List<ScrapItem>();
+            foreach(var item in state.items)
+            {
+                var next=new ScrapItem();foreach(var field in typeof(ScrapItem).GetFields())field.SetValue(next,field.GetValue(item));copy.items.Add(next);
+            }
+            return copy;
+        }
+        static void Fuzz()
+        {
+            var random=new Random(7138);
+            var m=new YardModel(new YardRules{copperPerWire=5,fanCopperYield=4,maxBundles=9,manualStrokes=2,fanRepairStrokes=2,fanDismantleStrokes=2});
+            long acquired=0,consumed=0,expectedMoney=0;
+            for(int i=0;i<20000;i++)
+            {
+                string before=Fingerprint(m.State);bool success=false;int action=random.Next(25);
+                ScrapItem held=m.Carried;int money=m.State.money;
+                switch(action)
+                {
+                    case 0:success=m.AcquireWire();if(success)acquired+=m.Rules.copperPerWire;break;
+                    case 1:success=m.AcquireFan();if(success)acquired+=m.Rules.fanCopperYield;break;
+                    case 2:success=m.LoadBench();break;
+                    case 3:success=m.WorkBench();break;
+                    case 4:success=m.CollectBench();break;
+                    case 5:success=m.FeedMachine();break;
+                    case 6:success=m.CollectMachine();break;
+                    case 7:success=m.Sell();if(success){consumed+=held.kind==MaterialKind.Copper?held.quantity:m.Rules.fanCopperYield;expectedMoney+=held.kind==MaterialKind.Copper?held.quantity*m.Rules.copperUnitPrice:m.Rules.fanSalePrice;}break;
+                    case 8:success=m.Drop(random.Next(-40,40),.1f,random.Next(-30,30));break;
+                    case 9:success=m.PickUp(m.State.items.Count==0?0:m.State.items[random.Next(m.State.items.Count)].id);break;
+                    case 10:success=m.Store(MaterialKind.Wire);break;
+                    case 11:success=m.Store(MaterialKind.Copper);break;
+                    case 12:success=m.Retrieve(MaterialKind.Wire);break;
+                    case 13:success=m.Retrieve(MaterialKind.Copper);break;
+                    case 14:success=m.AcceptOrder();break;
+                    case 15:
+                        int count=held==null?0:held.quantity,reward=m.CurrentOrder.reward;
+                        success=m.DeliverOrder();
+                        if(success){consumed+=count-(m.Carried==null?0:m.Carried.quantity);if(!m.State.orderAccepted)expectedMoney+=reward;}break;
+                    case 16:success=m.BuyMachine();if(success)expectedMoney-=m.Rules.machinePrice;break;
+                    case 17:
+                        var upgrade=(YardUpgrade)(1<<random.Next(3));success=m.BuyUpgrade(upgrade);if(success)expectedMoney-=m.UpgradePrice(upgrade);break;
+                    case 18:success=m.LoadFan();break;
+                    case 19:success=m.InspectFan();break;
+                    case 20:success=m.BeginFanRepair();if(success)expectedMoney-=m.Rules.fanPartsPrice;break;
+                    case 21:success=m.BeginFanDismantle();break;
+                    case 22:success=m.WorkFan();break;
+                    case 23:success=m.TestFan();break;
+                    case 24:success=m.CollectFan();break;
+                }
+                Check(success || before==Fingerprint(m.State),"Rejected action mutated state at step "+i+" action "+action);
+                if(i%7==0)m.Tick(.5f);if(i%59==0)m.AdvanceDay();
+                if(i%83==0)m=new YardModel(m.Rules,Copy(m.State)); // Model reconstruction; actual JSON is tested in Unity.
+                YardModel.Validate(m.State);
+                Check(m.State.money==expectedMoney,"Money ledger mismatch at "+i+" before €"+money);
+                Check(Material(m)+consumed==acquired,"Material lost/duplicated at "+i);
+                Check(m.OccupiedBundles<=m.Capacity,"Capacity exceeded at "+i);
+            }
+            Check(acquired>50 && consumed>20,"Mixed operations must make progress");
+        }
+        static void Progression()
+        {
+            var m=new YardModel(new YardRules());
+            for(int day=0;day<12;day++)
+            {
+                // A new yard earns its first machine entirely through hand work.
+                for(int wire=0;wire<3;wire++)
+                {
+                    Check(m.AcquireWire(),"renewable wire");
+                    if(m.State.machineOwned){Check(m.FeedMachine(),"feed");m.Tick(10);Check(m.CollectMachine(),"machine output");}
+                    else{Check(m.LoadBench(),"bench");while(m.State.benchLoaded)Check(m.WorkBench(),"hand stroke");Check(m.CollectBench(),"bench output");}
+                    if(!m.State.orderAccepted)m.AcceptOrder();
+                    Check(m.DeliverOrder(),"customer delivery");if(m.Carried!=null)Check(m.Sell(),"surplus sale");
+                    if(!m.State.machineOwned && m.State.money>=m.Rules.machinePrice)Check(m.BuyMachine(),"first machine");
+                }
+                for(int fan=0;fan<2;fan++)
+                {
+                    Check(m.AcquireFan()&&m.LoadFan()&&m.InspectFan(),"daily fan delivery");
+                    if(m.State.money>=m.Rules.fanPartsPrice)
+                    {Check(m.BeginFanRepair(),"motor purchase");while(m.State.fanStage==FanStage.Repairing)Check(m.WorkFan(),"repair stroke");Check(m.TestFan(),"explicit test");}
+                    else{Check(m.BeginFanDismantle(),"affordable salvage");while(m.State.fanStage==FanStage.Dismantling)Check(m.WorkFan(),"salvage stroke");}
+                    Check(m.CollectFan()&&m.Sell(),"fan recovery/resale");
+                }
+                foreach(var upgrade in new[]{YardUpgrade.StorageRack,YardUpgrade.HandTools,YardUpgrade.MachineTuning})if(m.CanBuyUpgrade(upgrade))Check(m.BuyUpgrade(upgrade),"investment");
+                Check(m.AdvanceDay(),"next day");YardModel.Validate(m.State);
+            }
+            Check(m.State.machineOwned&&m.Owns(YardUpgrade.StorageRack|YardUpgrade.HandTools|YardUpgrade.MachineTuning),"all upgrades earned from zero");
+            Check(m.State.orderIndex>5&&m.State.fansRepaired>10&&m.State.dayIndex==12,"repeat business progression");
+            Check(m.State.money>0&&m.State.items.Count==0,"clean retained economy");
+        }
+    }
+}

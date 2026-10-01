@@ -98,6 +98,8 @@ namespace Scrapshift
                 if (fov != p.fieldOfView) { p.fieldOfView = fov; changed = true; }
                 bool grade = GUILayout.Toggle(p.warmGrade, "Warm colour grade (Balanced / Detailed)");
                 if (grade != p.warmGrade) { p.warmGrade = grade; changed = true; }
+                bool meter = GUILayout.Toggle(p.showFrameRate, "Show gameplay FPS and frame time");
+                if (meter != p.showFrameRate) { p.showFrameRate = meter; changed = true; }
                 GUILayout.Space(10);
                 GUILayout.Label("Changes apply immediately. If the Editor feels slow, try Laptop, close Scene view while playing, and compare a standalone build.", wrap);
             }

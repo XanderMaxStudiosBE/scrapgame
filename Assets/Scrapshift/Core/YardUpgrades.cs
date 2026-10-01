@@ -29,7 +29,14 @@ namespace Scrapshift
         public bool BuyUpgrade(YardUpgrade upgrade)
         {
             if(!CanBuyUpgrade(upgrade))return false;
-            State.money-=UpgradePrice(upgrade);State.upgrades|=upgrade;return true;
+            State.money-=UpgradePrice(upgrade);State.upgrades|=upgrade;
+            if(upgrade==YardUpgrade.HandTools)
+            {
+                if(State.benchLoaded && State.benchStrokes>=WireWorkSteps)CompleteBenchWork();
+                if(State.fanStage==FanStage.Repairing && State.fanStrokes>=FanRepairSteps)CompleteFanWork(true);
+                else if(State.fanStage==FanStage.Dismantling && State.fanStrokes>=FanSalvageSteps)CompleteFanWork(false);
+            }
+            return true;
         }
     }
 }

@@ -14,10 +14,10 @@ namespace Scrapshift.Tests
             string path = Path.Combine(dir, "presentation.json");
             try
             {
-                var p = new PresentationPreferences { graphics = GraphicsPreset.Laptop, masterVolume = .25f, fieldOfView = 80 };
+                var p = new PresentationPreferences { graphics = GraphicsPreset.Laptop, masterVolume = .25f, fieldOfView = 80, showFrameRate = true };
                 PresentationStore.Write(path, p);
                 var restored = PresentationStore.Read(path, out _);
-                Assert.AreEqual(GraphicsPreset.Laptop, restored.graphics); Assert.AreEqual(.25f, restored.masterVolume); Assert.AreEqual(80, restored.fieldOfView);
+                Assert.AreEqual(GraphicsPreset.Laptop, restored.graphics); Assert.AreEqual(.25f, restored.masterVolume); Assert.AreEqual(80, restored.fieldOfView); Assert.IsTrue(restored.showFrameRate);
                 p.graphics = GraphicsPreset.Detailed; PresentationStore.Write(path, p); File.WriteAllText(path, "invalid");
                 restored = PresentationStore.Read(path, out string notice);
                 Assert.AreEqual(GraphicsPreset.Laptop, restored.graphics); Assert.That(notice, Does.Contain("backup"));

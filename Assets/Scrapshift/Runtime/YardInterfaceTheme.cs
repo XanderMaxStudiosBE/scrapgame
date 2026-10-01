@@ -28,6 +28,8 @@ namespace Scrapshift
             skin.button.hover.background=Panel(new Color(.36f,.40f,.31f),new Color(.69f,.62f,.41f));skin.button.hover.textColor=Color.white;
             skin.button.active.background=Panel(new Color(.61f,.48f,.29f),new Color(.85f,.72f,.46f));skin.button.active.textColor=Color.white;
             skin.button.focused=skin.button.hover;
+            skin.button.onNormal=skin.button.active;skin.button.onHover=skin.button.hover;
+            skin.button.onActive=skin.button.active;skin.button.onFocused=skin.button.active;
             skin.toggle.fontSize=17;skin.toggle.normal.textColor=ink;skin.toggle.onNormal.textColor=ink;
             skin.window.normal.textColor=muted;
         }

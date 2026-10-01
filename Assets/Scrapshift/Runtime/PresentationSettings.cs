@@ -68,8 +68,8 @@ namespace Scrapshift
             string notice; Preferences = PresentationStore.Read(path, out notice); Notice = notice;
             originalFrameLimit = Application.targetFrameRate; originalVSync = QualitySettings.vSyncCount;
             originalQualityPipeline = QualitySettings.renderPipeline;
-            var source = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
-            if (source != null) { pipeline = UnityEngine.Object.Instantiate(source); pipeline.name = "Scrapshift runtime graphics"; QualitySettings.renderPipeline = pipeline; }
+            var source = (QualitySettings.renderPipeline ?? GraphicsSettings.defaultRenderPipeline) as UniversalRenderPipelineAsset;
+            if (source != null) { pipeline = UnityEngine.Object.Instantiate(source); pipeline.name = "Scrapshift runtime graphics"; pipeline.hideFlags = HideFlags.DontSave; QualitySettings.renderPipeline = pipeline; }
             var data = camera.GetUniversalAdditionalCameraData(); originalPost = data.renderPostProcessing;
             gradeObject = new GameObject("Scrapshift warm color grade"); gradeObject.transform.SetParent(parent, false);
             var volume = gradeObject.AddComponent<Volume>(); volume.isGlobal = true; volume.priority = 10;
@@ -106,6 +106,10 @@ namespace Scrapshift
             { Notice = "Applied, but could not save: " + ex.Message; }
         }
         public void RestoreDefaults() { Preferences = new PresentationPreferences(); Save(); }
+        static void DestroyOwned(UnityEngine.Object value)
+        {
+            if (Application.isPlaying) UnityEngine.Object.Destroy(value); else UnityEngine.Object.DestroyImmediate(value);
+        }
         public void Dispose()
         {
             if (disposed) return; disposed = true;
@@ -113,9 +117,10 @@ namespace Scrapshift
             Application.targetFrameRate = originalFrameLimit; QualitySettings.vSyncCount = originalVSync;
             if (camera != null) { camera.fieldOfView = originalFov; camera.GetUniversalAdditionalCameraData().renderPostProcessing = originalPost; }
             for (int i = 0; i < lights.Length; i++) if (lights[i] != null) lights[i].shadows = originalShadows[i];
-            if (pipeline != null) UnityEngine.Object.Destroy(pipeline);
-            foreach (var component in gradeProfile.components) UnityEngine.Object.Destroy(component);
-            UnityEngine.Object.Destroy(gradeProfile); UnityEngine.Object.Destroy(gradeObject);
+            if (pipeline != null) DestroyOwned(pipeline);
+            var components = gradeProfile.components.ToArray();
+            foreach (var component in components) DestroyOwned(component);
+            DestroyOwned(gradeProfile); DestroyOwned(gradeObject);
         }
     }
 }

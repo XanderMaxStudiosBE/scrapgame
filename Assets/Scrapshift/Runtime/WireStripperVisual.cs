@@ -22,8 +22,38 @@ namespace Scrapshift
             root.localPosition = position;
             result.root.AddComponent<InteractionTarget>().kind = TargetKind.Machine;
 
+            // Preserve the original collision footprint regardless of model import/fallback.
+            var chassis = result.root.AddComponent<BoxCollider>();
+            chassis.center = new Vector3(0, .60f, .04f); chassis.size = new Vector3(2.35f, 1.20f, 1.22f);
+            if (!AuthoredYardProps.TryPlace("PoweredStripper", root, Vector3.zero, out GameObject authored))
+                BuildLegacyChassis(root);
+            result.rotor = Roller("Upper driven feed wheel", root, new Vector3(.58f, 1.19f, -.755f), .15f, .17f);
+            result.additionalRoller = Roller("Lower feed wheel", root, new Vector3(.58f, .90f, -.755f), .12f, .17f);
+
+            result.outputDisplay = new GameObject("Collectable copper / visual only").transform;
+            result.outputDisplay.SetParent(root, false);
+            result.outputDisplay.localPosition = new Vector3(-.61f, .76f, -.96f);
+            for (int i = 0; i < 5; i++)
+                Part("Recovered copper strand", result.outputDisplay, new Vector3((i - 2) * .105f, 0, 0), new Vector3(.065f, .10f, .40f), RetroSurface.Copper);
+            result.feedDisplay = new GameObject("Wire in feed opening / visual only").transform;
+            result.feedDisplay.SetParent(root, false);
+            result.feedDisplay.localPosition = new Vector3(.58f, 1.035f, -.90f);
+            for (int i = 0; i < 3; i++)
+                Part("Wire in rollers", result.feedDisplay, new Vector3((i - 1) * .10f, 0, 0), new Vector3(.06f, .075f, .48f), RetroSurface.WireInsulation);
+            result.outputDisplay.gameObject.SetActive(false);
+            result.feedDisplay.gameObject.SetActive(false);
+
+            result.statusLamp = YardGeometry.Box("Status lamp", root, new Vector3(.90f, 1.44f, -.546f), new Vector3(.17f, .11f, .04f), YardGeometry.Ivory, false).GetComponent<Renderer>();
+            Label(root, "WIRE IN", new Vector3(.58f, .67f, -.665f));
+            Label(root, "COPPER OUT", new Vector3(-.61f, .57f, -1.34f));
+            Label(root, "POWER", new Vector3(.40f, 1.44f, -.548f));
+            return result;
+        }
+
+        static void BuildLegacyChassis(Transform root)
+        {
             // One solid chassis collider, resolved through the parent's station marker.
-            Part("Heavy chassis", root, new Vector3(0, .60f, .04f), new Vector3(2.35f, 1.20f, 1.22f), RetroSurface.RustPaint, true);
+            Part("Heavy chassis", root, new Vector3(0, .60f, .04f), new Vector3(2.35f, 1.20f, 1.22f), RetroSurface.RustPaint);
             Part("Raised top plate", root, new Vector3(0, 1.26f, .04f), new Vector3(2.48f, .10f, 1.36f), RetroSurface.DarkMetal);
             Part("Lower plinth", root, new Vector3(0, .12f, .04f), new Vector3(2.54f, .22f, 1.44f), RetroSurface.DarkMetal);
             Part("Mismatched service door", root, new Vector3(-.61f, .69f, -.618f), new Vector3(.92f, .84f, .045f), RetroSurface.CorrugatedMetal);
@@ -39,9 +69,6 @@ namespace Scrapshift
             Part("Feed funnel left", root, new Vector3(.07f, 1.05f, -.75f), new Vector3(.09f, .50f, .23f), RetroSurface.DarkMetal);
             Part("Feed funnel right", root, new Vector3(1.09f, 1.05f, -.75f), new Vector3(.09f, .50f, .23f), RetroSurface.DarkMetal);
             Part("Feed lip", root, new Vector3(.58f, .82f, -.80f), new Vector3(1.10f, .055f, .4f), RetroSurface.DarkMetal);
-            result.rotor = Roller("Upper driven feed wheel", root, new Vector3(.58f, 1.19f, -.755f), .15f, .17f);
-            result.additionalRoller = Roller("Lower feed wheel", root, new Vector3(.58f, .90f, -.755f), .12f, .17f);
-
             // Exposed side-mounted motor and cable make the upgrade read as powered machinery.
             var motor = new GameObject("Exposed electric motor").transform;
             motor.SetParent(root, false);
@@ -61,27 +88,9 @@ namespace Scrapshift
             Part("Tray left edge", root, new Vector3(-1.04f, .74f, -.96f), new Vector3(.045f, .16f, .72f), RetroSurface.RustPaint);
             Part("Tray right edge", root, new Vector3(-.18f, .74f, -.96f), new Vector3(.045f, .16f, .72f), RetroSurface.RustPaint);
             Part("Tray front edge", root, new Vector3(-.61f, .72f, -1.3f), new Vector3(.91f, .11f, .045f), RetroSurface.RustPaint);
-            result.outputDisplay = new GameObject("Collectable copper / visual only").transform;
-            result.outputDisplay.SetParent(root, false);
-            result.outputDisplay.localPosition = new Vector3(-.61f, .76f, -.96f);
-            for (int i = 0; i < 5; i++)
-                Part("Recovered copper strand", result.outputDisplay, new Vector3((i - 2) * .105f, 0, 0), new Vector3(.065f, .10f, .40f), RetroSurface.Copper);
-            result.feedDisplay = new GameObject("Wire in feed opening / visual only").transform;
-            result.feedDisplay.SetParent(root, false);
-            result.feedDisplay.localPosition = new Vector3(.58f, 1.035f, -.90f);
-            for (int i = 0; i < 3; i++)
-                Part("Wire in rollers", result.feedDisplay, new Vector3((i - 1) * .10f, 0, 0), new Vector3(.06f, .075f, .48f), RetroSurface.WireInsulation);
-            result.outputDisplay.gameObject.SetActive(false);
-            result.feedDisplay.gameObject.SetActive(false);
-
             Part("Status indicator bezel", root, new Vector3(.90f, 1.43f, -.45f), new Vector3(.27f, .20f, .16f), RetroSurface.DarkMetal);
-            result.statusLamp = YardGeometry.Box("Status lamp", root, new Vector3(.90f, 1.44f, -.546f), new Vector3(.17f, .11f, .04f), YardGeometry.Ivory, false).GetComponent<Renderer>();
-            Label(root, "WIRE IN", new Vector3(.58f, .67f, -.665f));
-            Label(root, "COPPER OUT", new Vector3(-.61f, .57f, -1.34f));
-            Label(root, "POWER", new Vector3(.40f, 1.44f, -.548f));
             for (int i = 0; i < 4; i++)
                 Part("Front panel bolt", root, new Vector3(i < 2 ? -.98f : 1.07f, i % 2 == 0 ? .33f : 1.19f, -.671f), new Vector3(.05f, .05f, .025f), RetroSurface.DarkMetal);
-            return result;
         }
 
         static GameObject Part(string name, Transform parent, Vector3 position, Vector3 size, RetroSurface surface, bool collider = false)
@@ -94,6 +103,11 @@ namespace Scrapshift
             var pivot = new GameObject(name).transform;
             pivot.SetParent(parent, false);
             pivot.localPosition = position;
+            if (AuthoredYardProps.TryPlace("FeedRoller", pivot, Vector3.zero, out GameObject wheel))
+            {
+                wheel.transform.localScale = new Vector3(radius / .15f, radius / .15f, depth / .17f);
+                return pivot;
+            }
             Cylinder("Fluted steel roller", pivot, Vector3.zero, radius, depth, RetroSurface.DarkMetal);
             // Uneven ivory notches clearly communicate rotation without glossy reflections.
             for (int i = 0; i < 8; i++)

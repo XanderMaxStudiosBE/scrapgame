@@ -143,6 +143,61 @@
       ],
       "uv": "within shared atlas",
       "status": "passed"
+    },
+    {
+      "name": "PoweredStripper",
+      "triangles": 1628,
+      "metre_dimensions": [
+        2.909999966621399,
+        2.0825000405311584,
+        1.5300000234833178
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
+    },
+    {
+      "name": "BuyingScale",
+      "triangles": 1380,
+      "metre_dimensions": [
+        2.4700000286102295,
+        1.2999999523162842,
+        1.929999990204223
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
+    },
+    {
+      "name": "FeedRoller",
+      "triangles": 456,
+      "metre_dimensions": [
+        0.3450000286102295,
+        0.2005000039935112,
+        0.3450000435113907
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
+    },
+    {
+      "name": "WireBundle",
+      "triangles": 584,
+      "metre_dimensions": [
+        0.47600001096725464,
+        0.5679999887943268,
+        0.14000003039836884
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
+    },
+    {
+      "name": "CopperBundle",
+      "triangles": 220,
+      "metre_dimensions": [
+        0.4000000059604645,
+        0.550000011920929,
+        0.07999999821186066
+      ],
+      "uv": "within shared atlas",
+      "status": "passed"
     }
   ]
 }

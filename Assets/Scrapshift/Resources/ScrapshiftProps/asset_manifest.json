@@ -132,6 +132,56 @@
         2.619999885559082
       ],
       "materials": 1
+    },
+    "PoweredStripper": {
+      "triangles": 1628,
+      "vertices": 904,
+      "dimensions_blender": [
+        2.9099998474121094,
+        2.0824999809265137,
+        1.5299999713897705
+      ],
+      "materials": 1
+    },
+    "BuyingScale": {
+      "triangles": 1380,
+      "vertices": 788,
+      "dimensions_blender": [
+        2.4700000286102295,
+        1.2999999523162842,
+        1.9299999475479126
+      ],
+      "materials": 1
+    },
+    "FeedRoller": {
+      "triangles": 456,
+      "vertices": 248,
+      "dimensions_blender": [
+        0.3450000286102295,
+        0.2005000114440918,
+        0.3450000286102295
+      ],
+      "materials": 1
+    },
+    "WireBundle": {
+      "triangles": 584,
+      "vertices": 304,
+      "dimensions_blender": [
+        0.47600001096725464,
+        0.5679999589920044,
+        0.14000001549720764
+      ],
+      "materials": 1
+    },
+    "CopperBundle": {
+      "triangles": 220,
+      "vertices": 120,
+      "dimensions_blender": [
+        0.40000003576278687,
+        0.550000011920929,
+        0.07999999821186066
+      ],
+      "materials": 1
     }
   }
 }

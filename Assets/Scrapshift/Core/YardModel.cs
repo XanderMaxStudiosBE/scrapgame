@@ -16,7 +16,12 @@ namespace Scrapshift
             State = state ?? new YardState();
             Validate(State);
         }
-        public ScrapItem Find(int id) { return State.items.Find(item => item.id == id); }
+        public ScrapItem Find(int id)
+        {
+            if (id <= 0) return null;
+            for (int i = 0; i < State.items.Count; i++) if (State.items[i].id == id) return State.items[i];
+            return null;
+        }
         static bool Finite(float value) { return !float.IsNaN(value) && !float.IsInfinity(value); }
         public static void Validate(YardState s)
         {
@@ -70,7 +75,8 @@ namespace Scrapshift
         }
         public bool PickUp(int id)
         {
-            if (Carried != null || Find(id) == null || Find(id).storage != StorageSlot.None) return false;
+            var item = Find(id);
+            if (Carried != null || item == null || item.storage != StorageSlot.None) return false;
             State.carriedId = id; return true;
         }
         public bool Drop(float x, float y, float z)
@@ -96,9 +102,13 @@ namespace Scrapshift
             State.benchStrokes++;
             if (State.benchStrokes >= WireWorkSteps)
             {
-                State.benchLoaded = false; State.benchStrokes = 0; State.benchOutput = Rules.copperPerWire;
+                CompleteBenchWork();
             }
             return true;
+        }
+        void CompleteBenchWork()
+        {
+            State.benchLoaded = false; State.benchStrokes = 0; State.benchOutput = Rules.copperPerWire;
         }
         public bool CollectBench()
         {

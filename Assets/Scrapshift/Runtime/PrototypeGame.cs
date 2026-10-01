@@ -28,7 +28,9 @@ namespace Scrapshift
         SettingsMenu settings;
         PresentationSettings presentation;
         Vector3 benchRestPosition;
-        float workPulseUntil;
+        float workPulseUntil, frameElapsed;
+        int frameSamples;
+        string frameReadout = "Measuring gameplay frames…";
         string message;
         float messageUntil, nextStroke, nextAutosave;
         InteractionTarget target;
@@ -84,6 +86,12 @@ namespace Scrapshift
             }
             if (settings.IsOpen) settings.UpdateCapture();
             if (paused || settings.IsOpen) return;
+            frameElapsed += Time.unscaledDeltaTime; frameSamples++;
+            if (frameElapsed >= .5f)
+            {
+                frameReadout = (frameSamples / frameElapsed).ToString("0") + " FPS • " + (frameElapsed * 1000 / frameSamples).ToString("0.0") + " ms";
+                frameElapsed = 0; frameSamples = 0;
+            }
             bool inputReady = controls.GameplayReady;
             if (inputReady) player.Step();
             bool machineWasRunning = Model.State.machineRemaining > 0;
@@ -270,7 +278,7 @@ namespace Scrapshift
         void OnGUI()
         {
             if (Model == null) return;
-            float scale = Mathf.Clamp(Screen.height / 800f, .65f, 2f);
+            float scale = Mathf.Clamp(Mathf.Min(Screen.height / 800f, Screen.width / 960f), .25f, 2f);
             using (theme.Begin(scale))
             {
                 float width = Screen.width / scale, height = Screen.height / scale;
@@ -302,6 +310,8 @@ namespace Scrapshift
                     GUI.Box(new Rect(width-300,20,280,95),"CUSTOMER ORDER");
                     GUI.Label(new Rect(width-286,48,252,54),Model.CurrentOrder.customer+"\n"+Model.State.orderDelivered+" / "+Model.CurrentOrder.copper+" copper • €"+Model.CurrentOrder.reward,controlLegend);
                 }
+                if (presentation.Preferences.showFrameRate)
+                    GUI.Label(new Rect(width-250,height-175,230,28),frameReadout,controlLegend);
                 string held = Model.Carried == null ? "Hands empty" : "Carrying " + YardItemVisual.Label(Model.Carried.kind) + " ×" + Model.Carried.quantity + "   /   " + controls.Label(ControlAction.Drop) + ": drop";
                 float promptWidth=Mathf.Min(width-40,720);
                 var hint=CurrentHint();

@@ -131,7 +131,9 @@ namespace Scrapshift
             if (s.orderAccepted && m.StoredBundles(MaterialKind.Copper) > 0) return "Take copper from COPPER STORAGE [" + interact + "] for your customer order.";
             if (m.StoredBundles(MaterialKind.Wire) > 0) return "Take wire from WIRE STORAGE [" + interact + "] to process it.";
             if (s.orderAccepted) return "Strip wire for " + m.CurrentOrder.customer + " • " + s.orderDelivered + "/" + m.CurrentOrder.copper + " copper delivered.";
-            if (s.machineOwned) return "Take wire from DELIVERY [" + interact + "] to feed your powered stripper.";
+            if (s.machineOwned && (m.CanBuyUpgrade(YardUpgrade.StorageRack) || m.CanBuyUpgrade(YardUpgrade.HandTools) || m.CanBuyUpgrade(YardUpgrade.MachineTuning)))
+                return "Improve your yard at the YARD DIARY [" + interact + "] • Investments.";
+            if (s.machineOwned) return "Feed your powered stripper with DELIVERY wire, or restore a fan from APPLIANCE SALVAGE.";
             return "Take wire from DELIVERY [" + interact + "]. Strip and sell it; €" + (r.machinePrice - s.money) + " to your first machine.";
         }
     }

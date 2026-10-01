@@ -3,7 +3,7 @@ namespace Scrapshift.Tests
 {
     public static class UpgradeScenarios
     {
-        public static readonly string[] Names={"UpgradePurchaseGuards","StorageUpgradePreservesCapacity","ToolUpgradeReducesWork","MachineTuningPreservesRunningLoad","UpgradeLimitsAndResume","InvalidUpgradeStates", "LegacyBalanceExtensions"};
+        public static readonly string[] Names={"UpgradePurchaseGuards","StorageUpgradePreservesCapacity","ToolUpgradeReducesWork","MachineTuningPreservesRunningLoad","UpgradeLimitsAndResume","InvalidUpgradeStates", "LegacyBalanceExtensions", "ToolsCompleteEligiblePartialJobs"};
         static void Check(bool value,string message){if(!value)throw new Exception(message);}
         public static void Run(string name)
         {
@@ -48,6 +48,17 @@ namespace Scrapshift.Tests
                     Check(old.fanPartsPrice==8&&old.storageUpgradePrice==60&&!BalanceMigration.FillMissingExtensions(old),"idempotent defaults");
                     old.toolsUpgradePrice=-1;BalanceMigration.FillMissingExtensions(old);
                     bool invalid=false;try{old.Validate();}catch(ArgumentException){invalid=true;}Check(invalid,"negative authored values still rejected");break;
+                case "ToolsCompleteEligiblePartialJobs":
+                    m.State.money=100;m.AcquireWire();m.LoadBench();for(int i=0;i<3;i++)m.WorkBench();
+                    m.AcquireFan();m.LoadFan();m.InspectFan();m.BeginFanRepair();m.WorkFan();m.WorkFan();
+                    Check(m.BuyUpgrade(YardUpgrade.HandTools),"upgrade during concurrent hand work");
+                    Check(!m.State.benchLoaded&&m.State.benchOutput==3&&m.State.fanStage==FanStage.ReadyToTest,"completed thresholds apply immediately");
+                    Check(m.State.fansRepaired==0&&!m.WorkBench()&&!m.WorkFan(),"testing stays explicit and outputs stay exactly once");
+                    Check(m.TestFan()&&m.State.fansRepaired==1&&m.CollectFan(),"one tested fan");
+                    var salvage=new YardModel(new YardRules());salvage.State.money=75;
+                    salvage.AcquireFan();salvage.LoadFan();salvage.InspectFan();salvage.BeginFanDismantle();
+                    for(int i=0;i<3;i++)salvage.WorkFan();salvage.BuyUpgrade(YardUpgrade.HandTools);
+                    Check(salvage.State.fanStage==FanStage.CopperReady&&salvage.State.fansDismantled==1&&!salvage.WorkFan(),"salvage completion exactly once");break;
                 default:throw new Exception(name);
             }
             YardModel.Validate(m.State);

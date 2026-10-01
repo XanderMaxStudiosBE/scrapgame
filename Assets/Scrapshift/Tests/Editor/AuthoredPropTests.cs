@@ -18,6 +18,11 @@ namespace Scrapshift.Tests
         [TestCase("WireCrate", .7f, 1.3f)]
         [TestCase("PalletBundle", .6f, 1.2f)]
         [TestCase("StorageRack", 2.4f, 3)]
+        [TestCase("PoweredStripper", 1.4f, 1.7f)]
+        [TestCase("BuyingScale", 1.7f, 2.1f)]
+        [TestCase("FeedRoller", .3f, .4f)]
+        [TestCase("WireBundle", .05f, .2f)]
+        [TestCase("CopperBundle", .03f, .2f)]
         public void ImportedPropsHaveReadableMetreScaleMeshesAndUrpMaterials(string name, float minimumHeight, float maximumHeight)
         {
             var root = new GameObject("Authored prop test");

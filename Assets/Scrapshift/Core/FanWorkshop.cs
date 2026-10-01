@@ -45,11 +45,15 @@ namespace Scrapshift
             State.fanStrokes++;
             if (State.fanStrokes >= (repairing ? FanRepairSteps : FanSalvageSteps))
             {
-                State.fanStage = repairing ? FanStage.ReadyToTest : FanStage.CopperReady;
-                State.fanStrokes = 0;
-                if (!repairing) State.fansDismantled = Math.Min(int.MaxValue - 1, State.fansDismantled) + 1;
+                CompleteFanWork(repairing);
             }
             return true;
+        }
+        void CompleteFanWork(bool repairing)
+        {
+            State.fanStage = repairing ? FanStage.ReadyToTest : FanStage.CopperReady;
+            State.fanStrokes = 0;
+            if (!repairing) State.fansDismantled = Math.Min(int.MaxValue - 1, State.fansDismantled) + 1;
         }
         public bool TestFan()
         {

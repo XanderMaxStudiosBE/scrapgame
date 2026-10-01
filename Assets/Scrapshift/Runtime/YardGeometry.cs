@@ -66,6 +66,11 @@ namespace Scrapshift
         {
             var root = new GameObject(kind == MaterialKind.Wire ? "Insulated wire bundle" : "Recovered copper bundle");
             root.transform.SetParent(parent, false);
+            if (AuthoredYardProps.TryPlace(kind == MaterialKind.Wire ? "WireBundle" : "CopperBundle", root.transform, Vector3.zero, out GameObject authored))
+            {
+                var authoredCollider = root.AddComponent<BoxCollider>(); authoredCollider.size = new Vector3(.55f, .2f, .6f);
+                return root;
+            }
             for (int i = 0; i < 4; i++)
                 SurfaceBox("Strand", root.transform, new Vector3((i - 1.5f) * .13f, 0, 0), new Vector3(.10f, .17f, .55f), kind == MaterialKind.Wire ? RetroSurface.WireInsulation : RetroSurface.Copper, false);
             var collider = root.AddComponent<BoxCollider>(); collider.size = new Vector3(.55f, .2f, .6f);

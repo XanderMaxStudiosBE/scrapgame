@@ -85,6 +85,19 @@ namespace Scrapshift
         public static GameObject Buyer(Transform parent, Vector3 groundPosition)
         {
             var root = StationRoot("Copper buying scale", parent, groundPosition, TargetKind.Sell);
+            if (AuthoredYardProps.TryPlace("BuyingScale", root.transform, Vector3.zero, out GameObject scale))
+            {
+                Collision(root,new Vector3(-.45f,.52f,0),new Vector3(1.3f,1.04f,1.1f));
+                Collision(root,new Vector3(-.45f,1.08f,0),new Vector3(1.5f,.12f,1.3f));
+                Collision(root,new Vector3(-.45f,1.23f,-.05f),new Vector3(.78f,.20f,.65f));
+                Collision(root,new Vector3(-.45f,1.36f,-.05f),new Vector3(.95f,.06f,.78f));
+                Collision(root,new Vector3(-.45f,1.49f,.39f),new Vector3(.09f,.65f,.09f));
+                Collision(root,new Vector3(-.45f,1.78f,.34f),new Vector3(.55f,.3f,.14f));
+                Collision(root,new Vector3(.8f,.09f,.08f),new Vector3(.9f,.18f,1));
+                foreach(float x in new[]{.37f,1.23f})Collision(root,new Vector3(x,.45f,.08f),new Vector3(.08f,.75f,1));
+                foreach(float z in new[]{-.38f,.54f})Collision(root,new Vector3(.8f,.45f,z),new Vector3(.9f,.75f,.08f));
+                return root;
+            }
             Box("Buying counter pedestal", root.transform, new Vector3(-.45f, .52f, 0), new Vector3(1.3f, 1.04f, 1.1f), RetroSurface.CorrugatedMetal);
             Box("Countertop", root.transform, new Vector3(-.45f, 1.08f, 0), new Vector3(1.5f, .12f, 1.3f), RetroSurface.DarkMetal);
             Box("Scale housing", root.transform, new Vector3(-.45f, 1.23f, -.05f), new Vector3(.78f, .20f, .65f), RetroSurface.RustPaint);
