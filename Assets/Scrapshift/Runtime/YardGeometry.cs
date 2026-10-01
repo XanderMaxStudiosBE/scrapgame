@@ -17,15 +17,19 @@ namespace Scrapshift
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = name; go.transform.SetParent(parent, false);
             go.transform.localPosition = position; go.transform.localScale = size;
+            go.GetComponent<Renderer>().sharedMaterial = PaletteMaterial(color);
+            go.GetComponent<Collider>().enabled = collider;
+            return go;
+        }
+        public static Material PaletteMaterial(Color color)
+        {
             if (!Materials.TryGetValue(color, out Material material) || material == null)
             {
                 material = new Material(SurfaceShader != null ? SurfaceShader : Shader.Find("Universal Render Pipeline/Lit"));
                 material.color = color; material.SetFloat("_Smoothness", .08f);
                 Materials[color] = material;
             }
-            go.GetComponent<Renderer>().sharedMaterial = material;
-            go.GetComponent<Collider>().enabled = collider;
-            return go;
+            return material;
         }
         // Independent face UVs use metres rather than Transform scale, keeping the same texel density on every prop.
         public static GameObject SurfaceBox(string name, Transform parent, Vector3 position, Vector3 size, RetroSurface surface, bool collider = true)

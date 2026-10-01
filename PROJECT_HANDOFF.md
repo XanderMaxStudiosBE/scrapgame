@@ -2,6 +2,14 @@
 
 Updated: 2026-10-01 (UTC). Reinspect the checkout before continuing.
 
+## Latest continuation: cozy retro visual refinement
+
+User requested better visuals and asked to begin. Added `CozyYardDetails`: shared sage/blue/ochre/warm-window palette, pitched office roof/fascia/ridge, window framing, porch/door details and potted vegetation; workshop tool board/shelf/radio/mug/plant/lamp housing; original sixteen-triangle faceted tree/shrub meshes with metre UVs, outward flat faces and owned-mesh cleanup. `YardGeometry.PaletteMaterial` exposes its existing shared material cache without temporary objects. The world now uses faceted two-tier tree crowns, round twelve-sided vehicle tyres (existing Cylinder helper made public), painted vehicle roofs/windows/handles/headlights, container rails/stencil plates, delivery wheel ruts, dock markings and gate nameboard. Lighting uses a lighter haze and explicit sky/equator/ground ambient fill under the existing warm sun.
+
+Preserved all gameplay, source/station anchors, save schema/preferences and physical collision footprints. Accents have no active colliders, simulation, frame updates or extra realtime lights; small details/vegetation omit shadows and are included in regional static batches. Live font geometry stays outside batching. Props remain decorative (radio, office, cars, containers). Existing texture/material assets and GUIDs are preserved; no engine/package/input migration occurred.
+
+Checks: 26 core scenarios pass, zero failed; whitespace check passes. Added one Unity geometry/collider test (39 supplied Unity cases total), unrun here. Actual Unity import/compilation, geometry/sign/window/roof/wheel appearance, Trilight lighting, batching, saved-item access and Editor/player FPS need local verification. No screenshot, playable build or performance improvement is claimed. Pull and Play in the existing scene; no Generated reset required. Next gameplay work remains useful storage/customer orders and appliance repair after validating the visual/performance baseline.
+
 ## Latest continuation: an explorable scrapyard world
 
 The user explicitly requested a full scrapyard rather than the small test area. Implemented a 96 × 80 metre yard in `ScrapyardWorld`, replacing the original enclosing fences/ground. Kept the existing hub stations and spawn at their old coordinates. Five readable districts: workshop center; nine salvage vehicles and two wire sources west; nine sorting bins, shelter and another source east; six containers, loading dock and stationary gantry north; office exterior and entry gate south. Original roof/drums/clutter are reused via `YardProps.WorkshopSurroundings`. Warm workshop lighting and original coarse materials remain, with a lighter distant fog/sky and blocky tree horizon.

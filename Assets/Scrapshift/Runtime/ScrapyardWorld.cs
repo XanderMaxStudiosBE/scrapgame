@@ -5,7 +5,7 @@ namespace Scrapshift
     /// <summary>Walkable districts around the original working hub. No per-frame simulation or rigidbody clutter.</summary>
     public static class ScrapyardWorld
     {
-        static readonly Color Sky = new Color(.60f, .64f, .59f);
+        static readonly Color Sky = new Color(.69f, .72f, .68f);
         public static Color SkyColor { get { return Sky; } }
 
         public static void Build(Transform parent, bool combine = true)
@@ -14,6 +14,10 @@ namespace Scrapshift
             var lanes = Sector(parent, "Ground and lanes");
             Box(lanes, "Packed gravel", new Vector3(0, -.25f, 0), new Vector3(YardWorldLayout.HalfWidth * 2, .5f, YardWorldLayout.HalfDepth * 2), RetroSurface.Gravel);
             // Pale worn lane edges make the hub easy to find without a minimap.
+            // Sparse wheel ruts break up the repeated gravel without expensive decals.
+            foreach (float x in new[] { -1.15f, 1.15f })
+                for (int i = 0; i < 6; i++)
+                    CozyYardDetails.Accent(lanes, "Worn delivery tyre track", new Vector3(x, .006f, -33 + i * 9), new Vector3(.16f, .009f, 5), new Color32(89, 83, 67, 255));
             foreach (float x in new[] { -5f, 5f })
                 Box(lanes, "North south lane edge", new Vector3(x, .012f, 0), new Vector3(.14f, .02f, 72), RetroSurface.WeatheredWood, false);
             foreach (float z in new[] { -10f, -16f })
@@ -34,6 +38,8 @@ namespace Scrapshift
             Box(north, "Gantry beam", new Vector3(0, 8, 24), new Vector3(19, .7f, .8f), RetroSurface.RustPaint);
             Box(north, "Parked hoist", new Vector3(-3, 7.3f, 24), new Vector3(1.3f, .8f, 1.2f), RetroSurface.DarkMetal, false);
             Box(north, "Hoist cable", new Vector3(-3, 5.5f, 24), new Vector3(.08f, 3, .08f), RetroSurface.DarkMetal, false);
+            for (int i = 0; i < 16; i++)
+                CozyYardDetails.Accent(north, "Dock safety stripe", new Vector3(17 + i * .9f, .607f, 19.3f), new Vector3(.45f, .01f, .45f), i % 2 == 0 ? CozyYardDetails.Ochre : YardGeometry.Charcoal);
             Board(north, "LOADING & STORAGE\nWORKSHOP / SOUTH", new Vector3(0, 0, 18));
             Batch(north, combine);
 
@@ -68,11 +74,14 @@ namespace Scrapshift
             for (int i = 0; i < 3; i++) Pallet(south, new Vector3(16 + i * 5, 0, -30));
             Board(south, "SCRAPSHIFT\nWORKSHOP / NORTH", new Vector3(0, 0, -29));
             Board(south, "YARD OFFICE", new Vector3(-16, 0, -24));
+            CozyYardDetails.Accent(south, "Scrapshift entry nameboard", new Vector3(0, 4.12f, -38.23f), new Vector3(8, .5f, .04f), CozyYardDetails.Sage);
+            YardGeometry.Sign(south, "S C R A P S H I F T", new Vector3(0, 4.12f, -38.26f));
             Batch(south, combine);
 
             var hub = Sector(parent, "Workshop surroundings");
             // Existing roof and drums retain their shapes; the old enclosing walls are gone.
             YardProps.WorkshopSurroundings(hub);
+            CozyYardDetails.Workshop(hub);
             Board(hub, "WORKSHOP\nWIRE > STRIP > SELL", new Vector3(0, 0, 12));
             Board(hub, "< VEHICLE SALVAGE    METAL SORTING >", new Vector3(0, 0, -18));
             Batch(hub, combine);
@@ -88,9 +97,14 @@ namespace Scrapshift
                 float angle = i * Mathf.PI * 2 / 16;
                 Vector3 p = new Vector3(Mathf.Cos(angle) * 67, 0, Mathf.Sin(angle) * 59);
                 Box(horizon, "Tree trunk", p + Vector3.up * 2, new Vector3(.7f, 4, .7f), RetroSurface.WeatheredWood, false);
-                var crown = YardGeometry.Box("Chunky tree canopy", horizon, p + Vector3.up * (5 + i % 3), new Vector3(6, 5, 6), YardGeometry.Olive, false);
-                crown.transform.localRotation = Quaternion.Euler(0, i * 23, 0);
-                crown.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                CozyYardDetails.Faceted(horizon, "Faceted tree lower crown", p + Vector3.up * (4.8f + i % 3), new Vector3(7, 5, 7), i % 2 == 0 ? YardGeometry.Olive : CozyYardDetails.Sage);
+                CozyYardDetails.Faceted(horizon, "Faceted tree upper crown", p + Vector3.up * (7 + i % 3), new Vector3(5, 4.5f, 5), CozyYardDetails.Sage);
+            }
+            // Edge vegetation stays away from district routes and the original hub.
+            for (int i = 0; i < 12; i++)
+            {
+                float x = i % 2 == 0 ? -44 : 44;
+                CozyYardDetails.Faceted(horizon, "Fence line shrub", new Vector3(x, .6f, -32 + i * 5), new Vector3(2.5f, 1.2f, 2), YardGeometry.Olive);
             }
             Batch(horizon, combine);
         }
@@ -135,7 +149,11 @@ namespace Scrapshift
         static void Container(Transform p, Vector3 pos, RetroSurface surface)
         {
             Box(p, "Storage container", pos + new Vector3(0, 1.4f, 0), new Vector3(9, 2.8f, 4), surface);
+            foreach (float x in new[] { -4.4f, 4.4f })
+                CozyYardDetails.Accent(p, "Container corner rail", pos + new Vector3(x, 1.4f, -2.06f), new Vector3(.12f, 2.7f, .12f), CozyYardDetails.Sage);
             foreach (float x in new[] { -.12f, .12f }) Box(p, "Container door latch", pos + new Vector3(x, 1.4f, -2.04f), new Vector3(.05f, 2, .08f), RetroSurface.DarkMetal, false);
+            CozyYardDetails.Accent(p, "Container stencil plate", pos + new Vector3(-2.5f, 1.7f, -2.07f), new Vector3(2.4f, .65f, .03f), CozyYardDetails.DustyBlue);
+            YardGeometry.Sign(p, "SCRAP / STORAGE", pos + new Vector3(-2.5f, 1.7f, -2.10f));
         }
         static void Pallet(Transform p, Vector3 pos)
         {
@@ -147,10 +165,21 @@ namespace Scrapshift
             var surface = rust ? RetroSurface.RustPaint : RetroSurface.CorrugatedMetal;
             Box(p, "Salvaged vehicle body", pos + new Vector3(0, .65f, 0), new Vector3(2.1f, .65f, 4.4f), surface);
             Box(p, "Vehicle cabin", pos + new Vector3(0, 1.25f, .1f), new Vector3(1.8f, .7f, 1.9f), surface);
-            Box(p, "Dark windshield", pos + new Vector3(0, 1.27f, -.87f), new Vector3(1.5f, .48f, .025f), RetroSurface.WireInsulation, false);
+            CozyYardDetails.Accent(p, "Painted vehicle roof", pos + new Vector3(0, 1.62f, .1f), new Vector3(1.82f, .08f, 1.92f), rust ? CozyYardDetails.Ochre : CozyYardDetails.DustyBlue);
+            CozyYardDetails.Accent(p, "Windshield", pos + new Vector3(0, 1.27f, -.87f), new Vector3(1.5f, .48f, .035f), CozyYardDetails.Window);
+            CozyYardDetails.Accent(p, "Rear window", pos + new Vector3(0, 1.27f, 1.07f), new Vector3(1.5f, .48f, .035f), CozyYardDetails.Window);
+            foreach (float x in new[] { -.92f, .92f })
+            {
+                CozyYardDetails.Accent(p, "Vehicle side glass", pos + new Vector3(x, 1.27f, .1f), new Vector3(.035f, .48f, 1.55f), CozyYardDetails.Window);
+                CozyYardDetails.Accent(p, "Vehicle window pillar", pos + new Vector3(x, 1.27f, .1f), new Vector3(.055f, .56f, .09f), YardGeometry.Charcoal);
+                CozyYardDetails.Accent(p, "Vehicle door handle", pos + new Vector3(x * 1.18f, .89f, .45f), new Vector3(.035f, .06f, .18f), YardGeometry.Ivory);
+            }
+            foreach (float x in new[] { -.72f, .72f })
+                CozyYardDetails.Accent(p, "Faded vehicle headlight", pos + new Vector3(x, .72f, -2.23f), new Vector3(.34f, .2f, .04f), CozyYardDetails.WarmWindow);
+            CozyYardDetails.Accent(p, "Vehicle grille", pos + new Vector3(0, .65f, -2.23f), new Vector3(.8f, .22f, .04f), YardGeometry.Charcoal);
             foreach (float x in new[] { -1.08f, 1.08f })
                 foreach (float z in new[] { -1.35f, 1.35f })
-                    Box(p, "Blocky worn wheel", pos + new Vector3(x, .4f, z), new Vector3(.25f, .65f, .7f), RetroSurface.WireInsulation, false);
+                    YardProps.Cylinder("Low poly vehicle tyre", p, pos + new Vector3(x, .4f, z), .35f, .25f, RetroSurface.WireInsulation, Quaternion.Euler(0, 0, 90));
             Box(p, "Vehicle bumper", pos + new Vector3(0, .52f, -2.23f), new Vector3(2.15f, .16f, .15f), RetroSurface.DarkMetal, false);
         }
         static void ScrapBin(Transform p, Vector3 pos, bool rust)
@@ -169,9 +198,9 @@ namespace Scrapshift
         static void Building(Transform p, Vector3 pos)
         {
             Box(p, "Yard office", pos + Vector3.up * 1.5f, new Vector3(8, 3, 6), RetroSurface.WeatheredWood);
-            Box(p, "Office roof", pos + Vector3.up * 3.1f, new Vector3(9, .2f, 7), RetroSurface.CorrugatedMetal, false);
+            CozyYardDetails.Office(p, pos);
             Box(p, "Office door", pos + new Vector3(-2, 1.1f, 3.02f), new Vector3(1.2f, 2.2f, .04f), RetroSurface.RustPaint, false);
-            Box(p, "Office window", pos + new Vector3(1.5f, 1.7f, 3.03f), new Vector3(2, 1.1f, .04f), RetroSurface.WireInsulation, false);
+
         }
     }
 }

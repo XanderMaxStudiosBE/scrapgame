@@ -80,6 +80,19 @@ namespace Scrapshift.Tests
             Assert.AreEqual(3, drums);
         }
 
+        [Test]
+        public void FacetedVegetationHasOutwardFacesAndNoInteractionColliders()
+        {
+            var shrub = CozyYardDetails.Faceted(root.transform, "Test shrub", Vector3.zero, new Vector3(3, 2, 4), CozyYardDetails.Sage);
+            Assert.IsEmpty(shrub.GetComponentsInChildren<Collider>());
+            var mesh = shrub.GetComponent<MeshFilter>().sharedMesh;
+            Assert.AreEqual(16 * 3, mesh.triangles.Length);
+            AssertOutwardTriangles(mesh);
+            CozyYardDetails.Workshop(root.transform);
+            foreach (var collider in root.GetComponentsInChildren<Collider>())
+                Assert.IsFalse(collider.enabled, "Workshop accents must not obstruct station rays or saved items");
+        }
+
         static void AssertStation(GameObject station, TargetKind expected)
         {
             var marker = station.GetComponent<InteractionTarget>();

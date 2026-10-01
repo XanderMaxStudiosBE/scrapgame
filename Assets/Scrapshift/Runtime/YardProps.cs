@@ -126,7 +126,7 @@ namespace Scrapshift
             return YardGeometry.SurfaceBox(name, parent, position, size, surface, collider);
         }
 
-        static GameObject Cylinder(string name, Transform parent, Vector3 position, float radius, float length, RetroSurface surface, Quaternion rotation)
+        public static GameObject Cylinder(string name, Transform parent, Vector3 position, float radius, float length, RetroSurface surface, Quaternion rotation)
         {
             const int sides = 12;
             var go = new GameObject(name); go.transform.SetParent(parent, false);

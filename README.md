@@ -175,8 +175,17 @@ Scenery is static, uses shared materials and is batched by district. Small decor
 
 Local verification required:
 
-1. Run all EditMode tests (38 supplied cases), including the new district/collision/source reachability and expanded save/restore checks. Cloud ran only the 26 engine-independent scenarios; Unity tests remain unrun.
+1. Run all EditMode tests (39 supplied cases), including the new district/collision/source reachability and expanded save/restore checks. Cloud ran only the 26 engine-independent scenarios; Unity tests remain unrun.
 2. Walk from the original spawn through all districts, try each wire crate, process/sell its wire, and inspect signs, map, fence boundaries and vehicle/bin collisions. Verify no old fence blocks exploration.
 3. Drop wire or copper in west/east/north areas, save/restart and retrieve it. Save while standing on the loading platform and verify safe height restoration. Load a previous hub save and complete the original manual-to-machine loop.
 4. Pause during stripping-machine processing, open the map, use Back/Escape, enter Settings and resume with held keys. Confirm no movement, action or processing leaks into menus.
 5. Compare Profiler CPU/GPU/frame time at the workshop and facing each populated district, and test a desktop build. Verify regional batching and shader/text rendering. Do not infer a performance improvement from source changes alone.
+
+
+## Cozy retro visual pass
+
+The latest pass replaces cube tree crowns with original sixteen-triangle faceted vegetation, adds a pitched office roof, sage fascia, framed warm windows, porch awning and potted shrubs, and adds painted roofs, blue-green windows, door handles, faded headlights and twelve-sided tyres to salvage cars. Containers have corner rails and painted storage plates. The workshop has a tool board, shelf, decorative radio/mug/plants and a visible lamp housing. Wheel ruts, dock safety markings and an entry nameboard add identity to the larger yard. Sky/ground ambient fill and warm sun keep shaded areas readable.
+
+These are static visual details; the radio, office and vehicles gain no new interactions. Palette materials are shared, new vegetation owns/cleans up its generated meshes, signs stay outside static batches, and accents do not add active colliders, rigidbodies, realtime lights or frame updates. Existing station anchors, save data and materials remain intact.
+
+26 core checks still pass in Cloud. The 39-case Unity suite now includes faceted mesh winding and decoration collider checks, but is unrun here. Pull and Play in the existing scene, then inspect roof joins, window/sign facing, tyre orientation, tree silhouettes, workshop/tool visibility, saved-item accessibility and shadow readability. Compare frame time against the previous yard version in Editor and desktop player; neither visual quality nor a performance gain has been verified in Unity here.
