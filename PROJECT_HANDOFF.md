@@ -2,6 +2,10 @@
 
 Updated: 2026-10-01 (UTC). Reinspect the checkout before continuing. The first sections and README describe the current implementation; older milestone records below are historical checkpoints.
 
+## Work-session status
+
+The authorized two-hour development pass on 2026-10-01 is complete, and all milestones were committed and pushed directly to main. Current README/CLOUD_TASK_PROMPT describe the resulting game. A clean checkout and matching local/remote heads were confirmed. The asset integrity check passes and also rejects a deliberately stale FBX hash in an isolated temporary copy. No Unity Editor, player build, measured FPS result or user visual approval is available for this new pass. The next session should begin with local Unity import/compilation/play/visual/performance feedback rather than assuming the older “continue this active session” checkpoint instructions are still active.
+
 ## Final compatibility sweep: preserved output reservations
 
 The last review found that lowering maxBundles in a user's existing Balance asset could strand previously reserved bench/machine/fan output. Collection now replaces its reserved station slot without applying the new acquisition cap; it still requires empty hands, an available item ID and the fixed 100-item serialization ceiling. New wire/fan acquisitions remain blocked above the new effective capacity. Prompts use the same collection guard. A new core case reconstructs a yard with three ready stations plus loose wire under a lower capacity, collects/sells all original output, and resumes normal supply only once space is free. Two supplied Unity checks cover actual reduced-capacity save loading and deserializing/preparing an old tuned Balance.
