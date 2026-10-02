@@ -1,5 +1,9 @@
 # Scrapshift project handoff
 
+## Startup compilation fix (2026-10-02)
+
+The creator's Unity 6000.3.25f1 Console reported CS0136 in YardContactShadows.cs: Patch reused `c` for both the enclosing yaw cosine and an inner triangle index. Renamed the yaw values to `yawCos`/`yawSin`, preserving geometry. The exact corrected Patch method compiles with Mono and warnings-as-errors against minimal math/vector/color adapters. This checks the reported C# scope error, not Unity compilation. Pull the fix and allow Unity to recompile in Safe Mode; confirm the Console clears before opening the compact yard. Other Unity startup/playthrough checks remain outstanding.
+
 ## Latest milestone: compact player-built yard, stages A/B
 
 The creator requested the complete automation brief and supplied a 48 × 36m example map. Read Design/COMPACT_AUTOMATION_BRIEF.md, Design/COMPACT_STAGE_AB_VERIFICATION.md and Design/COMPACT_WORLD_VERIFICATION.md. Active scope supersedes the old wire-demo limit. Source now implements a new compact default with fixed office/shop/sales/delivery/entry/fence and an open freely buildable interior. Run Scrapshift → Create or Open Compact Yard after import, then play Generated/CompactScrapyard. The alias old setup command opens it too. The original Generated/Scrapyard scene, balance, repair/customer/day systems and all old saves/assets remain the explicit legacy continuation; nothing is silently reset.

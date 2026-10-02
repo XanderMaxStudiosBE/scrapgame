@@ -62,13 +62,13 @@ namespace Scrapshift
         }
         static void Patch(List<Vector3> vertices,List<Color> colors,List<int> triangles,Vector3 center,float radiusX,float radiusZ,float opacity,float yaw=0)
         {
-            float c=Mathf.Cos(yaw*Mathf.Deg2Rad),s=Mathf.Sin(yaw*Mathf.Deg2Rad);
+            float yawCos=Mathf.Cos(yaw*Mathf.Deg2Rad),yawSin=Mathf.Sin(yaw*Mathf.Deg2Rad);
             center.y+=.006f;int start=vertices.Count;vertices.Add(center);colors.Add(new Color(1,1,1,opacity));
             for(int ring=0;ring<2;ring++)for(int i=0;i<Segments;i++)
             {
                 float angle=i*Mathf.PI*2/Segments,radius=ring==0?.58f:1;
                 float dx=Mathf.Cos(angle)*radiusX*radius,dz=Mathf.Sin(angle)*radiusZ*radius;
-                vertices.Add(center+new Vector3(c*dx+s*dz,0,-s*dx+c*dz));
+                vertices.Add(center+new Vector3(yawCos*dx+yawSin*dz,0,-yawSin*dx+yawCos*dz));
                 colors.Add(new Color(1,1,1,ring==0?opacity*.65f:0));
             }
             for(int i=0;i<Segments;i++)
