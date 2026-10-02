@@ -1,0 +1,98 @@
+{
+  "source": "Original Blender-authored models; ArtSource/build_compact_assets.py",
+  "pack": "CompactStarter",
+  "units": "metres",
+  "atlas": "ScrapshiftPropAtlas.png",
+  "assets": {
+    "CompactGenerator": {
+      "triangles": 1376,
+      "vertices": 800,
+      "dimensions_blender": [
+        1.5099999904632568,
+        1.1200000047683716,
+        1.2010000944137573
+      ],
+      "materials": 1
+    },
+    "CompactTier1Scrapper": {
+      "triangles": 1380,
+      "vertices": 776,
+      "dimensions_blender": [
+        2.065000057220459,
+        2.044595718383789,
+        1.9850000143051147
+      ],
+      "materials": 1
+    },
+    "CompactMotor": {
+      "triangles": 696,
+      "vertices": 376,
+      "dimensions_blender": [
+        0.4399999976158142,
+        0.5699999928474426,
+        0.4150000214576721
+      ],
+      "materials": 1
+    },
+    "CompactCompressor": {
+      "triangles": 428,
+      "vertices": 240,
+      "dimensions_blender": [
+        0.49922192096710205,
+        0.43706631660461426,
+        0.4325000047683716
+      ],
+      "materials": 1
+    },
+    "CompactRefrigerator": {
+      "triangles": 808,
+      "vertices": 480,
+      "dimensions_blender": [
+        0.7900000810623169,
+        0.9169999361038208,
+        1.8625001907348633
+      ],
+      "materials": 1
+    },
+    "CompactDeliveryTruck": {
+      "triangles": 1636,
+      "vertices": 920,
+      "dimensions_blender": [
+        2.3592000007629395,
+        4.38599967956543,
+        1.8650000095367432
+      ],
+      "materials": 1
+    },
+    "CompactPlasticFragments": {
+      "triangles": 84,
+      "vertices": 54,
+      "dimensions_blender": [
+        0.4551216959953308,
+        0.464285671710968,
+        0.12600000202655792
+      ],
+      "materials": 1
+    },
+    "CompactInsulationCoil": {
+      "triangles": 568,
+      "vertices": 288,
+      "dimensions_blender": [
+        0.45399999618530273,
+        0.4240000247955322,
+        0.10100001096725464
+      ],
+      "materials": 1
+    },
+    "CompactBoundaryTree": {
+      "triangles": 1256,
+      "vertices": 694,
+      "dimensions_blender": [
+        3.9921042919158936,
+        3.869248390197754,
+        7.934467315673828
+      ],
+      "materials": 1
+    }
+  }
+}

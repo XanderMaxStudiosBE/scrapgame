@@ -2,6 +2,10 @@
 
 The goal is a cohesive cozy retro scrapyard game. This document is an implementation sequence, not a release announcement or a claim that the prototype is finished. Unity 6000.3.25f1 / URP 17.3.0, existing saves, controls and authored assets remain the baseline.
 
+## Active compact automation direction
+
+The creator's newer brief takes priority: see Design/COMPACT_AUTOMATION_BRIEF.md and Design/COMPACT_STAGE_AB_VERIFICATION.md. Stages A/B now implement a compact free-build manual scrapping/XP/power/Tier1 loop in source while retaining the old world. Verify that stage in Unity before extending it. Next complete stage C: purchased level-10 Tier2/ported storage and deterministic conveyors/corners/junctions with backpressure, conservation and explicit saved-state migration. Then stage D: scheduled intake/primary dismantler/sorting/automated sale/export. Catalogue entries are planned, not delivered features. Final art acceptance, pacing, measured performance and a verified desktop build remain. The following milestones describe the preserved legacy finishing track.
+
 ## 1. Establish the lighting and workshop look
 
 Latest screenshot-driven work adds independent material recovery, straight-alpha ground normalization and mipmapped coarse surfaces for Laptop. The creator’s actual screenshot was rejected; accept only after the same Unity view verifies recovered colors/fades. See FINISHING_PASS_VERIFICATION.md.

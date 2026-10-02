@@ -62,6 +62,15 @@ namespace Scrapshift
             var repairClip=model.State.benchAppliance==RepairAppliance.PortableRadio?radioTest:fanLoop;
             if(fan.clip!=repairClip){fan.Stop();fan.clip=repairClip;}
             Loop(machine,model.State.machineRemaining>0);Loop(fan,model.State.fanStage==FanStage.Tested);
+            StepFootsteps();
+        }
+        public void StepCompact(bool poweredMachineRunning,Vector3 machinePosition)
+        {
+            machine.transform.position=machinePosition;Loop(machine,poweredMachineRunning);Loop(fan,false);
+            StepFootsteps();
+        }
+        void StepFootsteps()
+        {
             Vector3 pos=player.transform.position,delta=pos-previousPosition;previousPosition=pos;delta.y=0;
             float distance=delta.magnitude;
             if(!player.Grounded || distance>2){stepDistance=0;return;}

@@ -20,3 +20,5 @@ run_checks "$test_dir/core.exe" "${sources[@]}"
 # Real SaveStore recovery/filesystem flow with a narrow adapter after field checks, not Unity JSON.
 run_checks "$test_dir/recovery.exe" "$repo_root"/Assets/Scrapshift/Core/*.cs \
     "$repo_root/Assets/Scrapshift/Runtime/SaveStore.cs" "$repo_root/Tests/SaveRecoveryRunner.cs"
+run_checks "$test_dir/compact-recovery.exe" "$repo_root"/Assets/Scrapshift/Core/*.cs \
+    "$repo_root/Assets/Scrapshift/Runtime/CompactSaveStore.cs" "$repo_root/Tests/CompactSaveRecoveryRunner.cs"

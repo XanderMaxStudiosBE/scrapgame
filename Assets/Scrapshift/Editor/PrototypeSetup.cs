@@ -12,12 +12,15 @@ namespace Scrapshift
     {
         const string Folder = "Assets/Scrapshift/Generated";
         const string ScenePath = Folder + "/Scrapyard.unity";
+        public const string CompactScenePath=Folder+"/CompactScrapyard.unity";
         [MenuItem("Scrapshift/Create or Open Prototype")]
         public static void CreateOrOpen()
         {
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             Generate();
         }
+        [MenuItem("Scrapshift/Create or Open Compact Yard")]
+        public static void CreateOrOpenCompact(){CreateOrOpen();}
         [MenuItem("Scrapshift/Update Existing Prototype Visuals")]
         public static void UpdateExistingVisuals()
         {
@@ -67,12 +70,24 @@ namespace Scrapshift
                 bootstrap.surfaceShader = Shader.Find("Universal Render Pipeline/Lit");
                 EditorSceneManager.SaveScene(scene, ScenePath);
             }
-            else EditorSceneManager.OpenScene(ScenePath);
-            var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
-            if (!scenes.Exists(scene => scene.path == ScenePath)) scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
+            // Existing legacy scenes are preserved byte-for-byte. Only create the missing compact scene.
+            if(!File.Exists(CompactScenePath))
+            {
+                var scene=EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);
+                var bootstrap=new GameObject("Compact Scrapshift Bootstrap").AddComponent<Compact.CompactYardBootstrap>();
+                bootstrap.balance=Resources.Load<Compact.CompactBalance>("ScrapshiftCompact/Balance");
+                bootstrap.legacyBalance=balance;bootstrap.logo=logo;
+                bootstrap.surfaceShader=Shader.Find("Universal Render Pipeline/Lit");
+                EditorSceneManager.SaveScene(scene,CompactScenePath);
+            }
+            else EditorSceneManager.OpenScene(CompactScenePath);
+            // Default build starts in the compact yard; legacy remains an explicit playable option.
+            var scenes=new List<EditorBuildSettingsScene>{new EditorBuildSettingsScene(CompactScenePath,true)};
+            foreach(var existing in EditorBuildSettings.scenes)if(existing.path!=CompactScenePath&&existing.path!=ScenePath)scenes.Add(existing);
+            scenes.Add(new EditorBuildSettingsScene(ScenePath,true));
             EditorBuildSettings.scenes = scenes.ToArray();
             AssetDatabase.SaveAssets();
-            Debug.Log("Scrapshift prototype ready (existing bootstrap scenes receive updated runtime props without scene replacement). Open Generated/Scrapyard and press Play. Balance.asset controls prices and processing.");
+            Debug.Log("Compact yard ready: open Generated/CompactScrapyard and press Play. Resources/ScrapshiftCompact/Balance controls the new economy. Generated/Scrapyard, its balance and all version-one saves remain the legacy continuation.");
         }
     }
 }

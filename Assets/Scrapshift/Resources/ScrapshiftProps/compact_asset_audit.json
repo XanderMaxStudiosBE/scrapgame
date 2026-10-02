@@ -1,0 +1,104 @@
+{
+  "scope": "Blender FBX round-trip, finite vertices/normals, metre bounds, UVs, single material and 2500 triangle budget; Unity import not run",
+  "assets": [
+    {
+      "name": "CompactGenerator",
+      "status": "passed",
+      "triangles": 1376,
+      "metre_dimensions": [
+        1.5099999904632568,
+        1.1200000047683716,
+        1.2010000795125961
+      ],
+      "sha256": "7ac78bee53ab1255e2da91b05aeee86a4ef698fd65bfb37219ea42086a28f814"
+    },
+    {
+      "name": "CompactTier1Scrapper",
+      "status": "passed",
+      "triangles": 1380,
+      "metre_dimensions": [
+        2.065000057220459,
+        2.044595956802368,
+        1.9850000431761146
+      ],
+      "sha256": "21b8879f4bf52488d7074b50f8e7c9a307cbb538e8bbec97fbb6b3b255f01384"
+    },
+    {
+      "name": "CompactMotor",
+      "status": "passed",
+      "triangles": 696,
+      "metre_dimensions": [
+        0.4400000125169754,
+        0.5700000077486038,
+        0.41500003255586293
+      ],
+      "sha256": "e4765b049abc4375d6165f7d8d7ac9ef0bb588621961867f74888d408d1760d4"
+    },
+    {
+      "name": "CompactCompressor",
+      "status": "passed",
+      "triangles": 428,
+      "metre_dimensions": [
+        0.49922190606594086,
+        0.43706630170345306,
+        0.4325000164705459
+      ],
+      "sha256": "0e2186254146da3c29ee9a699e1f51bce30fe5f77ae52f476d651590e9e1cfab"
+    },
+    {
+      "name": "CompactRefrigerator",
+      "status": "passed",
+      "triangles": 808,
+      "metre_dimensions": [
+        0.7900000214576721,
+        0.9169999957084656,
+        1.8625000966663734
+      ],
+      "sha256": "cb6f0c76d33c72074906e32f9549086c627a9f3adaa5829228710f31c0011b6c"
+    },
+    {
+      "name": "CompactDeliveryTruck",
+      "status": "passed",
+      "triangles": 1636,
+      "metre_dimensions": [
+        2.3592000007629395,
+        4.385999917984009,
+        1.8650001967325807
+      ],
+      "sha256": "7896facb7987fa1d77a7be607f4db0bc33614862d7677bf2b8e162d2f2a68b92"
+    },
+    {
+      "name": "CompactPlasticFragments",
+      "status": "passed",
+      "triangles": 84,
+      "metre_dimensions": [
+        0.4551216810941696,
+        0.4642856568098068,
+        0.12600001320242882
+      ],
+      "sha256": "ea0b69d01e2a8123ffb780cabfe3c75fc837eca615740649435a7f3039195f51"
+    },
+    {
+      "name": "CompactInsulationCoil",
+      "status": "passed",
+      "triangles": 568,
+      "metre_dimensions": [
+        0.45399998128414154,
+        0.42400000989437103,
+        0.1010000198148191
+      ],
+      "sha256": "7fc1013b3939d8cd724e313d86156807cd6649b5c6b8ed2f709eff46a4d9edab"
+    },
+    {
+      "name": "CompactBoundaryTree",
+      "status": "passed",
+      "triangles": 1256,
+      "metre_dimensions": [
+        3.992104172706604,
+        3.869248628616333,
+        7.934467580867931
+      ],
+      "sha256": "18e161ff6462a2025a69e06c743f7cf42a53bb483392dd4f00234dc35928e050"
+    }
+  ]
+}

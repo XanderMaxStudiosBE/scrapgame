@@ -6,7 +6,8 @@ Read `PROJECT_HANDOFF.md` before starting work. It records the design and verifi
 
 - Scrapshift is a first-person retro 3D scrapyard simulator. Manual labor gradually gives way to powered machines and automation.
 - Core loop: acquire scrap, inspect it, repair or dismantle it, sell items/materials, and upgrade the yard.
-- Prioritize one complete wire-processing loop: collect wire, strip it manually, sell copper, buy a powered wire stripper, feed it, collect output, and sell again.
+- Active direction: a compact, freely buildable scrapyard automation game. Read Design/COMPACT_AUTOMATION_BRIEF.md and the current handoff. Wire stripping remains one component chain, not the scope limit. Implement playable stages: manual car/fridge/component scrapping and sales XP; construction/generator/Tier1; level-10 belts/storage/Tier2; automated intake/sorting/export. Equipment placement is player-designed; only entrance, office/sales, delivery and boundaries are fixed.
+- The approximate starting yard is 48 × 36m. Keep interiors buildable, walking distances short and advanced equipment purchased rather than granted at start. The creator asks for multiple agents with separated world, gameplay and construction ownership; main owns shared contracts, integration, persistence and verification.
 - The earlier video-store concept was rejected in favor of the scrapyard. Do not introduce a video-rental business.
 - Visual reference chosen by the user: Retro Rewind - Video Store Simulator. Use believable, recognizable props, worn surfaces, warm practical lighting and a compact readable HUD in an original scrapyard setting; do not copy that game's assets, characters or video-store business. The user dislikes the current primitive-box look and requests worn retro realism.
 - Aim for a cozy retro simulator: chunky low-poly assets, coarse restrained textures, worn industrial surfaces, soft fog and warm workshop lighting. Favor welcoming colors, satisfying tool/machine sounds and relaxed pacing; keep controls and UI crisp and readable.
@@ -25,7 +26,7 @@ Read `PROJECT_HANDOFF.md` before starting work. It records the design and verifi
 
 ## Implementation and verification
 
-- Implement and verify the smallest complete gameplay loop before adding conveyors, vehicles, large maps, or elaborate repairs.
+- Complete coherent stages of the automation brief. Preserve prior systems/assets and the old scene as legacy/reference; make the compact yard the default without deleting old saves or hand-edited scenes. Version new data and make migration explicit/recoverable. Never label planned automation as implemented.
 - Prevent duplicate processing outputs, negative inventory/money, duplicate upgrades, and loss/duplication across saves. Provide a repeatable source of scrap.
 - Save money, owned equipment, relevant inventory/world state, and processing state consistently.
 - Run checks appropriate to the change. If Unity is unavailable, state exactly what remains unverified in the editor; do not claim a playable build merely because C# files exist.

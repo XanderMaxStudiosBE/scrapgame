@@ -3,16 +3,16 @@ using System.Collections.Generic;
 
 namespace Scrapshift
 {
-    public enum ControlAction { MoveForward, MoveBackward, MoveLeft, MoveRight, Interact, Drop, ManualWork }
+    public enum ControlAction { MoveForward, MoveBackward, MoveLeft, MoveRight, Interact, Drop, ManualWork, BuildToggle, BuildRotate }
 
     [Serializable]
     public sealed class ControlPreferences
     {
         public int version = 1;
-        public string[] bindings = { "W", "S", "A", "D", "E", "Q", "Mouse0" };
+        public string[] bindings = { "W", "S", "A", "D", "E", "Q", "Mouse0", "B", "R" };
         public float sensitivity = 2;
         public bool invertY;
-        static readonly string[] Defaults = { "W", "S", "A", "D", "E", "Q", "Mouse0" };
+        static readonly string[] Defaults = { "W", "S", "A", "D", "E", "Q", "Mouse0", "B", "R" };
         static readonly string[] Arrows = { "UpArrow", "DownArrow", "LeftArrow", "RightArrow" };
         public static readonly ControlAction[] Actions = (ControlAction[])Enum.GetValues(typeof(ControlAction));
         public static readonly string[] SupportedCodes = CreateSupportedCodes();
@@ -57,6 +57,33 @@ namespace Scrapshift
         {
             bindings = (string[])Defaults.Clone(); sensitivity = 2; invertY = false;
         }
+        // Version one remains additive: never replace a player's seven existing choices.
+        // Validate a copy before committing; malformed legacy arrays still recover via backup.
+        public bool UpgradeLegacyBindings()
+        {
+            if (version != 1 || bindings == null || bindings.Length != 7) return false;
+            var upgraded = new ControlPreferences { sensitivity = sensitivity, invertY = invertY };
+            Array.Copy(bindings, upgraded.bindings, 7);
+            upgraded.bindings[7] = UnusedBuildCode("B", upgraded, 7);
+            upgraded.bindings[8] = UnusedBuildCode("R", upgraded, 8);
+            upgraded.Validate();
+            bindings = upgraded.bindings;
+            return true;
+        }
+        static string UnusedBuildCode(string preferred, ControlPreferences p, int populated)
+        {
+            if (Unused(preferred, p, populated)) return preferred;
+            // Function keys make stable, accessible fallbacks without stealing movement aliases.
+            for (int i = 2; i <= 12; i++) if (Unused("F" + i, p, populated)) return "F" + i;
+            foreach (string code in SupportedCodes) if (Unused(code, p, populated)) return code;
+            throw new ArgumentException("No supported binding available for construction.");
+        }
+        static bool Unused(string code, ControlPreferences p, int populated)
+        {
+            for (int i = 0; i < populated; i++)
+                if (p.bindings[i] == code || (i < 4 && p.Alias((ControlAction)i) == code)) return false;
+            return true;
+        }
         public void Validate()
         {
             if (version != 1 || bindings == null || bindings.Length != Actions.Length ||
@@ -77,6 +104,8 @@ namespace Scrapshift
                 case ControlAction.MoveRight: return "Move right";
                 case ControlAction.Interact: return "Interact";
                 case ControlAction.Drop: return "Drop carried item";
+                case ControlAction.BuildToggle: return "Build catalogue";
+                case ControlAction.BuildRotate: return "Rotate construction";
                 default: return "Manual work";
             }
         }

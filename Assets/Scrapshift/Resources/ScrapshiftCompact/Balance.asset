@@ -1,0 +1,291 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f72208782f17421591715b38697ed6b0, type: 3}
+  m_Name: CompactBalance
+  m_EditorClassIdentifier:
+  rules:
+    startingMoney: 8
+    startingCars: 1
+    startingRefrigerators: 1
+    renewableWireQuantity: 1
+    maxStacks: 256
+    maxLargeScrap: 8
+    maxEquipment: 64
+    CableRange: 12
+    baseMachineSeconds: 4
+    levelThresholds: 000000001e00000050000000a000000018010000b80100008a020000a20300000a050000d606000010090000c20b0000
+    saleBonusPercents: 000000000c0000001000000014000000180000001c0000002000000024000000280000002d0000003200000037000000
+    parts:
+    - kind: 0
+      name: "Wiring"
+      unitPrice: 0
+      saleXp: 0
+      isMaterial: 0
+    - kind: 1
+      name: "Copper"
+      unitPrice: 3
+      saleXp: 2
+      isMaterial: 1
+    - kind: 2
+      name: "Broken fan"
+      unitPrice: 0
+      saleXp: 0
+      isMaterial: 0
+    - kind: 3
+      name: "Tested fan"
+      unitPrice: 42
+      saleXp: 0
+      isMaterial: 0
+    - kind: 4
+      name: "Broken radio"
+      unitPrice: 0
+      saleXp: 0
+      isMaterial: 0
+    - kind: 5
+      name: "Tested radio"
+      unitPrice: 34
+      saleXp: 0
+      isMaterial: 0
+    - kind: 6
+      name: "Motor"
+      unitPrice: 0
+      saleXp: 0
+      isMaterial: 0
+    - kind: 7
+      name: "Metal casing"
+      unitPrice: 0
+      saleXp: 0
+      isMaterial: 0
+    - kind: 8
+      name: "Steel"
+      unitPrice: 1
+      saleXp: 1
+      isMaterial: 1
+    - kind: 9
+      name: "Plastic"
+      unitPrice: 1
+      saleXp: 1
+      isMaterial: 1
+    - kind: 10
+      name: "Insulation"
+      unitPrice: 1
+      saleXp: 1
+      isMaterial: 1
+    - kind: 11
+      name: "Compressor"
+      unitPrice: 0
+      saleXp: 0
+      isMaterial: 0
+    recipes:
+    - id: 100
+      name: "Strip wiring"
+      input: 0
+      inputQuantity: 1
+      strokes: 4
+      seconds: 4
+      yields:
+      - kind: 1
+        quantity: 3
+      - kind: 10
+        quantity: 2
+    - id: 200
+      name: "Open motor"
+      input: 6
+      inputQuantity: 1
+      strokes: 5
+      seconds: 6
+      yields:
+      - kind: 1
+        quantity: 4
+      - kind: 8
+        quantity: 6
+    - id: 300
+      name: "Cut metal casing"
+      input: 7
+      inputQuantity: 1
+      strokes: 3
+      seconds: 3
+      yields:
+      - kind: 8
+        quantity: 4
+    - id: 400
+      name: "Open compressor"
+      input: 11
+      inputQuantity: 1
+      strokes: 5
+      seconds: 6
+      yields:
+      - kind: 1
+        quantity: 3
+      - kind: 8
+        quantity: 4
+    - id: 500
+      name: "Salvage fan"
+      input: 2
+      inputQuantity: 1
+      strokes: 4
+      seconds: 5
+      yields:
+      - kind: 1
+        quantity: 3
+      - kind: 8
+        quantity: 2
+      - kind: 9
+        quantity: 2
+    - id: 600
+      name: "Salvage radio"
+      input: 4
+      inputQuantity: 1
+      strokes: 4
+      seconds: 5
+      yields:
+      - kind: 1
+        quantity: 2
+      - kind: 9
+        quantity: 3
+    largeRecipes:
+    - kind: 0
+      name: "Scrap car"
+      purchasePrice: 25
+      strokes: 6
+      workStages:
+      - "Release wiring"
+      - "Remove battery leads"
+      - "Unbolt motor"
+      - "Lift motor free"
+      - "Remove body panels"
+      - "Separate usable components"
+      yields:
+      - kind: 6
+        quantity: 1
+      - kind: 0
+        quantity: 2
+      - kind: 7
+        quantity: 3
+    - kind: 1
+      name: "Scrap refrigerator"
+      purchasePrice: 15
+      strokes: 4
+      workStages:
+      - "Remove rear cover"
+      - "Release compressor"
+      - "Remove wiring"
+      - "Separate casing and plastic"
+      yields:
+      - kind: 11
+        quantity: 1
+      - kind: 0
+        quantity: 1
+      - kind: 7
+        quantity: 1
+      - kind: 9
+        quantity: 2
+    equipment:
+    - kind: 0
+      name: "Manual workbench"
+      price: 24
+      unlockLevel: 1
+      available: 1
+      width: 2.6
+      depth: 1.4
+      powerOutput: 0
+      powerDemand: 0
+      processingSeconds: 4
+      outputCapacity: 24
+    - kind: 1
+      name: "Generator"
+      price: 45
+      unlockLevel: 1
+      available: 1
+      width: 1.75
+      depth: 1.25
+      powerOutput: 6
+      powerDemand: 0
+      processingSeconds: 4
+      outputCapacity: 24
+    - kind: 2
+      name: "Tier 1 scrapper"
+      price: 60
+      unlockLevel: 1
+      available: 1
+      width: 2.4
+      depth: 2.3
+      powerOutput: 0
+      powerDemand: 3
+      processingSeconds: 4
+      outputCapacity: 24
+    - kind: 3
+      name: "Ported storage — later stage"
+      price: 70
+      unlockLevel: 10
+      available: 0
+      width: 3
+      depth: 2.5
+      powerOutput: 0
+      powerDemand: 0
+      processingSeconds: 4
+      outputCapacity: 120
+    - kind: 4
+      name: "Tier 2 scrapper — later stage"
+      price: 160
+      unlockLevel: 10
+      available: 0
+      width: 3.2
+      depth: 2.5
+      powerOutput: 0
+      powerDemand: 5
+      processingSeconds: 2
+      outputCapacity: 48
+    - kind: 5
+      name: "Conveyor — later stage"
+      price: 12
+      unlockLevel: 10
+      available: 0
+      width: 1
+      depth: 2
+      powerOutput: 0
+      powerDemand: 0
+      processingSeconds: 4
+      outputCapacity: 24
+    - kind: 6
+      name: "Splitter — later stage"
+      price: 30
+      unlockLevel: 10
+      available: 0
+      width: 1.5
+      depth: 1.5
+      powerOutput: 0
+      powerDemand: 0
+      processingSeconds: 4
+      outputCapacity: 24
+    - kind: 7
+      name: "Merger — later stage"
+      price: 30
+      unlockLevel: 10
+      available: 0
+      width: 1.5
+      depth: 1.5
+      powerOutput: 0
+      powerDemand: 0
+      processingSeconds: 4
+      outputCapacity: 24
+    - kind: 8
+      name: "Export station — later stage"
+      price: 200
+      unlockLevel: 12
+      available: 0
+      width: 3
+      depth: 2.5
+      powerOutput: 0
+      powerDemand: 2
+      processingSeconds: 4
+      outputCapacity: 24

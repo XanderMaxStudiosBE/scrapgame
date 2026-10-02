@@ -21,12 +21,16 @@ namespace Scrapshift
         FogMode previousFogMode;
         CameraClearFlags previousClear;
         public static YardLighting Build(Transform parent,Camera camera,YardLightingProfile profile)
+        {return Build(parent,camera,profile,null);}
+        // A compact layout supplies three fixed infrastructure anchors. Movable gear adds no lights.
+        public static YardLighting Build(Transform parent,Camera camera,YardLightingProfile profile,Vector3[] taskLights)
         {
             profile.Validate();
+            if(taskLights!=null&&taskLights.Length!=3)throw new System.ArgumentException("Supply exactly three task-light anchors.");
             var owner=new GameObject("Cozy yard lighting");owner.transform.SetParent(parent,false);
-            var lighting=owner.AddComponent<YardLighting>();lighting.Initialize(camera,profile);return lighting;
+            var lighting=owner.AddComponent<YardLighting>();lighting.Initialize(camera,profile,taskLights);return lighting;
         }
-        void Initialize(Camera camera,YardLightingProfile profile)
+        void Initialize(Camera camera,YardLightingProfile profile,Vector3[] taskLights)
         {
             view=camera;
             previousSky=RenderSettings.skybox;previousSun=RenderSettings.sun;previousReflection=RenderSettings.customReflectionTexture;
@@ -60,9 +64,12 @@ namespace Scrapshift
             var bench=YardBootstrap.StationPosition(YardLandmark.Bench);
             var buyer=YardBootstrap.StationPosition(YardLandmark.Buyer);
             var fan=YardBootstrap.StationPosition(YardLandmark.FanBench);
-            WorkLights=new[]{Spot("Stripping bench task light",bench+new Vector3(0,2.68f,-.35f),profile),Spot("Buyer task light",buyer+new Vector3(0,2.68f,-.35f),profile),Spot("Restoration task light",fan+new Vector3(0,2.5f,-.25f),profile)};
+            WorkLights=taskLights==null
+                ?new[]{Spot("Stripping bench task light",bench+new Vector3(0,2.68f,-.35f),profile),Spot("Buyer task light",buyer+new Vector3(0,2.68f,-.35f),profile),Spot("Restoration task light",fan+new Vector3(0,2.5f,-.25f),profile)}
+                :new[]{Spot("Office shop light",taskLights[0],profile),Spot("Sales counter light",taskLights[1],profile),Spot("Delivery light",taskLights[2],profile)};
             var trackedBulb=YardMaterialBindings.Load("ScrapshiftMaterials/PropAtlas",transform);
-            if(trackedBulb!=null)
+            // Compact infrastructure supplies its own three fixture meshes; do not double them.
+            if(trackedBulb!=null&&taskLights==null)
             {
                 bulbMaterial=new Material(trackedBulb){name="Private warm lamp diffuser",hideFlags=HideFlags.DontSave};
                 bulbMaterial.SetTexture("_BaseMap",Texture2D.whiteTexture);bulbMaterial.SetColor("_BaseColor",profile.lampColor);
