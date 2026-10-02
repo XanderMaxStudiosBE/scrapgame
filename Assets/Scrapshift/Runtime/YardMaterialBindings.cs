@@ -36,13 +36,22 @@ namespace Scrapshift
             var texture=material.GetTexture(property);
             if(Missing(texture))return true;
             if(material.shader==null || material.shader.name!="Universal Render Pipeline/Lit")return false;
+            if(texture==LitDefault(material,property))return true;
+            // URP's V1 upgrader copies _MainTex into _BaseMap. A legacy default may
+            // differ from BaseMap's default object and is still an unassigned map.
+            if(property=="_BaseMap")return texture==LitDefault(material,"_MainTex");
+            if(property=="_MainTex")return texture==LitDefault(material,"_BaseMap");
+            return false;
+        }
+        static Texture LitDefault(Material material,string property)
+        {
             if(!litDefaults.TryGetValue(property,out Texture defaultTexture))
             {
                 var probe=new Material(material.shader){hideFlags=HideFlags.DontSave};
                 try{defaultTexture=probe.GetTexture(property);litDefaults[property]=defaultTexture;}
                 finally{DestroyOwned(probe);}
             }
-            return texture==defaultTexture;
+            return defaultTexture;
         }
         static bool NeedsTexture(Material material,string property,Texture expected)
         {return expected!=null && material.HasProperty(property) && Missing(material,property);}

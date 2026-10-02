@@ -1,6 +1,16 @@
 # Scrapshift project handoff
 
-## Current milestone: compact Stage C automation (2026-10-02)
+## Current investigation: textures still white in Unity (2026-10-02)
+
+After pulling Stage C, the creator supplied an actual compact-yard screenshot with white props/fence sections and opaque white ground patches; gravel still visibly has texture. The earlier import/sampler fixes have not resolved or established the cause locally. Supplied Console text only reports Repair Missing Material Bindings changed one material, not the requested SCRAPSHIFT rendering report. Do not present the current screenshot as fixed. Next needed evidence: while playing, run Scrapshift → Diagnose Rendering and paste the complete report.
+
+Independent source audit confirms original PNG colors/alpha, twelve catalogue/GUID/shader references and compact assignment paths are intact. Found and closed a specific recovery coverage gap: a default _MainTex sampler copied by URP V1 into _BaseMap may be a different object from that slot's own default. Albedo/legacy checks now recognize either slot's default by object identity, preserving genuine custom texture objects. The adapter now models distinct objects and proves recovery/idempotence; this is a regression fix, not proof this condition occurs on the creator's machine. No texture/material files, presets, game state or engine versions changed.
+
+Diagnose Rendering now copies its complete report to the clipboard and saves Temp/ScrapshiftRenderingReport.txt. It adds graphics API/GPU/driver, catalogue comparison, import type/alpha/sRGB, render queue/tag and blend/depth/cutout values to existing actual asset/scene sampler, shader/support/error, light and pipeline details. Report capture leaves materials/gameplay intact. Built-in sampler paths are handled without attempting an importer lookup for an empty path.
+
+Executed: 191 core scenarios, twelve real filesystem branches, eight real material-recovery branch groups, seven material/reference Python cases, 133 C# syntax parses, and supplemental diagnostic/runtime C# compilation against minimal API adapters pass. All engine tests remain unrun, including the new actual Unity cross-slot recovery case. Unity unavailable: actual rendering/import/shader/clipboard/JSON/performance remain local. Pull, stop Play, allow import, run Repair Missing Material Bindings, restart Play, then capture Diagnose Rendering if still white. Main owned this bounded fix/report improvement; the texture agent audited source read-only. Obtain the report before further speculative material or lighting changes. Stage C remains intact; Stage D remains future work.
+
+## Previous milestone: compact Stage C automation (2026-10-02)
 
 The creator resumed development after STOP and supplied the updated inline 48 × 36m Compact Starter Yard map. Continue the existing game. Read Design/COMPACT_STAGE_C_CONTRACT.md and Design/COMPACT_STAGE_C_VERIFICATION.md. The map remains an example player-designed layout: fixed entrance/office/sales/delivery/boundary, open purchasable equipment space. A/B and the original legacy yard/assets/settings are retained.
 

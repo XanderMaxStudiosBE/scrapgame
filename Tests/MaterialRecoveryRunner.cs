@@ -16,7 +16,7 @@ namespace UnityEngine {
  public static class Resources { public static T Load<T>(string path) where T:class {return null;} }
  public class Texture:Object {}
  public class Texture2D:Texture { public static readonly Texture2D whiteTexture=new Texture2D{name="whiteTexture"}; }
- public class Shader:Object { public readonly Texture2D defaultWhite=new Texture2D{name="Default-White"}; }
+ public class Shader:Object { public readonly Texture2D defaultWhite=new Texture2D{name="Default-White"}; public readonly Texture2D legacyWhite=new Texture2D{name="Legacy-Default-White"}; }
  public struct Vector2 {
   public float x,y;public Vector2(float x,float y){this.x=x;this.y=y;}
   public static Vector2 one {get{return new Vector2(1,1);}} public static Vector2 zero {get{return new Vector2(0,0);}}
@@ -39,7 +39,7 @@ namespace UnityEngine {
   public Material(Shader shader){this.shader=shader;}
   public Material(Material source){shader=source.shader; foreach(var pair in source.textures)textures[pair.Key]=pair.Value;foreach(var pair in source.floats)floats[pair.Key]=pair.Value;foreach(var pair in source.colors)colors[pair.Key]=pair.Value;}
   public bool HasProperty(string property){return true;}
-  public Texture GetTexture(string property){Texture value;return textures.TryGetValue(property,out value)?value:shader.defaultWhite;}
+  public Texture GetTexture(string property){Texture value;return textures.TryGetValue(property,out value)?value:property=="_MainTex"?shader.legacyWhite:shader.defaultWhite;}
   public void SetTexture(string property,Texture value){textures[property]=value;}
   public Vector2 GetTextureScale(string property){Vector2 value;return scales.TryGetValue(property,out value)?value:Vector2.one;}
   public Vector2 GetTextureOffset(string property){Vector2 value;return offsets.TryGetValue(property,out value)?value:Vector2.zero;}
@@ -67,6 +67,13 @@ class MaterialRecoveryRunner {
   Check(material.GetColor("_BaseColor")==tint&&material.GetFloat("_Smoothness")==.21f&&material.GetTextureScale("_BaseMap")==new UnityEngine.Vector2(2,3),"preserve custom surface values");
   Check(!YardMaterialBindings.NeedsRepair(material,entry)&&!YardMaterialBindings.Repair(material,entry),"idempotent repair");
   Console.WriteLine("PASS default sampler recovery, unassigned mask exclusion, preserved surface values and idempotence");
+  var upgraded=new UnityEngine.Material(shader);upgraded.SetTexture("_BaseMap",shader.legacyWhite);
+  Check(shader.defaultWhite!=shader.legacyWhite,"fixture requires distinct modern and legacy defaults");
+  Check(YardMaterialBindings.NeedsRepair(upgraded,entry),"copied legacy placeholder must need repair");
+  YardMaterialBindings.Repair(upgraded,entry);
+  Check(upgraded.GetTexture("_BaseMap")==entry.albedo&&upgraded.GetTexture("_MainTex")==entry.albedo,"recover both copied legacy placeholders");
+  Check(!YardMaterialBindings.NeedsRepair(upgraded,entry),"cross-slot recovery must be idempotent");
+  Console.WriteLine("PASS distinct legacy default copied into modern albedo recovers original texture");
   var world=new YardMaterialEntry{albedo=entry.albedo,metallicGloss=new UnityEngine.Texture2D{name="Mask"},emission=new UnityEngine.Texture2D{name="Localized emission"}};
   var worldMaterial=new UnityEngine.Material(shader);worldMaterial.SetColor("_EmissionColor",new UnityEngine.Color(1,1,1));
   YardMaterialBindings.Repair(worldMaterial,world);

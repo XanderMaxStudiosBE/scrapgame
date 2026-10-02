@@ -62,6 +62,20 @@ namespace Scrapshift.Tests
             finally{Object.DestroyImmediate(defaults);Object.DestroyImmediate(material);}
         }
         [Test]
+        public void LegacyDefaultCopiedIntoModernAlbedoRestoresOriginalTexture()
+        {
+            var entry=Resources.Load<YardMaterialCatalog>("ScrapshiftRendering/Materials").Find("ScrapshiftMaterials/PropAtlas");
+            var defaults=new Material(entry.material.shader);var material=new Material(entry.material);
+            try
+            {
+                material.SetTexture("_BaseMap",defaults.GetTexture("_MainTex"));material.SetTexture("_MainTex",defaults.GetTexture("_MainTex"));
+                Assert.IsTrue(YardMaterialBindings.NeedsRepair(material,entry));YardMaterialBindings.Repair(material,entry);
+                Assert.AreSame(entry.albedo,material.GetTexture("_BaseMap"));Assert.AreSame(entry.albedo,material.GetTexture("_MainTex"));
+                Assert.IsFalse(YardMaterialBindings.NeedsRepair(material,entry));
+            }
+            finally{Object.DestroyImmediate(defaults);Object.DestroyImmediate(material);}
+        }
+        [Test]
         public void UserTextureNamedLikeTheEngineDefaultIsPreserved()
         {
             var entry=Resources.Load<YardMaterialCatalog>("ScrapshiftRendering/Materials").Find("ScrapshiftMaterials/PropAtlas");
