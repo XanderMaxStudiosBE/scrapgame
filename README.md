@@ -2,7 +2,7 @@
 
 A first-person retro scrapyard automation prototype. The new **48 × 36m compact yard** starts with manual car/refrigerator dismantling, component processing and material-sales XP. Buy and freely place a generator and Tier 1 scrapper, then build its power connections. The original 96 × 80m repair/order/day game remains a separate playable legacy scene.
 
-**Current Cloud verification:** 148 pure C# scenarios and ten real save-filesystem/recovery branches pass (the latter use narrow adapters, not Unity JSON). Nine new original FBXs pass Blender checks; the existing 31 models/eight sounds remain. **Unity is unavailable:** engine tests, compilation, rendering, controls/collisions, real JSON, audio, FPS and a desktop build/playthrough still need local verification. Blender previews are labelled asset examples, not gameplay screenshots.
+**Current Cloud verification:** 148 pure C# scenarios, ten real save-filesystem/recovery branches and seven material-recovery branch groups pass (adapters are not Unity JSON or rendering). Seven material-reference/authoring checks pass. Nine new original FBXs pass Blender checks; the existing 31 models/eight sounds remain. **Unity is unavailable:** engine tests, compilation, rendering, controls/collisions, real JSON, audio, FPS and a desktop build/playthrough still need local verification. Blender previews are labelled asset examples, not gameplay screenshots.
 
 [Compact stage implementation, migration and local checklist](Design/COMPACT_STAGE_AB_VERIFICATION.md) records the delivered A/B scope. **Conveyors, ported storage, Tier 2, automated intake/sorting/export and production completion remain later stages**, shown as unavailable catalogue data. This is not a finished-game claim. [Original compact art and provenance](Design/COMPACT_WORLD_VERIFICATION.md) explains the nine-model pack and example map.
 
@@ -13,6 +13,8 @@ Use **Unity 6000.3.25f1** and the pinned **URP 17.3.0** packages. After pulling/
 Compact Start/Continue opens the manual earning/building loop. New yard archives compact files; the optional legacy import previews what transfers and preserves the complete old JSON/source files. Cash, portable quantities and exact wire jobs can transfer; old repairs, upgrades, requests/escrow and daily records stay playable in the retained legacy scene. Imported machinery needs a purchased generator/cable. Existing inventory gets no invented historical XP. Control/video/audio choices are shared and preserved; gameplay files are separate (`yard-v2.json` versus `yard-v1.json`).
 
 Tune the new recipes/prices/yields/time/power/capacity/XP curve/starting supplies in `Resources/ScrapshiftCompact/Balance.asset`. The old `Generated/Balance.asset` remains for the legacy game. **Update Existing Prototype Visuals** still validates tracked materials without replacing scene or balance data. Do not delete Generated, old saves, custom materials or preferences.
+
+If props appear solid white, stop Play, finish import and run **Scrapshift → Repair Missing Material Bindings**, then Play the same scene again. The original materials now carry matching URP upgrade aliases, and recovery recognizes unassigned shader-default samplers without overwriting genuine custom textures. This applies to both yards and all presets. If the appearance remains wrong, **Scrapshift → Diagnose Rendering** logs actual asset/scene texture paths, shader errors, surface values, pipeline and lights to the Console; share that report for diagnosis. Local Unity confirmation is still required.
 
 ## Compact yard loop
 

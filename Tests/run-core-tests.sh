@@ -22,3 +22,6 @@ run_checks "$test_dir/recovery.exe" "$repo_root"/Assets/Scrapshift/Core/*.cs \
     "$repo_root/Assets/Scrapshift/Runtime/SaveStore.cs" "$repo_root/Tests/SaveRecoveryRunner.cs"
 run_checks "$test_dir/compact-recovery.exe" "$repo_root"/Assets/Scrapshift/Core/*.cs \
     "$repo_root/Assets/Scrapshift/Runtime/CompactSaveStore.cs" "$repo_root/Tests/CompactSaveRecoveryRunner.cs"
+# Real material recovery with deliberately distinct default samplers; not Unity import/rendering.
+run_checks "$test_dir/material-recovery.exe" "$repo_root/Assets/Scrapshift/Runtime/YardMaterialCatalog.cs" \
+    "$repo_root/Assets/Scrapshift/Runtime/YardMaterialBindings.cs" "$repo_root/Tests/MaterialRecoveryRunner.cs"

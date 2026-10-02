@@ -8,6 +8,7 @@ namespace Scrapshift
     {
         readonly Dictionary<string,Material> materials=new Dictionary<string,Material>();
         readonly List<Material> owned=new List<Material>();
+        static readonly Dictionary<string,Texture> litDefaults=new Dictionary<string,Texture>();
         public static Material Load(string resource,Transform parent)
         {
             var root=parent.root;
@@ -27,8 +28,24 @@ namespace Scrapshift
             scope.materials[resource]=result;return result;
         }
         public static bool Missing(Texture texture){return texture==null || texture==Texture2D.whiteTexture;}
+        // A shader's unassigned sampler can be a different built-in object from whiteTexture.
+        // Compare objects, never names/pixels: a user's small or white texture is still an intentional map.
+        public static bool Missing(Material material,string property)
+        {
+            if(material==null || !material.HasProperty(property))return true;
+            var texture=material.GetTexture(property);
+            if(Missing(texture))return true;
+            if(material.shader==null || material.shader.name!="Universal Render Pipeline/Lit")return false;
+            if(!litDefaults.TryGetValue(property,out Texture defaultTexture))
+            {
+                var probe=new Material(material.shader){hideFlags=HideFlags.DontSave};
+                try{defaultTexture=probe.GetTexture(property);litDefaults[property]=defaultTexture;}
+                finally{DestroyOwned(probe);}
+            }
+            return texture==defaultTexture;
+        }
         static bool NeedsTexture(Material material,string property,Texture expected)
-        {return expected!=null && material.HasProperty(property) && Missing(material.GetTexture(property));}
+        {return expected!=null && material.HasProperty(property) && Missing(material,property);}
         static bool KeywordMismatch(Material material,string keyword,bool value){return material.IsKeywordEnabled(keyword)!=value;}
         public static bool NeedsRepair(Material material,YardMaterialEntry entry)
         {
@@ -56,9 +73,10 @@ namespace Scrapshift
         {
             if(material==null||entry==null||material.shader==null||material.shader.name!="Universal Render Pipeline/Lit")return false;
             Texture legacy=material.HasProperty("_MainTex")?material.GetTexture("_MainTex"):null;
-            bool fromLegacy=!Missing(legacy) && NeedsTexture(material,"_BaseMap",legacy);
+            bool legacyMissing=Missing(material,"_MainTex");
+            bool fromLegacy=!legacyMissing && NeedsTexture(material,"_BaseMap",legacy);
             Vector2 legacyScale=fromLegacy?material.GetTextureScale("_MainTex"):Vector2.one,legacyOffset=fromLegacy?material.GetTextureOffset("_MainTex"):Vector2.zero;
-            bool changed=SetTextureIfMissing(material,"_BaseMap",Missing(legacy)?entry.albedo:legacy);
+            bool changed=SetTextureIfMissing(material,"_BaseMap",legacyMissing?entry.albedo:legacy);
             if(fromLegacy){material.SetTextureScale("_BaseMap",legacyScale);material.SetTextureOffset("_BaseMap",legacyOffset);}
             if(!Specular(material))changed|=SetTextureIfMissing(material,"_MetallicGlossMap",entry.metallicGloss);
             changed|=SetTextureIfMissing(material,"_EmissionMap",entry.emission);
@@ -87,14 +105,16 @@ namespace Scrapshift
             return changed;
         }
         static bool Specular(Material material){return material.GetFloat("_WorkflowMode")==0;}
-        static bool HasGlossMap(Material material){return !Missing(material.GetTexture(Specular(material)?"_SpecGlossMap":"_MetallicGlossMap"));}
+        static bool HasGlossMap(Material material){return !Missing(material,Specular(material)?"_SpecGlossMap":"_MetallicGlossMap");}
         static bool StraightAlpha(Material material,YardMaterialEntry entry)
         {return entry.straightAlpha && material.GetFloat("_Surface")>=1 && material.GetFloat("_Blend")==0;}
         static bool Float(Material material,string name,float value)
         {if(!material.HasProperty(name)||material.GetFloat(name)==value)return false;material.SetFloat(name,value);return true;}
+        static void DestroyOwned(Object value)
+        {if(value==null)return;if(Application.isPlaying)Destroy(value);else DestroyImmediate(value);}
         public void Dispose()
         {
-            foreach(var material in owned)if(material!=null){if(Application.isPlaying)Destroy(material);else DestroyImmediate(material);}
+            foreach(var material in owned)DestroyOwned(material);
             owned.Clear();materials.Clear();
         }
         void OnDestroy(){Dispose();}

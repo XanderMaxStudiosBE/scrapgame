@@ -1,5 +1,7 @@
 # Screenshot-driven finishing pass
 
+**2026-10-02 follow-up:** the earlier recovery did not resolve the creator's white-prop screenshot on all presets. The current fix adds public upgrader aliases to the actual twelve tracked materials, synchronizes authoring aliases after edits and detects default sampler objects distinct from whiteTexture. Modern texture/tint/UV/roughness values, GUIDs and all PNG/FBX bytes remain the same; the material files themselves now have compatibility additions. Seven material-authoring checks and seven real-runtime branch groups against a narrow API adapter pass. Three actual Unity regression cases are supplied but unrun. Use README's Repair Missing Material Bindings / Diagnose Rendering steps; the exact local cause and visual result still require Unity confirmation. The sections below describe the earlier pass.
+
 The creator supplied actual Unity gameplay showing white props/ground wedges, an empty forecourt and large HUD panels, and confirmed **Laptop**. This pass addresses those concrete symptoms and adds an opening-chapter completion flow. It is not a finished-game or visual-approval claim.
 
 ## Material recovery

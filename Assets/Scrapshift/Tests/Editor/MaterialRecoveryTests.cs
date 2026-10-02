@@ -41,6 +41,41 @@ namespace Scrapshift.Tests
             }
             finally{Object.DestroyImmediate(material);}
         }
+        [TestCase("ScrapshiftMaterials/PropAtlas")][TestCase("ScrapshiftWorld/WorldProps")]
+        public void ShaderDefaultSamplersRecoverAndDoNotEnableAnUnassignedGlossMap(string resource)
+        {
+            var entry=Resources.Load<YardMaterialCatalog>("ScrapshiftRendering/Materials").Find(resource);
+            var defaults=new Material(entry.material.shader);var material=new Material(entry.material);
+            try
+            {
+                foreach(var property in new[]{"_BaseMap","_MainTex","_MetallicGlossMap","_SpecGlossMap","_EmissionMap"})
+                    material.SetTexture(property,defaults.GetTexture(property));
+                material.EnableKeyword("_METALLICSPECGLOSSMAP");
+                Assert.IsTrue(YardMaterialBindings.NeedsRepair(material,entry));
+                YardMaterialBindings.Repair(material,entry);
+                Assert.AreSame(entry.albedo,material.GetTexture("_BaseMap"));
+                Assert.AreEqual(entry.metallicGloss!=null,material.IsKeywordEnabled("_METALLICSPECGLOSSMAP"),"Only an authored metallic mask enables its variant");
+                if(entry.metallicGloss!=null)Assert.AreSame(entry.metallicGloss,material.GetTexture("_MetallicGlossMap"));
+                if(entry.emission!=null)Assert.AreSame(entry.emission,material.GetTexture("_EmissionMap"));
+                Assert.IsFalse(YardMaterialBindings.NeedsRepair(material,entry));
+            }
+            finally{Object.DestroyImmediate(defaults);Object.DestroyImmediate(material);}
+        }
+        [Test]
+        public void UserTextureNamedLikeTheEngineDefaultIsPreserved()
+        {
+            var entry=Resources.Load<YardMaterialCatalog>("ScrapshiftRendering/Materials").Find("ScrapshiftMaterials/PropAtlas");
+            var defaults=new Material(entry.material.shader);var material=new Material(entry.material);
+            var custom=new Texture2D(2,2){name=defaults.GetTexture("_BaseMap")!=null?defaults.GetTexture("_BaseMap").name:"Default-White"};
+            try
+            {
+                material.SetTexture("_BaseMap",custom);material.SetTexture("_MainTex",custom);
+                YardMaterialBindings.Repair(material,entry);
+                Assert.AreSame(custom,material.GetTexture("_BaseMap"));Assert.AreSame(custom,material.GetTexture("_MainTex"));
+                Assert.IsFalse(YardMaterialBindings.Missing(material,"_BaseMap"));
+            }
+            finally{Object.DestroyImmediate(defaults);Object.DestroyImmediate(material);Object.DestroyImmediate(custom);}
+        }
         [Test]
         public void ValidCustomMapsAndAdditiveBlendRemainIntact()
         {

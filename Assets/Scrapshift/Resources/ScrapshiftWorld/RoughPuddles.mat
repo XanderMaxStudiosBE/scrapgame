@@ -31,8 +31,18 @@ Material:
         m_Texture: {fileID: 2800000, guid: 0132aa6e8c8d4f31a7eb52d838e11004, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: 0132aa6e8c8d4f31a7eb52d838e11004, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _DstBlendAlpha: 10
+    - _SrcBlendAlpha: 1
+    - _BlendModePreserveSpecular: 0
+    - _GlossyReflections: 1
+    - _GlossMapScale: 0.42
+    - _Glossiness: 0.42
     - _AlphaClip: 0
     - _Blend: 0
     - _Cull: 2
@@ -44,6 +54,7 @@ Material:
     - _Surface: 1
     - _ZWrite: 0
     m_Colors:
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []

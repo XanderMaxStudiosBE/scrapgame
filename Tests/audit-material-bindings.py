@@ -54,6 +54,19 @@ class MaterialAuthoring(unittest.TestCase):
         self.assertIn('_Color: {r: 0.4, g: 0.5, b: 0.6, a: 0.7}',safe)
         self.assertIn('_Glossiness: 0.21',safe);self.assertIn('_GlossMapScale: 0.21',safe);self.assertIn('_GlossyReflections: 1',safe)
         self.assertEqual(safe,migration_safe(safe))
+    def test_tracked_originals_survive_legacy_urp_rename(self):
+        for block in re.split(r'  - resource: ',self.catalog)[1:]:
+            resource=block.splitlines()[0]
+            source=(ASSETS/'Resources'/(resource+'.mat')).read_text()
+            self.assertEqual(source,migration_safe(source),resource+' must be safe before its first Unity import')
+            # V1 overwrites BaseMap/BaseColor and chooses either legacy smoothness value.
+            self.assertEqual(texture(source,'_BaseMap'),texture(source,'_MainTex'),resource)
+            colors={name:value for name,value in re.findall(r'    - (_BaseColor|_Color): (.+)',source)}
+            self.assertEqual(colors['_BaseColor'],colors['_Color'],resource)
+            floats={name:value for name,value in re.findall(r'    - (_Smoothness|_Glossiness|_GlossMapScale|_EnvironmentReflections|_GlossyReflections): ([\d.]+)',source)}
+            self.assertEqual(floats['_Smoothness'],floats['_Glossiness'],resource)
+            self.assertEqual(floats['_Smoothness'],floats['_GlossMapScale'],resource)
+            self.assertEqual(floats.get('_EnvironmentReflections','1'),floats['_GlossyReflections'],resource)
     def test_ground_aliases_preserve_straight_alpha_fade(self):
         for name in ['GroundWear','RoughPuddles']:
             safe=migration_safe((ASSETS/('Resources/ScrapshiftWorld/'+name+'.mat')).read_text())
