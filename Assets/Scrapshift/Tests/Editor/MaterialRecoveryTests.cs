@@ -5,6 +5,30 @@ namespace Scrapshift.Tests
 {
     public sealed class MaterialRecoveryTests
     {
+        [TestCase(0,false)][TestCase(1,false)][TestCase(2,false)][TestCase(4,false)]
+        [TestCase(5,false)][TestCase(6,false)][TestCase(7,false)]
+        [TestCase(0,true)][TestCase(1,true)][TestCase(2,true)][TestCase(4,true)]
+        [TestCase(5,true)][TestCase(6,true)][TestCase(7,true)]
+        public void EmissionRecoveryRemainsIdleAfterPublicUrpValidation(int flags,bool black)
+        {
+            var entry=Resources.Load<YardMaterialCatalog>("ScrapshiftRendering/Materials").Find("ScrapshiftWorld/WorldProps");
+            var material=new Material(entry.material);
+            try
+            {
+                material.globalIlluminationFlags=(MaterialGlobalIlluminationFlags)flags;
+                var color=black?Color.black:Color.white;material.SetColor("_EmissionColor",color);
+                var expected=UnityEditor.MaterialEditor.FixupEmissiveFlag(color,(MaterialGlobalIlluminationFlags)flags);
+                YardMaterialBindings.Repair(material,entry);Assert.AreEqual(expected,material.globalIlluminationFlags);
+                for(int cycle=0;cycle<4;cycle++)
+                {
+                    UnityEditor.BaseShaderGUI.SetMaterialKeywords(material);
+                    Assert.IsFalse(YardMaterialBindings.NeedsRepair(material,entry));
+                    Assert.IsFalse(YardMaterialBindings.Repair(material,entry),"URP validation must not trigger another repair");
+                }
+                if(flags==4){Assert.AreEqual(MaterialGlobalIlluminationFlags.EmissiveIsBlack,material.globalIlluminationFlags);Assert.IsFalse(material.IsKeywordEnabled("_EMISSION"));}
+            }
+            finally{Object.DestroyImmediate(material);}
+        }
         [TestCase("ScrapshiftMaterials/RustPaint")][TestCase("ScrapshiftMaterials/DarkMetal")]
         [TestCase("ScrapshiftMaterials/CorrugatedMetal")][TestCase("ScrapshiftMaterials/WeatheredWood")]
         [TestCase("ScrapshiftMaterials/Gravel")][TestCase("ScrapshiftMaterials/Copper")]

@@ -81,6 +81,8 @@ def material(name,texture,keywords=(),metallic=0,smoothness=.08,transparent=Fals
     s=s.replace('m_ValidKeywords: []','m_ValidKeywords:'+''.join('\n  - '+k for k in keywords) if keywords else 'm_ValidKeywords: []')
     s=s.replace('- _Smoothness: 0.08','- _Smoothness: '+str(smoothness)).replace('- _Metallic: 0','- _Metallic: '+str(metallic)).replace('- _SpecularHighlights: 0','- _SpecularHighlights: 1')
     if emission:
+        # URP enables emission from GI flags; 4 explicitly disables it despite a white color.
+        s=s.replace('m_LightmapFlags: 4','m_LightmapFlags: 2')
         extra=''
         for prop,tex in [('_MetallicGlossMap','WorldMetalGloss'),('_EmissionMap','WorldGlow')]:
             extra+='    - '+prop+':\n        m_Texture: {fileID: 2800000, guid: '+guid(OUT/(tex+'.png'))+', type: 3}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n'

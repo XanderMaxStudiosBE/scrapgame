@@ -74,6 +74,12 @@ class MaterialAuthoring(unittest.TestCase):
                 self.assertIn(state,safe)
     def test_missing_source_fields_fail_authoring(self):
         with self.assertRaises(ValueError):migration_safe(self.prop.replace('_BaseMap:','_Unknown:'))
+    def test_authored_emission_agrees_with_urp_gi_flags(self):
+        for block in re.split(r'  - resource: ',self.catalog)[1:]:
+            resource=block.splitlines()[0]
+            source=(ASSETS/'Resources'/(resource+'.mat')).read_text()
+            flags=int(re.search(r'm_LightmapFlags: (\d+)',source)[1])
+            self.assertEqual(bool(flags&3),'  - _EMISSION\n' in source,resource)
     def test_first_time_world_pack_serializes_upgrader_aliases(self):
         # Run the real authoring script in a fresh miniature checkout; production .mat files are not touched.
         with tempfile.TemporaryDirectory(prefix='scrapshift-materials-') as directory:
@@ -86,5 +92,6 @@ class MaterialAuthoring(unittest.TestCase):
                 self.assertEqual(texture(source,'_BaseMap'),texture(source,'_MainTex'))
                 self.assertEqual(source,migration_safe(source))
                 self.assertNotIn('AssetVersion',source,'Do not stamp package-private upgrade metadata')
+                self.assertIn('m_LightmapFlags: '+('2' if name=='WorldProps' else '4'),source)
 
 if __name__=='__main__':unittest.main()

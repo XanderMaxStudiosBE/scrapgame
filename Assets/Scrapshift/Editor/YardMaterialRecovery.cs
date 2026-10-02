@@ -5,14 +5,20 @@ using UnityEngine.SceneManagement;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Globalization;
 namespace Scrapshift
 {
     // Runs after URP's material postprocessors. Repairs missing bindings, never overwrites a valid custom map/tint.
     [InitializeOnLoad] public sealed class YardMaterialRecovery : AssetPostprocessor
     {
         static bool pending;
-        static YardMaterialRecovery(){Queue();}
-        static void Queue(){if(pending)return;pending=true;EditorApplication.delayCall+=Recover;}
+        static readonly Dictionary<string,HashSet<string>> attemptedStates=new Dictionary<string,HashSet<string>>();
+        static readonly Dictionary<string,string> lastChanges=new Dictionary<string,string>();
+        static readonly HashSet<string> reportedConflicts=new HashSet<string>();
+        static YardMaterialRecovery(){Queue();EditorApplication.playModeStateChanged+=OnPlayModeChanged;}
+        static void Queue(){if(pending)return;pending=true;EditorApplication.delayCall+=RecoverAutomatically;}
+        static void OnPlayModeChanged(PlayModeStateChange state)
+        {if(state==PlayModeStateChange.EnteredPlayMode)CaptureReport(false);}
         static void OnPostprocessAllAssets(string[] imported,string[] deleted,string[] moved,string[] movedFrom)
         {
             foreach(var path in imported)if(path.StartsWith("Assets/Scrapshift/",System.StringComparison.Ordinal)&&
@@ -21,21 +27,94 @@ namespace Scrapshift
         [MenuItem("Scrapshift/Repair Missing Material Bindings")]
         public static void Recover()
         {
+            // An explicit retry is allowed; automatic imports never retry an already repaired input.
+            attemptedStates.Clear();lastChanges.Clear();reportedConflicts.Clear();
+            EditorApplication.delayCall-=RecoverAutomatically;pending=false;RecoverAutomatically();
+        }
+        static void RecoverAutomatically()
+        {
             pending=false;
             if(EditorApplication.isCompiling||EditorApplication.isUpdating){Queue();return;}
             var catalog=AssetDatabase.LoadAssetAtPath<YardMaterialCatalog>("Assets/Scrapshift/Resources/ScrapshiftRendering/Materials.asset");
             if(catalog==null||catalog.entries==null)return;
             SurfaceTextureSampling.Ensure();
-            int count=0;
+            var changes=new StringBuilder();
             foreach(var entry in catalog.entries)
-                if(entry!=null && YardMaterialBindings.Repair(entry.material,entry))
-                {EditorUtility.SetDirty(entry.material);AssetDatabase.SaveAssetIfDirty(entry.material);count++;}
-            if(count>0)Debug.Log("Scrapshift restored material bindings/render state for "+count+" materials. Valid custom maps, colors and surface values were retained.");
+            {
+                if(entry==null || entry.material==null)continue;
+                var before=CaptureState(entry.material);
+                string fingerprint=TextureIdentity(entry.albedo)+"|"+TextureIdentity(entry.metallicGloss)+"|"+
+                    TextureIdentity(entry.emission)+"|"+entry.straightAlpha+"\n"+Fingerprint(before);
+                if(!attemptedStates.TryGetValue(entry.resource,out HashSet<string> attempts))
+                {attempts=new HashSet<string>();attemptedStates[entry.resource]=attempts;}
+                if(attempts.Contains(fingerprint))
+                {
+                    if(reportedConflicts.Add(entry.resource+"\n"+fingerprint))
+                    {
+                        Debug.LogWarning("SCRAPSHIFT automatic material repair stopped for "+entry.resource+
+                            ": the same pre-repair state returned after saving. Automatic retries stopped to avoid an import loop. Last attempted changes:\n"+lastChanges[entry.resource]+
+                            "\nUse Scrapshift → Diagnose Rendering to copy the report. Manual Repair can retry once.");
+                        CaptureReport(false);
+                    }
+                    continue;
+                }
+                if(!YardMaterialBindings.Repair(entry.material,entry))continue;
+                attempts.Add(fingerprint);
+                string detail=ChangedProperties(before,CaptureState(entry.material));lastChanges[entry.resource]=detail;
+                changes.AppendLine(entry.resource+":\n"+detail);
+                EditorUtility.SetDirty(entry.material);AssetDatabase.SaveAssetIfDirty(entry.material);
+            }
+            if(changes.Length>0)Debug.Log("SCRAPSHIFT material repair (valid custom maps and surface values retained):\n"+changes);
+        }
+        // Exact property snapshots keep the guard independent of keyword order and rounded Inspector text.
+        static Dictionary<string,string> CaptureState(Material material)
+        {
+            var state=new Dictionary<string,string>();
+            state["shader"]=material.shader!=null?material.shader.name:"missing";
+            state["globalIlluminationFlags"]=((int)material.globalIlluminationFlags).ToString(CultureInfo.InvariantCulture);
+            state["renderQueue"]=material.renderQueue.ToString(CultureInfo.InvariantCulture);
+            var keywords=material.shaderKeywords;System.Array.Sort(keywords,System.StringComparer.Ordinal);
+            state["keywords"]=string.Join(", ",keywords);
+            foreach(var property in new[]{"_BaseMap","_MainTex","_MetallicGlossMap","_SpecGlossMap","_EmissionMap"})
+                if(material.HasProperty(property))
+                {
+                    var texture=material.GetTexture(property);var scale=material.GetTextureScale(property);var offset=material.GetTextureOffset(property);
+                    state[property]=TextureIdentity(texture);
+                    state[property+" UV"]=Number(scale.x)+","+Number(scale.y)+" / "+Number(offset.x)+","+Number(offset.y);
+                }
+            foreach(var property in new[]{"_BaseColor","_Color","_EmissionColor"})
+                if(material.HasProperty(property))
+                {var color=material.GetColor(property);state[property]=Number(color.r)+","+Number(color.g)+","+Number(color.b)+","+Number(color.a);}
+            foreach(var property in new[]{"_Smoothness","_Glossiness","_GlossMapScale","_GlossyReflections","_Metallic","_WorkflowMode","_Surface","_Blend","_BlendModePreserveSpecular","_SrcBlend","_DstBlend","_SrcBlendAlpha","_DstBlendAlpha","_ZWrite","_AlphaClip","_SpecularHighlights","_EnvironmentReflections","_EmissionEnabled"})
+                if(material.HasProperty(property))state[property]=Number(material.GetFloat(property));
+            return state;
+        }
+        static string Number(float value){return value.ToString("R",CultureInfo.InvariantCulture);}
+        static string TextureIdentity(Texture texture)
+        {
+            if(texture==null)return "null";
+            if(AssetDatabase.TryGetGUIDAndLocalFileIdentifier(texture,out string guid,out long localId))
+                return AssetDatabase.GetAssetPath(texture)+" ["+guid+":"+localId+"]";
+            return texture.name+" [transient #"+texture.GetInstanceID()+"]";
+        }
+        static string Fingerprint(Dictionary<string,string> state)
+        {
+            var keys=new List<string>(state.Keys);keys.Sort(System.StringComparer.Ordinal);var result=new StringBuilder();
+            foreach(var key in keys)result.AppendLine(key+"="+state[key]);return result.ToString();
+        }
+        static string ChangedProperties(Dictionary<string,string> before,Dictionary<string,string> after)
+        {
+            var result=new StringBuilder();
+            foreach(var pair in before)if(after.TryGetValue(pair.Key,out string value) && value!=pair.Value)
+                result.AppendLine("  "+pair.Key+": "+pair.Value+" → "+value);
+            return result.ToString().TrimEnd();
         }
         // Reports imported asset bindings AND the materials actually assigned in the running scene.
         // Leaves materials/gameplay untouched; copies and saves a report for local diagnosis.
         [MenuItem("Scrapshift/Diagnose Rendering")]
         public static void Diagnose()
+        {CaptureReport(true);}
+        static void CaptureReport(bool copy)
         {
             var report=new StringBuilder("SCRAPSHIFT rendering report\n");
             var pipeline=QualitySettings.renderPipeline!=null?QualitySettings.renderPipeline:GraphicsSettings.defaultRenderPipeline;
@@ -68,21 +147,23 @@ namespace Scrapshift
                 if(light.enabled && light.gameObject.activeInHierarchy)
                 {lightCount++;report.AppendLine("Light: "+light.name+" / "+light.type+" / intensity "+light.intensity+" / shadows "+light.shadows);}
             report.AppendLine("Active lights: "+lightCount+" (generated yard normally has one sun and three task lights).");
-            string text=report.ToString();GUIUtility.systemCopyBuffer=text;
+            string text=report.ToString();if(copy)GUIUtility.systemCopyBuffer=text;
             string path=Path.GetFullPath(Path.Combine(Application.dataPath,"../Temp/ScrapshiftRenderingReport.txt"));
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(path));File.WriteAllText(path,text);
-                Debug.Log(text+"\nReport copied to clipboard and saved to "+path);
+                Debug.Log(copy?text+"\nReport copied to clipboard and saved to "+path:
+                    "SCRAPSHIFT rendering snapshot saved to "+path+". Use Scrapshift → Diagnose Rendering to copy the full report.");
             }
             catch(System.Exception ex)when(ex is IOException||ex is System.UnauthorizedAccessException)
-            {Debug.Log(text+"\nReport copied to clipboard; file could not be saved: "+ex.Message);}
+            {Debug.Log(text+"\n"+(copy?"Report copied to clipboard; ":"")+"file could not be saved: "+ex.Message);}
         }
         static void DescribeMaterial(StringBuilder report,Material material)
         {
             if(material==null){report.AppendLine("  ERROR: material unavailable.");return;}
             report.AppendLine("  Material "+material.name+" / shader "+(material.shader!=null?material.shader.name:"missing")+" / "+AssetDatabase.GetAssetPath(material));
             report.AppendLine("  Render queue: "+material.renderQueue+" / tag: "+material.GetTag("RenderType",false));
+            report.AppendLine("  Emission flags: "+material.globalIlluminationFlags+" ("+(int)material.globalIlluminationFlags+")");
             if(material.shader!=null)report.AppendLine("  Shader supported: "+material.shader.isSupported+" / shader errors: "+ShaderUtil.ShaderHasError(material.shader));
             foreach(var property in new[]{"_BaseMap","_MainTex","_MetallicGlossMap","_SpecGlossMap","_EmissionMap"})
                 if(material.HasProperty(property))report.AppendLine("  "+property+": "+TextureDescription(material.GetTexture(property))+" / unassigned-default: "+YardMaterialBindings.Missing(material,property));

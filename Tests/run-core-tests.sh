@@ -25,3 +25,7 @@ run_checks "$test_dir/compact-recovery.exe" "$repo_root"/Assets/Scrapshift/Core/
 # Real material recovery with deliberately distinct default samplers; not Unity import/rendering.
 run_checks "$test_dir/material-recovery.exe" "$repo_root/Assets/Scrapshift/Runtime/YardMaterialCatalog.cs" \
     "$repo_root/Assets/Scrapshift/Runtime/YardMaterialBindings.cs" "$repo_root/Tests/MaterialRecoveryRunner.cs"
+# Actual editor queue/save/diagnostic flow with controlled import callbacks, not Unity import/rendering.
+run_checks "$test_dir/editor-material-recovery.exe" -main:EditorMaterialRecoveryRunner \
+    "$repo_root/Assets/Scrapshift/Runtime/YardMaterialCatalog.cs" "$repo_root/Assets/Scrapshift/Runtime/YardMaterialBindings.cs" \
+    "$repo_root/Assets/Scrapshift/Editor/YardMaterialRecovery.cs" "$repo_root/Tests/MaterialRecoveryRunner.cs" "$repo_root/Tests/EditorMaterialRecoveryRunner.cs"

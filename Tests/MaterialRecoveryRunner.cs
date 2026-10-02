@@ -5,18 +5,20 @@ using System.Collections.Generic;
 using Scrapshift;
 namespace UnityEngine {
  public enum HideFlags { DontSave }
- public class Object { public string name; public HideFlags hideFlags; public static void Destroy(Object value){} public static void DestroyImmediate(Object value){} }
+ [Flags] public enum MaterialGlobalIlluminationFlags {None=0,RealtimeEmissive=1,BakedEmissive=2,EmissiveIsBlack=4,AnyEmissive=3}
+ public enum FindObjectsSortMode {None}
+ public class Object {public static T[] FindObjectsByType<T>(FindObjectsSortMode sort){return new T[0];}public int GetInstanceID(){return GetHashCode();} public string name; public HideFlags hideFlags; public static void Destroy(Object value){} public static void DestroyImmediate(Object value){} }
  public class Component:Object { public GameObject gameObject; public T GetComponent<T>() where T:class {return null;} }
  public class MonoBehaviour:Component {}
- public class GameObject:Object { public T AddComponent<T>() where T:new(){return new T();} }
+ public class GameObject:Object {public bool activeInHierarchy; public T AddComponent<T>() where T:new(){return new T();} }
  public class Transform:Component { public Transform root {get{return this;}} }
  public class ScriptableObject:Object {}
  public class CreateAssetMenuAttribute:Attribute {public string menuName;}
- public static class Application {public static bool isPlaying=false;}
- public static class Resources { public static T Load<T>(string path) where T:class {return null;} }
- public class Texture:Object {}
+ public static class Application {public static bool isPlaying=false;public static string unityVersion="adapter",dataPath;}
+ public static class Resources {public static Object catalog; public static T Load<T>(string path) where T:class {return catalog as T;} }
+ public class Texture:Object {public int width=64,height=64;}
  public class Texture2D:Texture { public static readonly Texture2D whiteTexture=new Texture2D{name="whiteTexture"}; }
- public class Shader:Object { public readonly Texture2D defaultWhite=new Texture2D{name="Default-White"}; public readonly Texture2D legacyWhite=new Texture2D{name="Legacy-Default-White"}; }
+ public class Shader:Object {public bool isSupported=true; public readonly Texture2D defaultWhite=new Texture2D{name="Default-White"}; public readonly Texture2D legacyWhite=new Texture2D{name="Legacy-Default-White"}; }
  public struct Vector2 {
   public float x,y;public Vector2(float x,float y){this.x=x;this.y=y;}
   public static Vector2 one {get{return new Vector2(1,1);}} public static Vector2 zero {get{return new Vector2(0,0);}}
@@ -30,14 +32,16 @@ namespace UnityEngine {
   public override bool Equals(object b){return b is Color&&this==(Color)b;}public override int GetHashCode(){return r.GetHashCode()^g.GetHashCode();}
  }
  public class Material:Object {
-  public Shader shader;
+  public Shader shader;public MaterialGlobalIlluminationFlags globalIlluminationFlags=MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+  public int renderQueue=2000;public string GetTag(string name,bool fallback){return "Opaque";}
+  public string[] shaderKeywords {get{var result=new string[keywords.Count];keywords.CopyTo(result);return result;}}
   readonly Dictionary<string,Texture> textures=new Dictionary<string,Texture>();
   readonly Dictionary<string,float> floats=new Dictionary<string,float>();
   readonly Dictionary<string,Color> colors=new Dictionary<string,Color>();
   readonly Dictionary<string,Vector2> scales=new Dictionary<string,Vector2>(),offsets=new Dictionary<string,Vector2>();
   readonly HashSet<string> keywords=new HashSet<string>();
   public Material(Shader shader){this.shader=shader;}
-  public Material(Material source){shader=source.shader; foreach(var pair in source.textures)textures[pair.Key]=pair.Value;foreach(var pair in source.floats)floats[pair.Key]=pair.Value;foreach(var pair in source.colors)colors[pair.Key]=pair.Value;}
+  public Material(Material source){shader=source.shader;globalIlluminationFlags=source.globalIlluminationFlags; foreach(var pair in source.textures)textures[pair.Key]=pair.Value;foreach(var pair in source.floats)floats[pair.Key]=pair.Value;foreach(var pair in source.colors)colors[pair.Key]=pair.Value;foreach(var pair in source.scales)scales[pair.Key]=pair.Value;foreach(var pair in source.offsets)offsets[pair.Key]=pair.Value;foreach(var keyword in source.keywords)keywords.Add(keyword);}
   public bool HasProperty(string property){return true;}
   public Texture GetTexture(string property){Texture value;return textures.TryGetValue(property,out value)?value:property=="_MainTex"?shader.legacyWhite:shader.defaultWhite;}
   public void SetTexture(string property,Texture value){textures[property]=value;}
@@ -75,11 +79,26 @@ class MaterialRecoveryRunner {
   Check(!YardMaterialBindings.NeedsRepair(upgraded,entry),"cross-slot recovery must be idempotent");
   Console.WriteLine("PASS distinct legacy default copied into modern albedo recovers original texture");
   var world=new YardMaterialEntry{albedo=entry.albedo,metallicGloss=new UnityEngine.Texture2D{name="Mask"},emission=new UnityEngine.Texture2D{name="Localized emission"}};
-  var worldMaterial=new UnityEngine.Material(shader);worldMaterial.SetColor("_EmissionColor",new UnityEngine.Color(1,1,1));
+  var worldMaterial=new UnityEngine.Material(shader){globalIlluminationFlags=UnityEngine.MaterialGlobalIlluminationFlags.BakedEmissive};worldMaterial.SetColor("_EmissionColor",new UnityEngine.Color(1,1,1));
   YardMaterialBindings.Repair(worldMaterial,world);
   Check(worldMaterial.GetTexture("_MetallicGlossMap")==world.metallicGloss&&worldMaterial.GetTexture("_EmissionMap")==world.emission,"recover independent mask/emission");
   Check(worldMaterial.IsKeywordEnabled("_METALLICSPECGLOSSMAP")&&worldMaterial.IsKeywordEnabled("_EMISSION"),"valid map variants");
   Console.WriteLine("PASS mask/emission recovery with authored variants");
+  // Interleave actual recovery with the public Unity/URP emission protocol, including explicit disable.
+  // Before the flag-based fix, disabled flags + white color oscillate on every validation.
+  foreach(int flags in new[]{0,1,2,4,5,6,7})foreach(bool black in new[]{false,true})
+  {
+   var roundTrip=new UnityEngine.Material(shader){globalIlluminationFlags=(UnityEngine.MaterialGlobalIlluminationFlags)flags};
+   roundTrip.SetColor("_EmissionColor",black?new UnityEngine.Color(0,0,0):new UnityEngine.Color(1,1,1));
+   YardMaterialBindings.Repair(roundTrip,world);
+   for(int cycle=0;cycle<4;cycle++)
+   {
+    ValidateUrpEmission(roundTrip);
+    Check(!YardMaterialBindings.NeedsRepair(roundTrip,world)&&!YardMaterialBindings.Repair(roundTrip,world),"URP emission round trip must be idle: "+flags+" / black "+black);
+   }
+   if(flags==4)Check(roundTrip.globalIlluminationFlags==UnityEngine.MaterialGlobalIlluminationFlags.EmissiveIsBlack&&!roundTrip.IsKeywordEnabled("_EMISSION"),"preserve intentional emission disable");
+  }
+  Console.WriteLine("PASS 14 GI/color combinations remain idle across four URP emission validation cycles");
   var custom=new UnityEngine.Texture2D{name=shader.defaultWhite.name};var customMaterial=new UnityEngine.Material(shader);
   customMaterial.SetTexture("_BaseMap",custom);customMaterial.SetTexture("_MainTex",custom);customMaterial.SetTexture("_MetallicGlossMap",custom);
   YardMaterialBindings.Repair(customMaterial,entry);
@@ -93,5 +112,16 @@ class MaterialRecoveryRunner {
   var groundEntry=new YardMaterialEntry{albedo=entry.albedo,straightAlpha=true};YardMaterialBindings.Repair(ground,groundEntry);
   Check(ground.GetFloat("_SrcBlend")==5&&ground.GetFloat("_DstBlend")==10&&ground.GetFloat("_ZWrite")==0&&!ground.IsKeywordEnabled("_ALPHAPREMULTIPLY_ON"),"straight-alpha ground state");Console.WriteLine("PASS straight-alpha ground recovery");
   var other=new UnityEngine.Material(new UnityEngine.Shader{name="Custom sky"});Check(!YardMaterialBindings.Repair(other,entry),"do not rewrite custom shader");Console.WriteLine("PASS custom shader retained");
+ }
+ // Reference behavior: UnityCsReference 6000.3 MaterialEditor.FixupEmissiveFlag, URP BaseShaderGUI.SetMaterialKeywords.
+ // The supplied EditMode regression uses these real public APIs instead of this narrow adapter.
+ static void ValidateUrpEmission(UnityEngine.Material material)
+ {
+  var flags=material.globalIlluminationFlags;
+  if((flags&UnityEngine.MaterialGlobalIlluminationFlags.BakedEmissive)!=0&&material.GetColor("_EmissionColor").maxColorComponent==0)
+   flags|=UnityEngine.MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+  else if(flags!=UnityEngine.MaterialGlobalIlluminationFlags.EmissiveIsBlack)flags&=UnityEngine.MaterialGlobalIlluminationFlags.AnyEmissive;
+  material.globalIlluminationFlags=flags;
+  if((flags&UnityEngine.MaterialGlobalIlluminationFlags.AnyEmissive)!=0)material.EnableKeyword("_EMISSION");else material.DisableKeyword("_EMISSION");
  }
 }

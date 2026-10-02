@@ -66,7 +66,7 @@ namespace Scrapshift
                 KeywordMismatch(material,"_ENVIRONMENTREFLECTIONS_OFF",material.GetFloat("_EnvironmentReflections")==0)||
                 KeywordMismatch(material,"_SPECULAR_SETUP",Specular(material))||
                 KeywordMismatch(material,"_METALLICSPECGLOSSMAP",HasGlossMap(material)||(!Specular(material)&&entry.metallicGloss!=null))||
-                KeywordMismatch(material,"_EMISSION",material.GetColor("_EmissionColor").maxColorComponent>0)||
+                material.globalIlluminationFlags!=EmissionFlags(material)||KeywordMismatch(material,"_EMISSION",EmissionEnabled(material))||
                 (StraightAlpha(material,entry) && (material.IsKeywordEnabled("_ALPHAPREMULTIPLY_ON") || material.GetFloat("_BlendModePreserveSpecular")!=0 ||
                     material.GetFloat("_SrcBlend")!=(float)BlendMode.SrcAlpha || material.GetFloat("_DstBlend")!=(float)BlendMode.OneMinusSrcAlpha ||
                     material.GetFloat("_SrcBlendAlpha")!=(float)BlendMode.One || material.GetFloat("_DstBlendAlpha")!=(float)BlendMode.OneMinusSrcAlpha || material.GetFloat("_ZWrite")!=0));
@@ -95,7 +95,9 @@ namespace Scrapshift
             changed|=SetKeyword(material,"_ENVIRONMENTREFLECTIONS_OFF",material.GetFloat("_EnvironmentReflections")==0);
             changed|=SetKeyword(material,"_SPECULAR_SETUP",Specular(material));
             changed|=SetKeyword(material,"_METALLICSPECGLOSSMAP",HasGlossMap(material));
-            changed|=SetKeyword(material,"_EMISSION",material.GetColor("_EmissionColor").maxColorComponent>0);
+            var emissionFlags=EmissionFlags(material);
+            if(material.globalIlluminationFlags!=emissionFlags){material.globalIlluminationFlags=emissionFlags;changed=true;}
+            changed|=SetKeyword(material,"_EMISSION",EmissionEnabled(material));
             // These transparent layers use straight alpha; specular must fade with their irregular edge.
             if(StraightAlpha(material,entry))
             {
@@ -112,6 +114,22 @@ namespace Scrapshift
             changed|=Float(material,"_Glossiness",material.GetFloat("_Smoothness"));changed|=Float(material,"_GlossMapScale",material.GetFloat("_Smoothness"));
             changed|=Float(material,"_GlossyReflections",material.GetFloat("_EnvironmentReflections"));
             return changed;
+        }
+        // Match Unity 6000.3 MaterialEditor.FixupEmissiveFlag and URP BaseShaderGUI.
+        // Exactly EmissiveIsBlack means deliberately disabled, even with a non-black saved color.
+        static MaterialGlobalIlluminationFlags EmissionFlags(Material material)
+        {
+            var flags=material.globalIlluminationFlags;
+            if(!material.HasProperty("_EmissionColor"))return flags;
+            if((flags&MaterialGlobalIlluminationFlags.BakedEmissive)!=0 && material.GetColor("_EmissionColor").maxColorComponent==0)
+                flags|=MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+            else if(flags!=MaterialGlobalIlluminationFlags.EmissiveIsBlack)flags&=MaterialGlobalIlluminationFlags.AnyEmissive;
+            return flags;
+        }
+        static bool EmissionEnabled(Material material)
+        {
+            return (EmissionFlags(material)&MaterialGlobalIlluminationFlags.AnyEmissive)!=0 ||
+                (material.HasProperty("_EmissionEnabled") && material.GetFloat("_EmissionEnabled")>=.5f);
         }
         static bool Specular(Material material){return material.GetFloat("_WorkflowMode")==0;}
         static bool HasGlossMap(Material material){return !Missing(material,Specular(material)?"_SpecGlossMap":"_MetallicGlossMap");}
