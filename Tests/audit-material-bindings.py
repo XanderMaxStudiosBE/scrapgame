@@ -28,6 +28,10 @@ def refs(source,index):
         if resource.endswith('WorldProps') and not {'metallicGloss','emission'}<=fields.keys():raise ValueError('Missing mask/glow')
         for prop in ['metallicGloss','emission']:
             if prop in fields and (fields[prop] not in index or index[fields[prop]].suffix!='.png'):raise ValueError('Invalid mask/glow')
+        for prop in ['albedo','metallicGloss','emission']:
+            saved_path=re.search(r'^    '+prop+r'Path: *(.*)$',block,re.M)
+            expected_path=index[fields[prop]].relative_to(ROOT).as_posix() if prop in fields else ''
+            if saved_path is None or saved_path[1]!=expected_path:raise ValueError('Missing or mismatched source path '+resource+'/'+prop)
         straight=re.search(r'    straightAlpha: (\d)',block)
         if not straight or int(straight[1])!=int(resource.endswith('/GroundWear') or resource.endswith('/RoughPuddles')):raise ValueError('Wrong alpha policy')
     return seen
@@ -47,6 +51,10 @@ class MaterialAuthoring(unittest.TestCase):
     def test_catalog_detects_broken_albedo_reference(self):
         corrupt=re.sub(r'(    albedo: \{fileID: \d+, guid: )\w+',lambda m:m[1]+'0'*32,self.catalog,count=1)
         with self.assertRaises(ValueError):refs(corrupt,self.index)
+    def test_catalog_detects_missing_or_wrong_recovery_paths(self):
+        for corrupt in [re.sub(r'^    albedoPath: .*\n','',self.catalog,count=1,flags=re.M),
+                        re.sub(r'^    albedoPath: .*$', '    albedoPath: Assets/Missing.png',self.catalog,count=1,flags=re.M)]:
+            with self.assertRaises(ValueError):refs(corrupt,self.index)
     def test_aliases_keep_texture_uv_color_and_smoothness(self):
         source=self.prop.replace('_Smoothness: 0.08','_Smoothness: 0.21').replace('m_Scale: {x: 1, y: 1}','m_Scale: {x: 2, y: 3}').replace('_BaseColor: {r: 1, g: 1, b: 1, a: 1}','_BaseColor: {r: 0.4, g: 0.5, b: 0.6, a: 0.7}')
         safe=migration_safe(source)
@@ -85,7 +93,7 @@ class MaterialAuthoring(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='scrapshift-materials-') as directory:
             root=Path(directory);(root/'ArtSource').mkdir();folder=root/'Assets/Scrapshift/Resources/ScrapshiftMaterials';folder.mkdir(parents=True)
             shutil.copy(ASSETS/'Resources/ScrapshiftMaterials/PropAtlas.mat',folder/'PropAtlas.mat')
-            for name in ['build_world_surfaces.py','material_compatibility.py']:shutil.copy(ROOT/'ArtSource'/name,root/'ArtSource'/name)
+            for name in ['build_world_surfaces.py','material_compatibility.py','texture_metadata.py']:shutil.copy(ROOT/'ArtSource'/name,root/'ArtSource'/name)
             subprocess.run([sys.executable,str(root/'ArtSource/build_world_surfaces.py')],check=True,stdout=subprocess.DEVNULL)
             for name in ['WorldProps','GroundWear','RoughPuddles','WireFence']:
                 source=(root/('Assets/Scrapshift/Resources/ScrapshiftWorld/'+name+'.mat')).read_text()

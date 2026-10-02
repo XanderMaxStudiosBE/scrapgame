@@ -19,6 +19,7 @@ for name,tex in [('WorldProps','WorldAtlas'),('GroundWear','GroundLayers'),('Rou
 for resource,mat,tex,mask,glow in entries:
     s+='  - resource: '+resource+'\n    material: {fileID: 2100000, guid: '+guid(mat)+', type: 2}\n    albedo: {fileID: 2800000, guid: '+guid(tex)+', type: 3}\n'
     for prop,p in [('metallicGloss',mask),('emission',glow)]:s+='    '+prop+': '+('{fileID: 2800000, guid: '+guid(p)+', type: 3}' if p else '{fileID: 0}')+'\n'
+    for prop,p in [('albedoPath',tex),('metallicGlossPath',mask),('emissionPath',glow)]:s+='    '+prop+':'+(' '+p.relative_to(root).as_posix() if p else '')+'\n'
     s+='    straightAlpha: '+('1' if resource.endswith('/GroundWear') or resource.endswith('/RoughPuddles') else '0')+'\n'
 p=folder/'Materials.asset';p.write_text(s);guid(p);guid(folder)
 print('MATERIAL_CATALOG: 12 independent texture bindings, preserved existing GUIDs')

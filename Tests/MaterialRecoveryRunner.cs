@@ -15,7 +15,10 @@ namespace UnityEngine {
  public class ScriptableObject:Object {}
  public class CreateAssetMenuAttribute:Attribute {public string menuName;}
  public static class Application {public static bool isPlaying=false;public static string unityVersion="adapter",dataPath;}
- public static class Resources {public static Object catalog; public static T Load<T>(string path) where T:class {return catalog as T;} }
+ public static class Resources {
+  public static Object catalog;public static readonly Dictionary<string,Object> assets=new Dictionary<string,Object>();
+  public static T Load<T>(string path) where T:class {Object value;return assets.TryGetValue(path,out value)?value as T:catalog as T;}
+ }
  public class Texture:Object {public int width=64,height=64;}
  public class Texture2D:Texture { public static readonly Texture2D whiteTexture=new Texture2D{name="whiteTexture"}; }
  public class Shader:Object {public bool isSupported=true; public readonly Texture2D defaultWhite=new Texture2D{name="Default-White"}; public readonly Texture2D legacyWhite=new Texture2D{name="Legacy-Default-White"}; }
@@ -84,6 +87,17 @@ class MaterialRecoveryRunner {
   Check(worldMaterial.GetTexture("_MetallicGlossMap")==world.metallicGloss&&worldMaterial.GetTexture("_EmissionMap")==world.emission,"recover independent mask/emission");
   Check(worldMaterial.IsKeywordEnabled("_METALLICSPECGLOSSMAP")&&worldMaterial.IsKeywordEnabled("_EMISSION"),"valid map variants");
   Console.WriteLine("PASS mask/emission recovery with authored variants");
+  var runtimeAtlas=new UnityEngine.Texture2D{name="Resolved original atlas"};
+  UnityEngine.Resources.assets["ScrapshiftProps/ScrapshiftPropAtlas"]=runtimeAtlas;
+  var missingEntry=new YardMaterialEntry{resource=entry.resource,material=worldMaterial,albedoPath="Assets/Scrapshift/Resources/ScrapshiftProps/ScrapshiftPropAtlas.png",straightAlpha=true};
+  var resolvedEntry=missingEntry.ResolveRuntimeTextures();
+  Check(resolvedEntry!=missingEntry&&resolvedEntry.albedo==runtimeAtlas&&missingEntry.albedo==null,"runtime path fallback uses a descriptor copy and leaves catalogue intact");
+  Check(resolvedEntry.material==worldMaterial&&resolvedEntry.straightAlpha&&resolvedEntry.albedoPath==missingEntry.albedoPath,"runtime descriptor preserves remaining fields");
+  missingEntry.albedo=entry.albedo;
+  Check(missingEntry.ResolveRuntimeTextures()==missingEntry&&missingEntry.albedo==entry.albedo,"runtime fallback preserves valid custom catalogue texture");
+  var absentEntry=new YardMaterialEntry{albedoPath="Assets/Scrapshift/Resources/Unavailable.png"};
+  Check(absentEntry.ResolveRuntimeTextures()==absentEntry&&absentEntry.albedo==null,"failed runtime lookup leaves catalogue untouched");
+  Console.WriteLine("PASS runtime Resources path recovery, descriptor ownership, custom reference preservation and missing asset behavior");
   // Interleave actual recovery with the public Unity/URP emission protocol, including explicit disable.
   // Before the flag-based fix, disabled flags + white color oscillate on every validation.
   foreach(int flags in new[]{0,1,2,4,5,6,7})foreach(bool black in new[]{false,true})

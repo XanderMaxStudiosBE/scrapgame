@@ -5,6 +5,8 @@ No downloaded models; renders are asset previews, not Unity gameplay captures.
 import bpy, math, random, json, sys
 from pathlib import Path
 from mathutils import Vector
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+from texture_metadata import ensure_texture_metadata
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'Assets/Scrapshift/Resources/ScrapshiftProps'
 PREV=ROOT/'Assets/Scrapshift/Art/Previews'
@@ -26,7 +28,9 @@ def prepare_materials(write_atlas=True):
                 pixels[offset:offset+4]=[max(0,min(1,c/255)) for c in color]+[1]
         m=bpy.data.materials.new(name); m.diffuse_color=tuple(c/255 for c in rgb)+(1,); MAT[name]=m
     atlas.pixels=pixels; atlas.filepath_raw=str(OUT/'ScrapshiftPropAtlas.png'); atlas.file_format='PNG'
-    if write_atlas:atlas.save()
+    if write_atlas:
+        atlas.save()
+        ensure_texture_metadata(OUT/'ScrapshiftPropAtlas.png',max_size=512)
     atlasmat=bpy.data.materials.new('ScrapshiftPropAtlas'); atlasmat.use_nodes=True
     bs=atlasmat.node_tree.nodes.get('Principled BSDF'); bs.inputs['Roughness'].default_value=.85
     tex=atlasmat.node_tree.nodes.new('ShaderNodeTexImage');tex.image=atlas;tex.interpolation='Linear'

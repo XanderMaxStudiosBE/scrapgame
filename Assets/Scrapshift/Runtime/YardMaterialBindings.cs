@@ -17,6 +17,7 @@ namespace Scrapshift
             if(scope.materials.TryGetValue(resource,out Material cached)&&cached!=null)return cached;
             var catalog=Resources.Load<YardMaterialCatalog>("ScrapshiftRendering/Materials");
             var entry=catalog!=null?catalog.Find(resource):null;
+            if(entry!=null)entry=entry.ResolveRuntimeTextures();
             var tracked=Resources.Load<Material>(resource);
             if(tracked==null)return null;
             var result=tracked;

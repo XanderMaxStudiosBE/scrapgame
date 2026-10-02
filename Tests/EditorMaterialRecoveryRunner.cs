@@ -38,7 +38,8 @@ namespace UnityEditor
  public class MenuItemAttribute:Attribute {public MenuItemAttribute(string path){}}
  public class AssetPostprocessor{}
  public class AssetImporter {public static AssetImporter GetAtPath(string path){return null;}}
- public class TextureImporter:AssetImporter {public string textureType,alphaSource;public bool sRGBTexture;}
+ public class TextureImporter:AssetImporter {public string textureType,textureShape,alphaSource;public bool sRGBTexture;}
+ [Flags] public enum ImportAssetOptions {ForceUpdate=1,ForceSynchronousImport=8}
  public enum PlayModeStateChange {EnteredPlayMode}
  public static class EditorApplication
  {
@@ -57,14 +58,26 @@ namespace UnityEditor
  {
   public static YardMaterialCatalog catalog;
   public static int saves;
+  public static int catalogSaves,textureImports;
   public static Action<Material> onSave;
   static readonly Dictionary<UnityEngine.Object,string> paths=new Dictionary<UnityEngine.Object,string>();
-  public static void Register(UnityEngine.Object value,string path){paths[value]=path;}
-  public static T LoadAssetAtPath<T>(string path)where T:class {return catalog as T;}
+  static readonly Dictionary<string,UnityEngine.Object> assets=new Dictionary<string,UnityEngine.Object>();
+  public static readonly Dictionary<string,UnityEngine.Object> pendingAssets=new Dictionary<string,UnityEngine.Object>();
+  public static void Register(UnityEngine.Object value,string path){paths[value]=path;assets[path]=value;}
+  public static T LoadAssetAtPath<T>(string path)where T:class {UnityEngine.Object value;return typeof(T)==typeof(YardMaterialCatalog)?catalog as T:assets.TryGetValue(path,out value)?value as T:null;}
   public static string GetAssetPath(UnityEngine.Object value){string path;return value!=null&&paths.TryGetValue(value,out path)?path:"";}
   public static bool TryGetGUIDAndLocalFileIdentifier(UnityEngine.Object value,out string guid,out long localId)
   {string path=GetAssetPath(value);guid="test-guid-"+path;localId=2800000;return path.Length>0;}
-  public static void SaveAssetIfDirty(UnityEngine.Object value){saves++;if(onSave!=null)onSave((Material)value);Import(GetAssetPath(value));}
+  public static void SaveAssetIfDirty(UnityEngine.Object value)
+  {
+   if(value is Material){saves++;if(onSave!=null)onSave((Material)value);}else catalogSaves++;
+   Import(GetAssetPath(value));
+  }
+  public static void ImportAsset(string path,ImportAssetOptions options)
+  {
+   textureImports++;UnityEngine.Object value;if(pendingAssets.TryGetValue(path,out value))Register(value,path);
+   Import(path);
+  }
   public static void Import(string path)
   {
    typeof(YardMaterialRecovery).GetMethod("OnPostprocessAllAssets",BindingFlags.NonPublic|BindingFlags.Static)
@@ -144,5 +157,44 @@ class EditorMaterialRecoveryRunner
   YardMaterialRecovery.SaveRenderingReport();
   Check(GUIUtility.systemCopyBuffer=="clipboard before cancel"&&File.ReadAllText(selectedPath)==exported&&Debug.logs.Count==logCount,"cancel must leave clipboard/files/logs untouched");
   Console.WriteLine("PASS export cancellation leaves clipboard and files intact");
+  CheckTextureSources(shader);
+ }
+ static void CheckTextureSources(Shader shader)
+ {
+  const string root="Assets/Scrapshift/Resources/ScrapshiftWorld/";
+  var albedo=new Texture2D{name="Recovered world atlas"};var mask=new Texture2D{name="Recovered mask"};var glow=new Texture2D{name="Recovered localized glow"};
+  foreach(string name in new[]{"WorldAtlas","WorldMetalGloss","WorldGlow","Unavailable"})
+  {
+   string file=Path.GetFullPath(Path.Combine(Application.dataPath,"..",root+name+".png"));
+   Directory.CreateDirectory(Path.GetDirectoryName(file));File.WriteAllText(file,"controlled adapter texture source");
+  }
+  AssetDatabase.pendingAssets[root+"WorldAtlas.png"]=albedo;AssetDatabase.pendingAssets[root+"WorldMetalGloss.png"]=mask;
+  AssetDatabase.pendingAssets[root+"WorldGlow.png"]=glow;
+  var material=new Material(shader){name="World source recovery",globalIlluminationFlags=MaterialGlobalIlluminationFlags.BakedEmissive};
+  material.SetColor("_EmissionColor",new Color(1,1,1));var tint=new Color(.4f,.5f,.6f);material.SetColor("_BaseColor",tint);
+  var entry=new YardMaterialEntry{resource="ScrapshiftWorld/WorldProps",material=material,albedoPath=root+"WorldAtlas.png",metallicGlossPath=root+"WorldMetalGloss.png",emissionPath=root+"WorldGlow.png"};
+  var catalog=new YardMaterialCatalog{entries=new[]{entry}};AssetDatabase.catalog=catalog;Resources.catalog=catalog;AssetDatabase.onSave=null;
+  AssetDatabase.Register(material,root+"WorldProps.mat");AssetDatabase.Register(catalog,"Assets/Scrapshift/Resources/ScrapshiftRendering/Materials.asset");
+  int saves=AssetDatabase.saves,catalogSaves=AssetDatabase.catalogSaves,imports=AssetDatabase.textureImports;
+  YardMaterialRecovery.Recover();int ticks=EditorApplication.Pump();
+  Check(ticks==1&&AssetDatabase.textureImports==imports+3,"missing imported sources must force one import per path and converge");
+  Check(entry.albedo==albedo&&entry.metallicGloss==mask&&entry.emission==glow,"catalogue null references recover from actual texture paths");
+  Check(AssetDatabase.catalogSaves==catalogSaves+1&&AssetDatabase.saves==saves+1,"save rebound catalogue and repaired material once");
+  Check(material.GetTexture("_BaseMap")==albedo&&material.GetTexture("_MetallicGlossMap")==mask&&material.GetTexture("_EmissionMap")==glow,"material must receive recovered source maps");
+  Check(material.GetColor("_BaseColor")==tint,"preserve tint during source recovery");
+  Console.WriteLine("PASS null catalogue/imported textures recover by path and repair material with bounded imports");
+  var custom=new Texture2D{name="Valid custom albedo"};entry.albedo=custom;
+  AssetDatabase.Import(root+"WorldAtlas.png");EditorApplication.Pump();
+  Check(entry.albedo==custom&&material.GetTexture("_BaseMap")==albedo&&AssetDatabase.textureImports==imports+3,"valid catalogue/material maps survive source import");
+  Console.WriteLine("PASS source import preserves valid custom catalogue and material references");
+  var failed=new YardMaterialEntry{resource="Missing source",material=new Material(shader),albedoPath=root+"Unavailable.png"};
+  catalog.entries=new[]{failed};int warnings=Debug.warnings.Count;imports=AssetDatabase.textureImports;
+  YardMaterialRecovery.Recover();EditorApplication.Pump();
+  Check(AssetDatabase.textureImports==imports+1&&Debug.warnings.Count==warnings+1&&failed.albedo==null,"unavailable source must attempt once and warn once");
+  AssetDatabase.Import(root+"Unavailable.png");EditorApplication.Pump();
+  Check(AssetDatabase.textureImports==imports+1&&Debug.warnings.Count==warnings+1,"unavailable source must not create a retry loop");
+  YardMaterialRecovery.Diagnose();
+  Check(GUIUtility.systemCopyBuffer.Contains("ERROR: albedo catalogue texture is unavailable.")&&GUIUtility.systemCopyBuffer.Contains("BaseMap matches loaded catalogue texture: False"),"two null references must be reported as missing rather than matching");
+  Console.WriteLine("PASS failed source import stays bounded and report correctly identifies null reference failure");
  }
 }

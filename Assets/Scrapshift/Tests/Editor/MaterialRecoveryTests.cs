@@ -39,9 +39,44 @@ namespace Scrapshift.Tests
         {
             var catalog=Resources.Load<YardMaterialCatalog>("ScrapshiftRendering/Materials");Assert.NotNull(catalog);
             var entry=catalog.Find(resource);Assert.NotNull(entry);Assert.NotNull(entry.albedo);
+            Assert.AreSame(entry.albedo,UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(entry.albedoPath));
             Assert.AreSame(Resources.Load<Material>(resource),entry.material);
-            if(resource.EndsWith("WorldProps")){Assert.NotNull(entry.metallicGloss);Assert.NotNull(entry.emission);}
+            if(resource.EndsWith("WorldProps"))
+            {
+                Assert.NotNull(entry.metallicGloss);Assert.NotNull(entry.emission);
+                Assert.AreSame(entry.metallicGloss,UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(entry.metallicGlossPath));
+                Assert.AreSame(entry.emission,UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(entry.emissionPath));
+            }
             Assert.AreEqual(resource.EndsWith("GroundWear")||resource.EndsWith("RoughPuddles"),entry.straightAlpha);
+        }
+        [TestCase("ScrapshiftMaterials/PropAtlas")][TestCase("ScrapshiftWorld/WorldProps")]
+        [TestCase("ScrapshiftWorld/GroundWear")][TestCase("ScrapshiftWorld/WireFence")]
+        public void MissingCatalogueMapsResolveThroughResourcesWithoutEditingTheDescriptor(string resource)
+        {
+            var original=Resources.Load<YardMaterialCatalog>("ScrapshiftRendering/Materials").Find(resource);
+            var missing=new YardMaterialEntry{resource=resource,material=original.material,straightAlpha=original.straightAlpha,
+                albedoPath=original.albedoPath,metallicGlossPath=original.metallicGlossPath,emissionPath=original.emissionPath};
+            var resolved=missing.ResolveRuntimeTextures();
+            Assert.AreNotSame(missing,resolved);Assert.IsNull(missing.albedo);
+            Assert.NotNull(resolved.albedo);Assert.AreSame(original.albedo,resolved.albedo);
+            Assert.AreSame(original.metallicGloss,resolved.metallicGloss);Assert.AreSame(original.emission,resolved.emission);
+            var custom=new Texture2D(2,2);
+            try{resolved.albedo=custom;Assert.AreSame(resolved,resolved.ResolveRuntimeTextures());Assert.AreSame(custom,resolved.albedo);}
+            finally{Object.DestroyImmediate(custom);}
+        }
+        [TestCase("ScrapshiftProps/ScrapshiftPropAtlas")][TestCase("ScrapshiftWorld/WorldAtlas")]
+        [TestCase("ScrapshiftWorld/WorldMetalGloss")][TestCase("ScrapshiftWorld/WorldGlow")]
+        [TestCase("ScrapshiftWorld/GroundLayers")][TestCase("ScrapshiftWorld/ChainLink")]
+        public void OriginalAtlasSourcesImportAsTexture2DWithAlphaPreserved(string resource)
+        {
+            var path="Assets/Scrapshift/Resources/"+resource+".png";
+            var importer=UnityEditor.AssetImporter.GetAtPath(path) as UnityEditor.TextureImporter;
+            Assert.NotNull(importer);Assert.AreEqual(UnityEditor.TextureImporterType.Default,importer.textureType);
+            Assert.AreEqual(UnityEditor.TextureImporterShape.Texture2D,importer.textureShape);
+            Assert.AreEqual(UnityEditor.TextureImporterAlphaSource.FromInput,importer.alphaSource);
+            Assert.AreEqual(!resource.EndsWith("WorldMetalGloss"),importer.sRGBTexture);
+            var texture=UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(path);Assert.NotNull(texture);
+            Assert.AreSame(texture,Resources.Load<Texture2D>(resource));
         }
         [TestCase(false)][TestCase(true)]
         public void EmptyBindingsRecoverWithoutChangingTintRoughnessOrUvAndSecondRepairIsIdle(bool engineWhite)

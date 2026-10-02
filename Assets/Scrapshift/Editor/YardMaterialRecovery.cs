@@ -15,6 +15,8 @@ namespace Scrapshift
         static readonly Dictionary<string,HashSet<string>> attemptedStates=new Dictionary<string,HashSet<string>>();
         static readonly Dictionary<string,string> lastChanges=new Dictionary<string,string>();
         static readonly HashSet<string> reportedConflicts=new HashSet<string>();
+        static readonly HashSet<string> textureImportAttempts=new HashSet<string>();
+        static readonly HashSet<string> reportedMissingTextures=new HashSet<string>();
         static YardMaterialRecovery(){Queue();EditorApplication.playModeStateChanged+=OnPlayModeChanged;}
         static void Queue(){if(pending)return;pending=true;EditorApplication.delayCall+=RecoverAutomatically;}
         static void OnPlayModeChanged(PlayModeStateChange state)
@@ -22,13 +24,14 @@ namespace Scrapshift
         static void OnPostprocessAllAssets(string[] imported,string[] deleted,string[] moved,string[] movedFrom)
         {
             foreach(var path in imported)if(path.StartsWith("Assets/Scrapshift/",System.StringComparison.Ordinal)&&
-                (path.EndsWith(".mat",System.StringComparison.Ordinal)||path.EndsWith("Materials.asset",System.StringComparison.Ordinal))){Queue();return;}
+                (path.EndsWith(".mat",System.StringComparison.Ordinal)||path.EndsWith(".png",System.StringComparison.Ordinal)||path.EndsWith("Materials.asset",System.StringComparison.Ordinal))){Queue();return;}
         }
         [MenuItem("Scrapshift/Repair Missing Material Bindings")]
         public static void Recover()
         {
             // An explicit retry is allowed; automatic imports never retry an already repaired input.
             attemptedStates.Clear();lastChanges.Clear();reportedConflicts.Clear();
+            textureImportAttempts.Clear();reportedMissingTextures.Clear();
             EditorApplication.delayCall-=RecoverAutomatically;pending=false;RecoverAutomatically();
         }
         static void RecoverAutomatically()
@@ -37,6 +40,7 @@ namespace Scrapshift
             if(EditorApplication.isCompiling||EditorApplication.isUpdating){Queue();return;}
             var catalog=AssetDatabase.LoadAssetAtPath<YardMaterialCatalog>("Assets/Scrapshift/Resources/ScrapshiftRendering/Materials.asset");
             if(catalog==null||catalog.entries==null)return;
+            ResolveCatalogTextures(catalog);
             SurfaceTextureSampling.Ensure();
             var changes=new StringBuilder();
             foreach(var entry in catalog.entries)
@@ -66,6 +70,38 @@ namespace Scrapshift
             }
             if(changes.Length>0)Debug.Log("SCRAPSHIFT material repair (valid custom maps and surface values retained):\n"+changes);
         }
+        static void ResolveCatalogTextures(YardMaterialCatalog catalog)
+        {
+            int count=0;
+            foreach(var entry in catalog.entries)
+            {
+                if(entry==null)continue;
+                var albedo=ResolveTexture(entry.albedo,entry.albedoPath);var mask=ResolveTexture(entry.metallicGloss,entry.metallicGlossPath);
+                var glow=ResolveTexture(entry.emission,entry.emissionPath);
+                if(albedo!=entry.albedo){entry.albedo=albedo;count++;}
+                if(mask!=entry.metallicGloss){entry.metallicGloss=mask;count++;}
+                if(glow!=entry.emission){entry.emission=glow;count++;}
+            }
+            if(count==0)return;
+            EditorUtility.SetDirty(catalog);AssetDatabase.SaveAssetIfDirty(catalog);
+            Debug.Log("SCRAPSHIFT restored "+count+" missing catalogue texture references from their original asset paths.");
+        }
+        static Texture2D ResolveTexture(Texture2D existing,string path)
+        {
+            if(existing!=null || string.IsNullOrEmpty(path))return existing;
+            var texture=AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if(texture==null && SourceFileExists(path) && textureImportAttempts.Add(path))
+            {
+                // Repair the imported texture first: assigning another null reference cannot fix the material.
+                AssetDatabase.ImportAsset(path,ImportAssetOptions.ForceUpdate|ImportAssetOptions.ForceSynchronousImport);
+                texture=AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            }
+            if(texture==null && reportedMissingTextures.Add(path))
+                Debug.LogWarning("SCRAPSHIFT texture unavailable after import: "+path+". Save Rendering Report includes its file/importer details.");
+            return texture;
+        }
+        static bool SourceFileExists(string path)
+        {return path.StartsWith("Assets/",System.StringComparison.Ordinal) && File.Exists(Path.Combine(Application.dataPath,"..",path));}
         // Exact property snapshots keep the guard independent of keyword order and rounded Inspector text.
         static Dictionary<string,string> CaptureState(Material material)
         {
@@ -134,9 +170,12 @@ namespace Scrapshift
             {
                 if(entry==null)continue;
                 report.AppendLine("Catalog "+entry.resource+" / albedo: "+TextureDescription(entry.albedo));
+                DescribeSource(report,"albedo",entry.albedo,entry.albedoPath);
+                DescribeSource(report,"metallicGloss",entry.metallicGloss,entry.metallicGlossPath);
+                DescribeSource(report,"emission",entry.emission,entry.emissionPath);
                 DescribeMaterial(report,entry.material);
                 if(entry.material!=null && entry.material.HasProperty("_BaseMap"))
-                    report.AppendLine("  BaseMap matches catalogue: "+(entry.material.GetTexture("_BaseMap")==entry.albedo));
+                    report.AppendLine("  BaseMap matches loaded catalogue texture: "+(entry.albedo!=null && entry.material.GetTexture("_BaseMap")==entry.albedo));
             }
             var seen=new HashSet<Material>();
             foreach(var renderer in Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
@@ -178,6 +217,18 @@ namespace Scrapshift
             foreach(var property in new[]{"_Smoothness","_Metallic","_WorkflowMode","_Surface","_Blend","_SrcBlend","_DstBlend","_ZWrite","_AlphaClip"})
                 if(material.HasProperty(property))report.AppendLine("  "+property+": "+material.GetFloat(property));
             report.AppendLine("  Keywords: "+string.Join(", ",material.shaderKeywords));
+        }
+        static void DescribeSource(StringBuilder report,string slot,Texture2D reference,string path)
+        {
+            if(string.IsNullOrEmpty(path))return;
+            var importer=AssetImporter.GetAtPath(path);var loaded=AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            report.AppendLine("  "+slot+" source: "+path+" / file exists: "+SourceFileExists(path)+
+                " / importer: "+(importer!=null?importer.GetType().Name:"missing")+" / loaded by path: "+TextureDescription(loaded));
+            if(loaded!=null && AssetDatabase.TryGetGUIDAndLocalFileIdentifier(loaded,out string guid,out long localId))
+                report.AppendLine("  "+slot+" imported object: GUID "+guid+" / local file ID "+localId);
+            if(importer is TextureImporter textureImporter)
+                report.AppendLine("  "+slot+" texture import: "+textureImporter.textureType+" / shape: "+textureImporter.textureShape);
+            if(reference==null)report.AppendLine("  ERROR: "+slot+" catalogue texture is unavailable.");
         }
         static string TextureDescription(Texture texture)
         {

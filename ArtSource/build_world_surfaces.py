@@ -3,6 +3,7 @@ Run python3 ArtSource/build_world_surfaces.py. Only this new pack's textures are
 Existing material files and all legacy textures are preserved.
 """
 from material_compatibility import migration_safe
+from texture_metadata import ensure_texture_metadata
 from pathlib import Path
 import math,random,struct,zlib,json,hashlib,uuid
 ROOT=Path(__file__).resolve().parents[1]
@@ -19,6 +20,7 @@ def png(name,size,paint):
     def chunk(kind,data):return struct.pack('>I',len(data))+kind+data+struct.pack('>I',zlib.crc32(kind+data)&0xffffffff)
     raw=b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',size,size,8,6,0,0,0))+chunk(b'IDAT',zlib.compress(b''.join(rows),9))+chunk(b'IEND',b'')
     path=OUT/(name+'.png');path.write_bytes(raw)
+    ensure_texture_metadata(path,linear=name=='WorldMetalGloss',repeat=name=='ChainLink',max_size=max(32,size),alpha_transparency=name!='WorldMetalGloss')
     manifest[name]={'size':size,'sha256':hashlib.sha256(raw).hexdigest()}
     return path
 
@@ -67,6 +69,9 @@ def fence(x,y):
 png('ChainLink',256,fence)
 
 def meta(path):
+    if path.suffix.lower()=='.png':
+        ensure_texture_metadata(path,linear=path.stem=='WorldMetalGloss',repeat=path.stem=='ChainLink',max_size=64 if path.stem=='WorldGlow' else 256 if path.stem=='ChainLink' else 512,alpha_transparency=path.stem!='WorldMetalGloss')
+        return
     p=Path(str(path)+'.meta')
     if not p.exists():p.write_text('fileFormatVersion: 2\nguid: '+uuid.uuid4().hex+'\n')
 def guid(path):

@@ -30,6 +30,8 @@ namespace Scrapshift
         {
             if (assetPath != Prefix + "ScrapshiftPropAtlas.png") return;
             var importer = (TextureImporter)assetImporter;
+            importer.textureType = TextureImporterType.Default;
+            importer.textureShape = TextureImporterShape.Texture2D;
             importer.maxTextureSize = 512;
             importer.textureCompression = TextureImporterCompression.Uncompressed;
             importer.filterMode = FilterMode.Bilinear;
