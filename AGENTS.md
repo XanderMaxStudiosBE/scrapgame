@@ -15,7 +15,7 @@ Read `PROJECT_HANDOFF.md` before starting work. It records the design and verifi
 ## Technical direction
 
 - Unity and C# are the chosen stack. Preserve an existing project's compatible version/pipeline; do not silently migrate engines or upgrade Unity.
-- At the initial handoff, no Unity project exists. For initial creation, Unity 6 LTS with URP is the intended baseline. Local Unity 6000.3.25f1 is available; use that as the initial compatibility target unless repository evidence or the user specifies another version. It has not yet been tested with this game.
+- The existing project targets Unity 6000.3.25f1 and pinned URP 17.3.0. The creator uses Unity locally; cloud source/adapter checks do not verify engine compilation, rendering or a build.
 - Desktop PC, keyboard/mouse, and single-player are the initial development scope. These are prototype targets, not promises of shipped platform support.
 - Use relative project paths. Never rely on the author's Windows drive paths in runtime code or Cloud instructions.
 - Preserve `Campaign/` as source artwork and documentation. Concept art is a mood reference, not gameplay evidence.
@@ -29,6 +29,7 @@ Read `PROJECT_HANDOFF.md` before starting work. It records the design and verifi
 - Complete coherent stages of the automation brief. Preserve prior systems/assets and the old scene as legacy/reference; make the compact yard the default without deleting old saves or hand-edited scenes. Version new data and make migration explicit/recoverable. Never label planned automation as implemented.
 - Prevent duplicate processing outputs, negative inventory/money, duplicate upgrades, and loss/duplication across saves. Provide a repeatable source of scrap.
 - Save money, owned equipment, relevant inventory/world state, and processing state consistently.
+- Compact Stage C includes conveyors/storage/Tier2/junctions; read Design/COMPACT_STAGE_C_VERIFICATION.md. Compact yard-v2.json now uses schema 3 with explicit validated in-memory migration from schema 2; preserve original backups, global IDs and recovery eligibility. Stage D intake/primary whole-object processing/export remains future work.
 - Run checks appropriate to the change. If Unity is unavailable, state exactly what remains unverified in the editor; do not claim a playable build merely because C# files exist.
 - Update `PROJECT_HANDOFF.md` after meaningful work with implemented features, checks performed, bugs, and the next concrete task. Keep planned and implemented behavior clearly separated.
 - Preserve existing work. Do not create another repository or replace this checkout without a user request.

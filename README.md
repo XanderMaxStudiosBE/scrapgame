@@ -1,16 +1,16 @@
 # SCRAPSHIFT
 
-A first-person retro scrapyard automation prototype. The new **48 × 36m compact yard** starts with manual car/refrigerator dismantling, component processing and material-sales XP. Buy and freely place a generator and Tier 1 scrapper, then build its power connections. The original 96 × 80m repair/order/day game remains a separate playable legacy scene.
+A first-person retro scrapyard automation prototype. The **48 × 36m compact yard** starts with manual car/refrigerator dismantling, component processing and material-sales XP. Buy and freely place powered machines, then at level 10 build conveyor, storage and Tier 2 networks with splitters and mergers. Fixed office/delivery corners leave the interior yours to arrange. The original 96 × 80m repair/order/day game remains a separate legacy scene.
 
-**Current Cloud verification:** 148 pure C# scenarios, ten real save-filesystem/recovery branches and seven material-recovery branch groups pass (adapters are not Unity JSON or rendering). Seven material-reference/authoring checks pass. Nine new original FBXs pass Blender checks; the existing 31 models/eight sounds remain. **Unity is unavailable:** engine tests, compilation, rendering, controls/collisions, real JSON, audio, FPS and a desktop build/playthrough still need local verification. Blender previews are labelled asset examples, not gameplay screenshots.
+**Current Cloud verification:** 191 pure C# scenarios, twelve real save-filesystem/recovery branches and seven material-recovery branch groups pass (adapters are not Unity JSON or rendering). Seven material-reference/authoring checks pass. Four new automation FBXs pass Blender checks; the earlier 31 models/nine compact models/eight sounds remain. **Unity is unavailable:** engine tests, compilation, rendering, controls/collisions, real JSON, audio, FPS and a desktop build/playthrough still need local verification. Blender previews are labelled asset examples, not gameplay screenshots.
 
-[Compact stage implementation, migration and local checklist](Design/COMPACT_STAGE_AB_VERIFICATION.md) records the delivered A/B scope. **Conveyors, ported storage, Tier 2, automated intake/sorting/export and production completion remain later stages**, shown as unavailable catalogue data. This is not a finished-game claim. [Original compact art and provenance](Design/COMPACT_WORLD_VERIFICATION.md) explains the nine-model pack and example map.
+[Stage C implementation, save migration and local checklist](Design/COMPACT_STAGE_C_VERIFICATION.md) records conveyors, corners, ported storage, Tier 2 and junctions. [A/B verification](Design/COMPACT_STAGE_AB_VERIFICATION.md) and [original compact art](Design/COMPACT_WORLD_VERIFICATION.md) record the earlier work. **Automatic whole-object intake/export and production completion remain future work.**
 
 ## Open or update in Unity
 
 Use **Unity 6000.3.25f1** and the pinned **URP 17.3.0** packages. After pulling/importing, run **Scrapshift → Create or Open Compact Yard**, then press Play in `Generated/CompactScrapyard`. The original **Create or Open Prototype** command is an alias. It creates only missing generated assets/scenes, preserves existing scene/balance edits, makes the compact scene the first build scene and keeps `Generated/Scrapyard` as the legacy option. Opening the old scene directly still plays the old game; a pull alone does not reconstruct generated scenes.
 
-Compact Start/Continue opens the manual earning/building loop. New yard archives compact files; the optional legacy import previews what transfers and preserves the complete old JSON/source files. Cash, portable quantities and exact wire jobs can transfer; old repairs, upgrades, requests/escrow and daily records stay playable in the retained legacy scene. Imported machinery needs a purchased generator/cable. Existing inventory gets no invented historical XP. Control/video/audio choices are shared and preserved; gameplay files are separate (`yard-v2.json` versus `yard-v1.json`).
+Compact Start/Continue opens the earning/building loop. Existing compact schema-two saves upgrade in memory to schema three, retaining partial work and ownership; the next save retains the old file in backup. The filename remains `yard-v2.json`. New yard archives compact files; optional legacy import preserves source JSON/files. Cash, portable quantities and exact wire jobs can transfer; old repairs, upgrades, requests/escrow and daily records stay in the legacy scene. Imported machinery needs a purchased generator/cable. Existing inventory gets no invented historical XP. Shared control/video/audio preferences remain separate.
 
 Tune the new recipes/prices/yields/time/power/capacity/XP curve/starting supplies in `Resources/ScrapshiftCompact/Balance.asset`. The old `Generated/Balance.asset` remains for the legacy game. **Update Existing Prototype Visuals** still validates tracked materials without replacing scene or balance data. Do not delete Generated, old saves, custom materials or preferences.
 
@@ -23,6 +23,8 @@ If props appear solid white, stop Play, finish import and run **Scrapshift → R
 3. Defaults start at €8. Selling starter scrap plus two renewable wire loads reaches €117, covering a €45 generator and €60 Tier 1. Replacement cars/fridges cost €25/€15; free wiring and at least one retained manual bench protect the earning loop.
 4. Select equipment in the catalogue, aim at nearby ground, rotate/grid-snap and confirm a green preview. Cancel spends nothing. Inspect empty disconnected equipment to move/dismantle it; paid equipment refunds half its paid price.
 5. Inspect powered equipment to connect physical ports. Supply must meet total connected demand (default 6kW per generator, 3kW per Tier 1). Overload/disconnection pauses work without losing inputs/progress. Tier 1 is manually fed/collected. All menus/Settings pause processing.
+6. At level 10, purchase input storage, Tier 2 (5kW), output storage and conveyors. Select output/input ports, switch the preview elbow with Rotate and confirm the displayed full price. Escape cancels freely. Feed recovered components into storage and connect a powered processing chain; full destinations retain their items.
+7. Add splitters/mergers and storage output filters to route materials. Withdraw matching output units as one carried bundle and sell them at the counter. Tier 2 recipe filters affect intake. Transfers grant no XP. Empty belts before dismantling; empty and disconnect equipment before moving it.
 
 ## Controls and Settings
 
@@ -136,6 +138,7 @@ Purchases are guarded against double charges. Already-worked hand jobs complete 
 Under `Application.persistentDataPath` (company `XanderMaxStudiosBE`, product `Scrapshift`):
 
 - `yard-v1.json`: cash/equipment/upgrades, carried/dropped/stored items, station/appliance faults and progress, copper/restoration requests and agreed payout, current daily ledger/last-day receipt, welcome/journal goals and player position/look.
+- `yard-v2.json` (schema 3): compact cash/XP, equipment/positions/power, buffers/filters/recipes, partial dismantling/work, carried/dropped goods and conveyor endpoints/moving units/progress. Valid schema-two compact files migrate without altering source bytes on read.
 - `controls-v1.json`: action bindings, sensitivity and invert-Y.
 - `presentation-v1.json`: graphics/FOV/frame limit/FPS display and audio volumes.
 
@@ -152,6 +155,8 @@ Check original asset packaging without Unity/Blender:
 ```sh
 python3 Tests/audit-original-assets.py
 python3 Tests/audit-world-assets.py
+python3 Tests/audit-compact-assets.py
+python3 Tests/audit-automation-assets.py
 python3 Tests/audit-material-bindings.py
 ```
 
@@ -169,11 +174,11 @@ This Cloud instance has Mono extracted outside the repository:
 SCRAPSHIFT_MONO_ROOT=/workspace/tooling/mono ./Tests/run-core-tests.sh
 ```
 
-The same command also runs three filesystem/recovery checks against the real SaveStore with a narrow serializer adapter after its field checks. They verify missing-field primary recovery, double corruption protection and backup-only loading without modifying files. They do **not** validate Unity JSON; the existing Unity corruption test covers the real serializer.
+The same command runs three legacy and nine compact filesystem/recovery checks against the real save implementations with narrow serializer adapters. They include corruption protection, atomic backups, compact migration retaining original bytes and moving-item snapshot recovery. Seven material-recovery branch groups also use an API adapter. These checks do **not** validate Unity JSON or rendering.
 
 Core coverage includes inventory/money conservation, exactly-once processing, capacity/output reservations, 100 renewable wire cycles, invalid/overflow/ID guards, rebinding/conflicts/defaults, dynamic guidance, expanded-world positions, storage/independent partial copper/restoration requests, locked quote and final-delivery overflow guards, daily cost/work reconciliation and legacy reports, repair/salvage/day transactions, upgrade prerequisites/progress, legacy balance migration and presentation validation. Mixed tests reconstruct copied core data; actual JSON round-trips are supplied Unity tests.
 
-In Unity use **Window → General → Test Runner → EditMode → Run All**. There are **219 supplied cases**, all unrun in Cloud, including actual gameplay/preferences JSON and backup recovery, old saves, model/audio imports, geometry/colliders, dynamic station parts and graphics cleanup. A source/syntax/Blender audit does not replace Unity compilation or a player build.
+In Unity use **Window → General → Test Runner → EditMode → Run All**. The supplied suite includes actual gameplay/preferences JSON, recovery, model/audio imports, geometry/colliders, automation, dynamic parts and graphics cleanup. All engine cases remain unrun in Cloud. Follow the [Stage C local checklist](Design/COMPACT_STAGE_C_VERIFICATION.md). A source/syntax/Blender audit does not replace Unity compilation or a player build.
 
 Optional batch commands, with `UNITY_EDITOR` set to your installed editor:
 

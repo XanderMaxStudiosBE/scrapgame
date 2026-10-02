@@ -41,6 +41,8 @@ namespace Scrapshift.Compact
         public int startingMoney=8, startingCars=1, startingRefrigerators=1;
         public int renewableWireQuantity=1, maxStacks=256, maxLargeScrap=8, maxEquipment=64;
         public float CableRange=12, baseMachineSeconds=4;
+        public float beltSpeed=1.2f,beltSpacing=.65f,beltMaxLength=12;
+        public int beltCapacity=8,maxBelts=64;
         public int[] levelThresholds={0,30,80,160,280,440,650,930,1290,1750,2320,3010};
         // Integer-euro quotes need 12% for a common €9 copper bundle to gain its first €1.
         public int[] saleBonusPercents={0,12,16,20,24,28,32,36,40,45,50,55};
@@ -76,11 +78,11 @@ namespace Scrapshift.Compact
             new EquipmentDefinition{kind=EquipmentKind.Workbench,name="Manual workbench",price=24,available=true,width=2.6f,depth=1.4f,outputCapacity=24},
             new EquipmentDefinition{kind=EquipmentKind.Generator,name="Generator",price=45,available=true,width=1.75f,depth=1.25f,powerOutput=6},
             new EquipmentDefinition{kind=EquipmentKind.Tier1Scrapper,name="Tier 1 scrapper",price=60,available=true,width=2.4f,depth=2.3f,powerDemand=3,processingSeconds=4,outputCapacity=24},
-            new EquipmentDefinition{kind=EquipmentKind.Storage,name="Ported storage — later stage",price=70,unlockLevel=10,width=3,depth=2.5f,outputCapacity=120},
-            new EquipmentDefinition{kind=EquipmentKind.Tier2Scrapper,name="Tier 2 scrapper — later stage",price=160,unlockLevel=10,width=3.2f,depth=2.5f,powerDemand=5,processingSeconds=2,outputCapacity=48},
-            new EquipmentDefinition{kind=EquipmentKind.Conveyor,name="Conveyor — later stage",price=12,unlockLevel=10,width=1,depth=2},
-            new EquipmentDefinition{kind=EquipmentKind.Splitter,name="Splitter — later stage",price=30,unlockLevel=10,width=1.5f,depth=1.5f},
-            new EquipmentDefinition{kind=EquipmentKind.Merger,name="Merger — later stage",price=30,unlockLevel=10,width=1.5f,depth=1.5f},
+            new EquipmentDefinition{kind=EquipmentKind.Storage,name="Ported storage",price=70,unlockLevel=10,available=true,width=3,depth=2.5f,outputCapacity=120},
+            new EquipmentDefinition{kind=EquipmentKind.Tier2Scrapper,name="Tier 2 scrapper",price=160,unlockLevel=10,available=true,width=3.2f,depth=2.5f,powerDemand=5,processingSeconds=2,outputCapacity=48},
+            new EquipmentDefinition{kind=EquipmentKind.Conveyor,name="Conveyor",price=12,unlockLevel=10,available=true,width=1,depth=2},
+            new EquipmentDefinition{kind=EquipmentKind.Splitter,name="Splitter",price=30,unlockLevel=10,available=true,width=1.5f,depth=1.5f},
+            new EquipmentDefinition{kind=EquipmentKind.Merger,name="Merger",price=30,unlockLevel=10,available=true,width=1.5f,depth=1.5f},
             new EquipmentDefinition{kind=EquipmentKind.ExportStation,name="Export station — later stage",price=200,unlockLevel=12,width=3,depth=2.5f,powerDemand=2}
         };
 
@@ -97,6 +99,33 @@ namespace Scrapshift.Compact
         public ComponentRecipe Recipe(PartKind input) { foreach(var r in recipes) if(r.input==input) return r; return null; }
         public LargeScrapRecipe LargeRecipe(ScrapObjectKind kind) { foreach(var r in largeRecipes) if(r.kind==kind) return r; return null; }
         public EquipmentDefinition Equipment(EquipmentKind kind) { foreach(var e in equipment) if(e.kind==kind) return e; return null; }
+        // Older custom ScriptableObjects may deserialize newly added fields as zero.
+        // Preserve positive tuning and custom catalogue names/availability; negatives stay invalid.
+        public bool FillMissingAutomationDefaults()
+        {
+            bool changed=false;
+            if(beltSpeed==0){beltSpeed=1.2f;changed=true;}
+            if(beltSpacing==0){beltSpacing=.65f;changed=true;}
+            if(beltMaxLength==0){beltMaxLength=12;changed=true;}
+            if(beltCapacity==0){beltCapacity=8;changed=true;}
+            if(maxBelts==0){maxBelts=64;changed=true;}
+            if(equipment!=null)foreach(var e in equipment)
+            {
+                if(e==null)continue;
+                string name=null;
+                switch(e.kind)
+                {
+                    case EquipmentKind.Storage:name="Ported storage";break;
+                    case EquipmentKind.Tier2Scrapper:name="Tier 2 scrapper";break;
+                    case EquipmentKind.Conveyor:name="Conveyor";break;
+                    case EquipmentKind.Splitter:name="Splitter";break;
+                    case EquipmentKind.Merger:name="Merger";break;
+                }
+                if(name!=null && e.name==name+" — later stage")
+                {e.name=name;e.available=true;changed=true;}
+            }
+            return changed;
+        }
         public void Validate()
         {
             if(startingMoney<0 || startingMoney>1000000 || startingCars<0 || startingCars>4 || startingRefrigerators<0 || startingRefrigerators>4 || startingCars+startingRefrigerators>4 ||
@@ -104,6 +133,9 @@ namespace Scrapshift.Compact
                 maxEquipment<1 || maxEquipment>128 || !Finite(CableRange) || CableRange<1 || CableRange>60 ||
                 !Finite(baseMachineSeconds) || baseMachineSeconds<=0 || baseMachineSeconds>3600)
                 throw new ArgumentException("Invalid compact-yard starting supplies or limits.");
+            if(!Finite(beltSpeed) || beltSpeed<.1f || beltSpeed>10 || !Finite(beltSpacing) || beltSpacing<.2f || beltSpacing>3 ||
+                !Finite(beltMaxLength) || beltMaxLength<1 || beltMaxLength>48 || beltCapacity<1 || beltCapacity>32 || maxBelts<1 || maxBelts>128)
+                throw new ArgumentException("Invalid conveyor speed, spacing, capacity or bounds.");
             if(levelThresholds==null || saleBonusPercents==null || levelThresholds.Length<10 || levelThresholds.Length>100 ||
                 saleBonusPercents.Length!=levelThresholds.Length || levelThresholds[0]!=0)
                 throw new ArgumentException("Experience curve must start at zero and contain at least ten levels.");
@@ -143,11 +175,11 @@ namespace Scrapshift.Compact
                     !Finite(e.width) || !Finite(e.depth) || e.width<=0 || e.width>10 || e.depth<=0 || e.depth>10 ||
                     !Finite(e.powerOutput) || !Finite(e.powerDemand) || e.powerOutput<0 || e.powerOutput>10000 || e.powerDemand<0 || e.powerDemand>10000 ||
                     !Finite(e.processingSeconds) || e.processingSeconds<=0 || e.processingSeconds>3600 || e.outputCapacity<1 || e.outputCapacity>4096 ||
-                    (e.available && e.kind!=EquipmentKind.Workbench && e.kind!=EquipmentKind.Generator && e.kind!=EquipmentKind.Tier1Scrapper))
+                    (e.available && e.kind==EquipmentKind.ExportStation))
                     throw new ArgumentException("Invalid equipment settings or an unavailable automation stage enabled.");
-            var bench=Equipment(EquipmentKind.Workbench);var generator=Equipment(EquipmentKind.Generator);var tierOne=Equipment(EquipmentKind.Tier1Scrapper);
+            var bench=Equipment(EquipmentKind.Workbench);var generator=Equipment(EquipmentKind.Generator);var tierOne=Equipment(EquipmentKind.Tier1Scrapper);var tierTwo=Equipment(EquipmentKind.Tier2Scrapper);
             if(bench.powerDemand!=0 || bench.powerOutput!=0 || generator.powerDemand!=0 || generator.powerOutput<=0 ||
-                tierOne.powerOutput!=0 || tierOne.powerDemand<=0 || Recipe(PartKind.Wire)==null)
+                tierOne.powerOutput!=0 || tierOne.powerDemand<=0 || tierTwo.powerOutput!=0 || tierTwo.powerDemand<=0 || Recipe(PartKind.Wire)==null)
                 throw new ArgumentException("A manual workbench, renewable wiring recipe and functional generator/machine power are required.");
         }
         internal static bool Finite(float n) { return !float.IsNaN(n) && !float.IsInfinity(n); }

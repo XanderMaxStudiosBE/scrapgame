@@ -14,7 +14,7 @@ namespace Scrapshift.Compact
             if(string.IsNullOrWhiteSpace(json))throw new ArgumentException("Empty compact save.");
             if(!json.TrimStart().StartsWith("{",StringComparison.Ordinal)||!json.TrimEnd().EndsWith("}",StringComparison.Ordinal))
                 throw new ArgumentException("Compact save must be a JSON object.");
-            int depth=0;bool quoted=false,escaped=false;var keys=new HashSet<string>();
+            int depth=0,version=0;bool quoted=false,escaped=false;var keys=new HashSet<string>();
             int start=0;
             for(int i=0;i<json.Length;i++)
             {
@@ -31,6 +31,11 @@ namespace Scrapshift.Compact
                         string key=json.Substring(start,i-start);
                         if(!keys.Add(key))throw new ArgumentException("Duplicate compact-save field: "+key+".");
                         CheckValue(json,next+1,key);
+                        if(key=="version")
+                        {
+                            int end=next+1;while(end<json.Length&&json[end]!=','&&json[end]!='}')end++;
+                            version=int.Parse(json.Substring(next+1,end-next-1).Trim(),CultureInfo.InvariantCulture);
+                        }
                     }
                     continue;
                 }
@@ -40,12 +45,13 @@ namespace Scrapshift.Compact
             }
             if(quoted||depth!=0)throw new ArgumentException("Incomplete compact save.");
             foreach(string key in Required)if(!keys.Contains(key))throw new ArgumentException("Missing compact-save field: "+key+".");
+            if(version>=3&&!keys.Contains("belts"))throw new ArgumentException("Missing compact-save field: belts.");
         }
         static void CheckValue(string json,int start,string key)
         {
-            if(Array.IndexOf(Required,key)<0)return;
+            if(Array.IndexOf(Required,key)<0&&key!="belts")return;
             while(start<json.Length&&char.IsWhiteSpace(json[start]))start++;
-            if(key=="items"||key=="scrap"||key=="equipment"||key=="powerLinks")
+            if(key=="items"||key=="scrap"||key=="equipment"||key=="powerLinks"||key=="belts")
             {
                 if(start>=json.Length||json[start]!='[')throw new ArgumentException("Expected compact-save list: "+key+".");
                 return;

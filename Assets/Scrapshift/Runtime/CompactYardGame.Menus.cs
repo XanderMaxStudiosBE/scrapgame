@@ -108,7 +108,7 @@ namespace Scrapshift.Compact
             Text("2. Carry a motor, compressor, wiring or metal casing to your manual bench. ["+controls.Label(ControlAction.Interact)+"] loads it; ["+controls.Label(ControlAction.ManualWork)+"] processes it. Collect every output, then sell materials at the office counter.");
             Text("3. Earn money and sale XP. Open the equipment catalogue ["+controls.Label(ControlAction.BuildToggle)+"], buy a generator and a Tier 1 scrapper, and connect their power ports. Its powered work replaces hand strokes; input and collection still need you.");
             Text("Free wiring at delivery keeps you earning if cash is low. Put items down with ["+controls.Label(ControlAction.Drop)+"]. Escape pauses work and opens Settings.");
-            Text("Level 10 is the planned conveyor/storage/Tier 2 milestone. Those later production stages are displayed in the catalogue, but are not purchasable in this stage.");
+            Text("At level 10, buy ported storage, conveyors, junctions and a Tier 2 scrapper. Connect storage output to its input, supply power, then send recovered materials into storage. Equipment unlocks let you purchase it; they do not grant free machines.");
             if(Model.State.importedLegacy)Text(Model.State.legacyNotice);
             if(Button("Settings"))settings.Open();
         }
@@ -119,10 +119,11 @@ namespace Scrapshift.Compact
             foreach(var recipe in Model.Rules.recipes)
                 Text(Model.Rules.Part(recipe.input).name+" → "+YieldText(recipe.yields)+" / "+recipe.strokes+" strokes per "+recipe.inputQuantity+" input");
             Text("Each input is reserved once, then its exact outputs remain until collected. A machine with uncollected output cannot accept another load. Power cuts and overloaded networks preserve inputs and progress. Pause/Settings stop every processing clock.");
-            Text("POWER & BUILDING\nSelect a catalogue item, aim at nearby gravel and rotate its ghost. Green is valid; red explains the blockage. Toggle optional grid snap in the catalogue. Confirm with ["+controls.Label(ControlAction.Interact)+"]. Cancel is free. Keep the entrance and receiving area clear. Empty equipment and disconnect its cables before moving or dismantling it. Keep at least one manual bench.");
+            Text("POWER & BUILDING\nSelect a catalogue item, aim at nearby gravel and rotate its ghost. Green is valid; red explains the blockage. Toggle optional grid snap in the catalogue. Confirm with ["+controls.Label(ControlAction.Interact)+"]. Cancel is free. Keep the entrance and receiving area clear. Empty equipment and disconnect its cables and conveyors before moving or dismantling it. Keep at least one manual bench.");
             Text("Inspect powered equipment to connect or disconnect a cable to another nearby port. A generator supplies its connected network; if combined machine demand exceeds supply every consumer pauses. Generators have no fuel cost in this stage.");
             Text("PROGRESSION\nOnly completed sales of eligible recovered materials earn XP. Collection, moving, purchases and repeated button presses do not. Levels increase the editable material-sale bonus. Replacement cars and refrigerators are bought at delivery; renewable free wiring protects the basic earning loop.");
-            Text("CURRENT STAGES\nManual dismantling, component processing, sales/XP, free equipment placement, generators and manual-feed Tier 1 are implemented in source. Level-10 conveyor networks, ported storage, Tier 2 and automated intake/export remain later stages.");
+            Text("CONVEYORS & STORAGE\nInspect storage to deposit/withdraw bundles and choose an output filter. Select an output port, then aim at an input port to snap a conveyor preview. ["+controls.Label(ControlAction.BuildRotate)+"] switches the corner; ["+controls.Label(ControlAction.Interact)+"] confirms. Splitters rotate between free outputs; mergers combine incoming lines. Full destinations hold items on the belt. Connect a generator to Tier 2; it reserves supported components from its buffer, processes them, then outputs recovered materials. Recipe selection filters its intake. No transport grants XP.");
+            Text("CURRENT STAGES\nManual dismantling, component processing, sales/XP, free placement, generators, Tier 1 and level-10 conveyor/storage/Tier 2 networks are implemented in source. Automatic whole-car/appliance intake and export remain later stages.");
             if(Model.State.importedLegacy)Text(Model.State.legacyNotice);
             if(Button("Settings"))settings.Open();
         }
@@ -139,7 +140,8 @@ namespace Scrapshift.Compact
             foreach(var d in Model.Rules.equipment)
             {
                 string requirement=!d.available?"Planned stage / level "+d.unlockLevel:Model.Level<d.unlockLevel?"Requires level "+d.unlockLevel:Model.State.money<d.price?"Save €"+(d.price-Model.State.money)+" more":"Ready to place";
-                Text(d.name+" / €"+d.price+" / "+d.width.ToString("0.#")+" × "+d.depth.ToString("0.#")+"m\n"+requirement+(d.powerOutput>0?" / supplies "+d.powerOutput+" kW":"")+(d.powerDemand>0?" / draws "+d.powerDemand+" kW":""));
+                string size=d.kind==EquipmentKind.Conveyor?" per 2m section / select equipment ports": " / "+d.width.ToString("0.#")+" × "+d.depth.ToString("0.#")+"m";
+                Text(d.name+" / €"+d.price+size+"\n"+requirement+(d.powerOutput>0?" / supplies "+d.powerOutput+" kW":"")+(d.powerDemand>0?" / draws "+d.powerDemand+" kW":""));
                 if(Button("Choose "+d.name,d.available&&Model.Level>=d.unlockLevel&&Model.State.money>=d.price))BeginBuild(d.kind);
                 GUILayout.Space(12);
             }
@@ -184,7 +186,11 @@ namespace Scrapshift.Compact
                         if(Act(()=>Model.CollectOutput(selectedId,slot))){page=Page.None;Pause(false);return;}
                 }
             }
+            else if(equipment.kind==EquipmentKind.Generator)Text("Supplies its connected power network. Connect enough generators for the combined machine demand.");
+            else if(equipment.kind==EquipmentKind.Tier2Scrapper)Text("Waiting for buffered input. Deposit a supported component or connect an incoming conveyor; power advances each reserved recipe.");
+            else if(equipment.kind==EquipmentKind.Storage||equipment.kind==EquipmentKind.Splitter||equipment.kind==EquipmentKind.Merger)Text("Deposit and withdraw items below. Connected conveyors transfer them without granting experience.");
             else Text("Empty. Carry a component here and use ["+controls.Label(ControlAction.Interact)+"] to load it.");
+            DrawAutomation(equipment);
             if(definition.powerOutput>0||definition.powerDemand>0)
             {
                 var power=Construction.PowerFor(selectedId);Text("POWER / "+power.reason+"\nSupply "+power.supply+" kW / demand "+power.demand+" kW. Cable range "+Model.Rules.CableRange+"m.");
@@ -297,8 +303,9 @@ namespace Scrapshift.Compact
             if(hudHeld.Length>0){GUI.Box(new Rect(width*.5f-285,height-155,570,35),"");GUI.Label(new Rect(width*.5f-273,height-152,546,29),hudHeld,small);}
             if(IsBuilding)
             {
+                Fill(new Rect(width*.5f-2,height*.5f-2,4,4),previewClear?new Color(.48f,.78f,.66f):Color.white);
                 GUI.Box(new Rect(width*.5f-330,height-113,660,88),"");
-                GUI.Label(new Rect(width*.5f-316,height-107,632,70),Model.Rules.Equipment(build.SelectedKind).name+" / "+buildReason+"\n["+controls.Label(ControlAction.Interact)+"] confirm   ["+controls.Label(ControlAction.BuildRotate)+"] rotate   Escape cancel",wrap);
+                GUI.Label(new Rect(width*.5f-316,height-107,632,70),(beltStage>0?"Conveyor":Model.Rules.Equipment(build.SelectedKind).name)+" / "+buildReason+"\n["+controls.Label(ControlAction.Interact)+"] "+(beltStage==1?"choose output":"confirm")+"   ["+controls.Label(ControlAction.BuildRotate)+"] "+(beltStage>0?"change elbow":"rotate")+"   Escape cancel",wrap);
             }
             else
             {

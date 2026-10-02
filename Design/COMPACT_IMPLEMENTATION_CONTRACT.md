@@ -1,5 +1,7 @@
 # Compact-yard integration contract
 
+Historical A/B contract. Stage C additions and schema-three migration supersede its future/unavailable transport descriptions; read COMPACT_STAGE_C_CONTRACT.md and COMPACT_STAGE_C_VERIFICATION.md for the current APIs and state. Existing A/B ownership and conservation requirements remain.
+
 Creator brief: COMPACT_AUTOMATION_BRIEF.md. Map is an example player-built layout, not fixed equipment pads. Current task delivers coherent A and B if integration is complete; C/D remain explicitly later rather than disconnected placeholders. Unity 6000.3.25f1/URP17.3.0 and all existing assets/settings remain. New default scene is Generated/CompactScrapyard.unity; Generated/Scrapyard.unity remains playable legacy/reference. Distinct version-two yard-v2.json never overwrites yard-v1.json. Explicit optional compatible-progress import retains old files and complete source snapshot. Main owns import rules, save I/O, bootstraps/runtime integration and docs.
 
 Shared namespace Scrapshift.Compact, Core/CompactYardState.cs owned by main. Shared globally unique positive IDs for stacks, large jobs, equipment; nextId must exceed all. Large scrap never enters carried inventory. Portable IDs 0-5 map legacy kinds. EquipmentState stores placement, paidPrice/starter flag, snapshotted ProcessingJob and contents. ProcessingJob input is already consumed; yields retain remaining collectible output quantities. Durable recipe snapshot survives tuning. No processing during pause. Required lists serialize as concrete lists, no dictionaries in saves.

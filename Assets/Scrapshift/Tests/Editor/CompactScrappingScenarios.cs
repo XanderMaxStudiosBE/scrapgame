@@ -59,13 +59,22 @@ namespace Scrapshift.Tests
                 strokes=large.strokes,requiredStrokes=large.requiredStrokes,remaining=CloneAmounts(large.remaining)});
             foreach(var e in s.equipment)
             {
-                var copy=new EquipmentState{id=e.id,kind=e.kind,x=e.x,z=e.z,yaw=e.yaw,paidPrice=e.paidPrice,starter=e.starter};
+                var copy=new EquipmentState{id=e.id,kind=e.kind,x=e.x,z=e.z,yaw=e.yaw,paidPrice=e.paidPrice,starter=e.starter,filterKind=e.filterKind,routeCursor=e.routeCursor};
                 foreach(var item in e.contents)copy.contents.Add(CloneStack(item));
                 if(e.job!=null){var j=e.job;copy.job=new ProcessingJob{recipeId=j.recipeId,input=j.input,inputQuantity=j.inputQuantity,requiredStrokes=j.requiredStrokes,
                     strokes=j.strokes,duration=j.duration,remaining=j.remaining,ready=j.ready,xpEligible=j.xpEligible,yields=CloneAmounts(j.yields)};}
                 c.equipment.Add(copy);
             }
-            foreach(var link in s.powerLinks)c.powerLinks.Add(new PowerLink(link.a,link.b));return c;
+            foreach(var link in s.powerLinks)c.powerLinks.Add(new PowerLink(link.a,link.b));
+            if(s.belts==null)c.belts=null;
+            else foreach(var belt in s.belts)
+            {
+                var copy=new ConveyorLink{id=belt.id,fromId=belt.fromId,fromPort=belt.fromPort,toId=belt.toId,toPort=belt.toPort,
+                    paidPrice=belt.paidPrice,bendXFirst=belt.bendXFirst,launchRemaining=belt.launchRemaining};
+                foreach(var item in belt.items)copy.items.Add(new ConveyorItem{id=item.id,kind=item.kind,quantity=item.quantity,xpEligible=item.xpEligible,progress=item.progress});
+                c.belts.Add(copy);
+            }
+            return c;
         }
         static string Fingerprint(CompactYardState s)
         {
@@ -135,7 +144,7 @@ namespace Scrapshift.Tests
                     m.State.experience=m.Rules.levelThresholds[8];m.AcquireWire();m.BeginProcessing(bench);FinishManual(m,bench);m.CollectOutput(bench,0);
                     m.Carried.quantity=100;m.State.experience=m.Rules.levelThresholds[9]-200;
                     var quote=m.SaleQuote();Check(quote.baseTotal==300 && quote.bonusPercent==40 && quote.bonusTotal==120 && quote.total==420,"separately explained level bonus");
-                    Check(m.Sell() && m.Level==10 && m.LastNotice.Contains("level requirement reached") && !m.Rules.Equipment(EquipmentKind.Conveyor).available,"unlock is purchase eligibility, later implementation explicit");
+                    Check(m.Sell() && m.Level==10 && m.LastNotice.Contains("is now purchasable") && m.Rules.Equipment(EquipmentKind.Conveyor).available,"unlock grants purchase eligibility without gifting equipment");
                     Check(m.LevelFraction==0 && m.XPToNextLevel>0,"visible progress reset");break;
                 case "CompactRejectBuyResell":
                     Check(m.AcquireWire() && !m.CanSell() && !m.Sell() && m.State.experience==0,"raw wire cannot sell for XP");
@@ -192,7 +201,7 @@ namespace Scrapshift.Tests
                     bad=new CompactRules();bad.saleBonusPercents[1]=-1;Invalid(()=>bad.Validate(),"negative bonus");
                     bad=new CompactRules();bad.levelThresholds[2]=bad.levelThresholds[1];Invalid(()=>bad.Validate(),"nonincreasing curve");
                     bad=new CompactRules();bad.recipes[1].id=bad.recipes[0].id;Invalid(()=>bad.Validate(),"unstable recipe IDs");
-                    bad=new CompactRules();bad.Equipment(EquipmentKind.Conveyor).available=true;Invalid(()=>bad.Validate(),"cannot pretend later stage works");break;
+                    bad=new CompactRules();bad.Equipment(EquipmentKind.ExportStation).available=true;Invalid(()=>bad.Validate(),"cannot pretend export stage works");break;
                 case "CompactLegacyPortableSalesSalvage":
                     m.State.items.Add(new CompactStack{id=m.State.nextId++,kind=PartKind.RestoredFan,quantity=1});m.State.carriedId=m.State.items[0].id;
                     Check(m.SaleQuote().total==42 && m.SaleQuote().experience==0 && m.Sell(),"existing tested appliance remains saleable");

@@ -22,6 +22,11 @@ MonoBehaviour:
     maxEquipment: 64
     CableRange: 12
     baseMachineSeconds: 4
+    beltSpeed: 1.2
+    beltSpacing: 0.65
+    beltMaxLength: 12
+    beltCapacity: 8
+    maxBelts: 64
     levelThresholds: 000000001e00000050000000a000000018010000b80100008a020000a20300000a050000d606000010090000c20b0000
     saleBonusPercents: 000000000c0000001000000014000000180000001c0000002000000024000000280000002d0000003200000037000000
     parts:
@@ -224,10 +229,10 @@ MonoBehaviour:
       processingSeconds: 4
       outputCapacity: 24
     - kind: 3
-      name: "Ported storage — later stage"
+      name: "Ported storage"
       price: 70
       unlockLevel: 10
-      available: 0
+      available: 1
       width: 3
       depth: 2.5
       powerOutput: 0
@@ -235,10 +240,10 @@ MonoBehaviour:
       processingSeconds: 4
       outputCapacity: 120
     - kind: 4
-      name: "Tier 2 scrapper — later stage"
+      name: "Tier 2 scrapper"
       price: 160
       unlockLevel: 10
-      available: 0
+      available: 1
       width: 3.2
       depth: 2.5
       powerOutput: 0
@@ -246,10 +251,10 @@ MonoBehaviour:
       processingSeconds: 2
       outputCapacity: 48
     - kind: 5
-      name: "Conveyor — later stage"
+      name: "Conveyor"
       price: 12
       unlockLevel: 10
-      available: 0
+      available: 1
       width: 1
       depth: 2
       powerOutput: 0
@@ -257,10 +262,10 @@ MonoBehaviour:
       processingSeconds: 4
       outputCapacity: 24
     - kind: 6
-      name: "Splitter — later stage"
+      name: "Splitter"
       price: 30
       unlockLevel: 10
-      available: 0
+      available: 1
       width: 1.5
       depth: 1.5
       powerOutput: 0
@@ -268,10 +273,10 @@ MonoBehaviour:
       processingSeconds: 4
       outputCapacity: 24
     - kind: 7
-      name: "Merger — later stage"
+      name: "Merger"
       price: 30
       unlockLevel: 10
-      available: 0
+      available: 1
       width: 1.5
       depth: 1.5
       powerOutput: 0

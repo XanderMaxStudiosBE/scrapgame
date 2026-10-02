@@ -11,6 +11,7 @@ namespace Scrapshift.Compact
             get
             {
                 if(rules==null)rules=new CompactRules();
+                rules.FillMissingAutomationDefaults();
                 // Custom prices, yields and curve remain authoritative; invalid tuning is surfaced.
                 rules.Validate();return rules;
             }

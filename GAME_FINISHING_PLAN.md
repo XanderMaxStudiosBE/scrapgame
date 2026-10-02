@@ -4,7 +4,7 @@ The goal is a cohesive cozy retro scrapyard game. This document is an implementa
 
 ## Active compact automation direction
 
-The creator's newer brief takes priority: see Design/COMPACT_AUTOMATION_BRIEF.md and Design/COMPACT_STAGE_AB_VERIFICATION.md. Stages A/B now implement a compact free-build manual scrapping/XP/power/Tier1 loop in source while retaining the old world. Verify that stage in Unity before extending it. Next complete stage C: purchased level-10 Tier2/ported storage and deterministic conveyors/corners/junctions with backpressure, conservation and explicit saved-state migration. Then stage D: scheduled intake/primary dismantler/sorting/automated sale/export. Catalogue entries are planned, not delivered features. Final art acceptance, pacing, measured performance and a verified desktop build remain. The following milestones describe the preserved legacy finishing track.
+The creator's newer brief takes priority: see Design/COMPACT_AUTOMATION_BRIEF.md and Design/COMPACT_STAGE_C_VERIFICATION.md. A/B manual scrapping/XP/free construction/power/Tier1 and C purchased level-10 Tier2/ported storage/conveyors/corners/junctions are implemented in source. Stage C includes backpressure, conserved recovery eligibility, grouped withdrawal, cached/pooled transport and explicit schema-two-to-three save migration. Verify the full chain in Unity before extending state. Next is D: scheduled intake, primary whole-car/appliance dismantling, connected sorting and automated sale/export, currently unavailable. Final art acceptance, pacing, measured laptop performance and a verified desktop build remain. The following milestones describe the preserved legacy finishing track.
 
 ## 1. Establish the lighting and workshop look
 

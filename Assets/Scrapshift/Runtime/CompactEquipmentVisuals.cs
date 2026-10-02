@@ -5,8 +5,10 @@ namespace Scrapshift.Compact
     /// <summary>Original, metre-sized views. Inventory and work progress remain in the core model.</summary>
     public static class CompactEquipmentVisuals
     {
-        public static GameObject Build(EquipmentKind kind, Transform parent, Vector3 position, float yaw = 0, bool colliders = true)
+        public static GameObject Build(EquipmentKind kind, Transform parent, Vector3 position, float yaw = 0, bool colliders = true, CompactRules rules = null)
         {
+            if(kind==EquipmentKind.Storage || kind==EquipmentKind.Tier2Scrapper || kind==EquipmentKind.Splitter || kind==EquipmentKind.Merger)
+                return CompactAutomationVisuals.BuildEquipment(kind,parent,position,yaw,colliders,rules);
             var root = Root(kind.ToString(), parent, position, yaw);
             switch (kind)
             {
@@ -23,16 +25,25 @@ namespace Scrapshift.Compact
                     Model("CompactTier1Scrapper",root.transform);
                     Collision(root, new Vector3(0,1.0f,-.04f), new Vector3(2.4f,2,2.3f), colliders);
                     break;
-                // Future catalogue previews remain visual-only; this factory does not grant machinery.
-                case EquipmentKind.Storage:
-                    Model("StorageRack",root.transform);
-                    Collision(root,new Vector3(0,1.3f,0),new Vector3(2.45f,2.6f,1.3f),colliders);
-                    break;
                 default:
                     Model("PoweredStripper",root.transform);
                     Collision(root,new Vector3(0,.7f,0),new Vector3(3.2f,1.4f,2.0f),colliders);
                     break;
             }
+            if(rules!=null)
+            {
+                var definition=rules.Equipment(kind);
+                if(definition!=null)
+                {
+                    foreach(var box in root.GetComponents<BoxCollider>())box.size=new Vector3(definition.width,box.size.y,definition.depth);
+                    if(kind==EquipmentKind.Tier1Scrapper)
+                    {
+                        var body=root.transform.Find("CompactTier1Scrapper");
+                        if(body!=null)body.localScale=new Vector3(definition.width/2.4f,1,definition.depth/2.3f);
+                    }
+                }
+            }
+            if(kind==EquipmentKind.Tier1Scrapper)CompactAutomationVisuals.BuildPorts(kind,root.transform,rules ?? new CompactRules());
             return root;
         }
 

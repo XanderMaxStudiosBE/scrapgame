@@ -11,6 +11,7 @@ namespace Scrapshift.Compact
         {
             ScrappingModel.Validate(state,rules);
             ConstructionModel.Validate(state,rules);
+            if(state.version>=3)AutomationModel.Validate(state,rules);
         }
         public static void Write(string path,CompactYardState state,CompactRules rules)
         {
@@ -43,7 +44,9 @@ namespace Scrapshift.Compact
                 {
                     string json=File.ReadAllText(candidate);CompactSaveHeader.Validate(json);
                     var state=JsonUtility.FromJson<CompactYardState>(json);Validate(state,rules);
+                    bool migrated=CompactSaveMigration.Upgrade(state,rules);
                     notice=candidate==path?"Compact yard restored.":"Restored compact-yard backup; unreadable latest file retained.";
+                    if(migrated)notice+=" Version-two progress upgraded for conveyors; original file retained until the next backup save.";
                     return state;
                 }
                 catch(Exception ex)when(ex is IOException||ex is InvalidDataException||ex is ArgumentException||ex is UnauthorizedAccessException)

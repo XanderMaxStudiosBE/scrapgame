@@ -44,6 +44,8 @@ namespace Scrapshift.Compact
         public bool CanPlace(EquipmentKind kind, float x, float z, float yaw, int ignoreId, out string reason)
         {
             var d = rules.Equipment(kind);
+            if (kind == EquipmentKind.Conveyor || kind == EquipmentKind.ExportStation)
+                return Refuse("Build conveyors between ports; export is a later stage.", out reason);
             if (!Supported(d)) return Refuse("Equipment footprint is unavailable.", out reason);
             if (!Finite(x) || !Finite(z) || !Finite(yaw) || Math.Abs(yaw) > 360000)
                 return Refuse("Choose a finite yard position and rotation.", out reason);
@@ -83,9 +85,16 @@ namespace Scrapshift.Compact
             foreach (var item in state.items)
                 if (item.id != state.carriedId && candidate.Overlaps(new Footprint(item.x, item.z, .8f, .8f, 0)))
                     return Refuse("Move the loose component before building here.", out reason);
+            if (state.belts != null) foreach (var belt in state.belts)
+            {
+                var path = AutomationModel.Path(belt,state,rules);
+                for (int i = 1; i < path.Length; i++)
+                    if (candidate.Overlaps(AutomationModel.Segment(path[i-1],path[i])))
+                        return Refuse("Disconnect the empty conveyor before building over its route.",out reason);
+            }
             reason = "Clear footprint"; return true;
         }
-        static bool Protected(Footprint candidate, out string reason)
+        internal static bool Protected(Footprint candidate, out string reason)
         {
             if (candidate.Overlaps(new Footprint(0, -14.5f, 4, 7, 0)))
             { reason = "Keep the entrance corridor clear."; return true; }
@@ -112,6 +121,8 @@ namespace Scrapshift.Compact
                 return Refuse("Collect all output and empty the equipment before moving or dismantling it.", out reason);
             foreach (var link in state.powerLinks)
                 if (link.a == id || link.b == id) return Refuse("Disconnect power cables before moving or dismantling it.", out reason);
+            if (state.belts != null) foreach (var belt in state.belts)
+                if (belt.fromId == id || belt.toId == id) return Refuse("Disconnect empty conveyors before moving or dismantling it.",out reason);
             reason = "Empty and disconnected"; return true;
         }
         public bool Move(int id, float x, float z, float yaw)
@@ -252,7 +263,7 @@ namespace Scrapshift.Compact
                     throw new ArgumentException("Invalid saved power connection.");
             }
         }
-        struct Footprint
+        internal struct Footprint
         {
             readonly float x, z, hx, hz, c, s;
             public Footprint(float x, float z, float width, float depth, float yaw)

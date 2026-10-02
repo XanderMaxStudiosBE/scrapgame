@@ -27,7 +27,8 @@ namespace Scrapshift.Tests
             var rules=balance.PreparedRules;Assert.AreEqual(12,rules.parts.Length);Assert.AreEqual(6,rules.recipes.Length);
             Assert.AreEqual(2,rules.largeRecipes.Length);Assert.AreEqual(9,rules.equipment.Length);
             Assert.AreEqual(12,rules.BonusForLevel(2));Assert.AreEqual(45,rules.BonusForLevel(10));
-            Assert.IsFalse(rules.Equipment(EquipmentKind.Conveyor).available);Assert.AreEqual(10,rules.Equipment(EquipmentKind.Conveyor).unlockLevel);
+            Assert.IsTrue(rules.Equipment(EquipmentKind.Conveyor).available);Assert.AreEqual(10,rules.Equipment(EquipmentKind.Conveyor).unlockLevel);
+            Assert.IsFalse(rules.Equipment(EquipmentKind.ExportStation).available);
         }
         [Test]
         public void ActualJsonRetainsInterruptedPoweredRecipeSnapshot()

@@ -1,0 +1,48 @@
+{
+  "source": "Original Blender-authored models; ArtSource/build_automation_assets.py",
+  "pack": "CompactAutomation",
+  "units": "metres",
+  "atlas": "ScrapshiftPropAtlas.png",
+  "assets": {
+    "CompactPortedStorage": {
+      "triangles": 1376,
+      "vertices": 832,
+      "dimensions_blender": [
+        3.0399999618530273,
+        2.619999885559082,
+        2.237499952316284
+      ],
+      "materials": 1
+    },
+    "CompactTier2Scrapper": {
+      "triangles": 2184,
+      "vertices": 1244,
+      "dimensions_blender": [
+        2.9149999618530273,
+        2.56000018119812,
+        2.198000192642212
+      ],
+      "materials": 1
+    },
+    "CompactSplitter": {
+      "triangles": 1132,
+      "vertices": 624,
+      "dimensions_blender": [
+        1.4600000381469727,
+        1.4600000381469727,
+        0.94984370470047
+      ],
+      "materials": 1
+    },
+    "CompactMerger": {
+      "triangles": 1132,
+      "vertices": 624,
+      "dimensions_blender": [
+        1.4600000381469727,
+        1.4600000381469727,
+        0.94984370470047
+      ],
+      "materials": 1
+    }
+  }
+}

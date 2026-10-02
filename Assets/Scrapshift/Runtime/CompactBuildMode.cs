@@ -40,7 +40,7 @@ namespace Scrapshift
         public void Rotate()
         {
             if (!Active) return;
-            Yaw = (Yaw + 90) % 360; ValidatePreview();
+            Yaw = (Mathf.Round(Yaw / 90) * 90 + 90) % 360; ValidatePreview();
         }
         public void UpdatePreview(Vector3 point)
         {

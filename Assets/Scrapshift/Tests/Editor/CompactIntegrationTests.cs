@@ -84,9 +84,9 @@ namespace Scrapshift.Tests
                 CompactSaveStore.Validate(game.Model.State,game.Model.Rules);
             });
         }
-        static void Invoke(CompactYardGame game,string name,params object[] arguments)
+        internal static void Invoke(CompactYardGame game,string name,params object[] arguments)
         {typeof(CompactYardGame).GetMethod(name,BindingFlags.Instance|BindingFlags.NonPublic).Invoke(game,arguments);}
-        static void WithCoordinator(System.Action<CompactYardGame,PlayerInputSettings> check)
+        internal static void WithCoordinator(System.Action<CompactYardGame,PlayerInputSettings> check)
         {
             var root=new GameObject("Compact coordinator contract test");var balance=ScriptableObject.CreateInstance<CompactBalance>();
             float previousTime=Time.timeScale;var previousCursor=Cursor.lockState;bool previousVisible=Cursor.visible;

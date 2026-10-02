@@ -1,0 +1,49 @@
+{
+  "scope": "Blender FBX round-trip, metre bounds, finite normals/vertices, shared-atlas UVs, one material, 2500-triangle budget; Unity unrun",
+  "assets": [
+    {
+      "name": "CompactPortedStorage",
+      "status": "passed",
+      "triangles": 1376,
+      "metre_dimensions": [
+        3.0399999618530273,
+        2.619999885559082,
+        2.2375000410263084
+      ],
+      "sha256": "c4a650d7bf304c351733ee326679df42ca1ea519a3d004d33b579b725665871b"
+    },
+    {
+      "name": "CompactTier2Scrapper",
+      "status": "passed",
+      "triangles": 2184,
+      "metre_dimensions": [
+        2.915000081062317,
+        2.5600000619888306,
+        2.1980002639877227
+      ],
+      "sha256": "7e29f4c164cdfff0504e9a1c5cce2796e6470507384de41ee2cf0d01a99c111e"
+    },
+    {
+      "name": "CompactSplitter",
+      "status": "passed",
+      "triangles": 1132,
+      "metre_dimensions": [
+        1.4599998593330383,
+        1.4599998593330383,
+        0.9498436931879866
+      ],
+      "sha256": "04fafc910ad1b14ce4ef2df57a9ceb10fc24de9fbcda56be748685845e39a8fa"
+    },
+    {
+      "name": "CompactMerger",
+      "status": "passed",
+      "triangles": 1132,
+      "metre_dimensions": [
+        1.4599998593330383,
+        1.4599998593330383,
+        0.9498436931879866
+      ],
+      "sha256": "57d6419aab86e2a0fa1bdf5a74a9ad2a027c7e4497330c5435288c1aa0a825fd"
+    }
+  ]
+}

@@ -16,8 +16,9 @@ namespace Scrapshift.Compact
         public YardLighting lighting;
         public ScrappingModel Model { get; private set; }
         public ConstructionModel Construction { get; private set; }
+        public AutomationModel Automation { get; private set; }
         public bool IsPaused { get { return paused; } }
-        public bool IsBuilding { get { return build!=null&&build.Active; } }
+        public bool IsBuilding { get { return (build!=null&&build.Active)||beltStage>0; } }
         enum Page {None,Title,Pause,Welcome,Help,Catalogue,Equipment,LargeScrap,Sales,Delivery,Import}
         Page page=Page.Title,backPage;
         int selectedId;
@@ -50,8 +51,10 @@ namespace Scrapshift.Compact
         }
         void BindModel(CompactYardState state)
         {
+            ResetTransportViews();
             Model=new ScrappingModel(balance.PreparedRules,state);
             Construction=new ConstructionModel(Model.State,Model.Rules);
+            Automation=new AutomationModel(Model,Construction);
             RebuildPower();Model.HasPower=id=>PowerStatus(id).powered;
             build=new CompactBuildMode(Construction);
         }
@@ -99,12 +102,13 @@ namespace Scrapshift.Compact
             player.Step();
             if(Time.unscaledTime>=nextPower){RebuildPower();nextPower=Time.unscaledTime+1;}
             Model.Tick(Time.deltaTime);
+            Automation.Tick(Time.deltaTime);UpdateTransportViews();
             if(Time.unscaledTime>=nextViews){RefreshProcessingViews();nextViews=Time.unscaledTime+.2f;}
             StepSound();
             fpsTime+=Time.unscaledDeltaTime;fpsFrames++;
             if(fpsTime>=1){fpsLabel=(fpsFrames/fpsTime).ToString("0")+" fps / "+(fpsTime/fpsFrames*1000).ToString("0.0")+" ms";fpsTime=0;fpsFrames=0;}
             if(Time.unscaledTime>=nextSave){Save();nextSave=Time.unscaledTime+15;}
-            if(IsBuilding){UpdateBuild();return;}
+            if(IsBuilding){if(beltStage>0)UpdateBeltBuild();else UpdateBuild();return;}
             UpdateTarget();
             if(controls.Pressed(ControlAction.BuildToggle)){Show(Page.Catalogue);return;}
             if(controls.Pressed(ControlAction.Interact)){Interact();if(paused)return;}
@@ -138,7 +142,12 @@ namespace Scrapshift.Compact
                     if(Model.FindScrap(id)!=null&&!Model.FindScrap(id).inspected)Act(()=>Model.InspectScrap(id));
                     Show(Page.LargeScrap,id);break;
                 case CompactTargetKind.Equipment:
-                    if(Model.State.carriedId!=0)Act(()=>Model.BeginProcessing(id));
+                    if(Model.State.carriedId!=0)
+                    {
+                        var equipment=Model.FindEquipment(id);
+                        bool buffer=equipment!=null&&(equipment.kind==EquipmentKind.Storage||equipment.kind==EquipmentKind.Tier2Scrapper||equipment.kind==EquipmentKind.Splitter||equipment.kind==EquipmentKind.Merger);
+                        Act(()=>buffer?Model.Deposit(id):Model.BeginProcessing(id));
+                    }
                     else Show(Page.Equipment,id);
                     break;
             }
@@ -180,7 +189,7 @@ namespace Scrapshift.Compact
         void RebuildPower()
         {
             powerCache.Clear();foreach(var equipment in Model.State.equipment)
-                if(equipment.kind==EquipmentKind.Generator||equipment.kind==EquipmentKind.Tier1Scrapper)
+                if(Model.Rules.Equipment(equipment.kind).powerOutput>0||Model.Rules.Equipment(equipment.kind).powerDemand>0)
                     powerCache[equipment.id]=Construction.PowerFor(equipment.id);
         }
         CompactPowerStatus PowerStatus(int id)
@@ -201,7 +210,7 @@ namespace Scrapshift.Compact
         void OnDestroy()
         {
             theme.Dispose();if(presentation!=null)presentation.Dispose();if(sounds!=null)sounds.Dispose();
-            if(lighting!=null)lighting.Dispose();DestroyGhost();Time.timeScale=1;Cursor.lockState=CursorLockMode.None;Cursor.visible=true;
+            if(lighting!=null)lighting.Dispose();DestroyGhost();DestroyBeltPreview();Time.timeScale=1;Cursor.lockState=CursorLockMode.None;Cursor.visible=true;
         }
     }
 }

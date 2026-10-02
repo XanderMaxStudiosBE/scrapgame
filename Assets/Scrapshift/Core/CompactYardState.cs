@@ -20,6 +20,14 @@ namespace Scrapshift.Compact
     {
         public int id;public EquipmentKind kind;public float x,z,yaw;public int paidPrice;public bool starter;
         public ProcessingJob job;public List<CompactStack> contents=new List<CompactStack>();
+        public int filterKind=-1,routeCursor;
+    }
+    [Serializable] public sealed class ConveyorItem
+    {public int id;public PartKind kind;public int quantity=1;public bool xpEligible;public float progress;}
+    [Serializable] public sealed class ConveyorLink
+    {
+        public int id,fromId,fromPort,toId,toPort,paidPrice;public bool bendXFirst=true;
+        public float launchRemaining;public List<ConveyorItem> items=new List<ConveyorItem>();
     }
     [Serializable] public sealed class PowerLink {public int a,b;public PowerLink(){}public PowerLink(int first,int second){a=first;b=second;} }
     [Serializable] public sealed class EquipmentDefinition
@@ -29,10 +37,11 @@ namespace Scrapshift.Compact
     }
     [Serializable] public sealed class CompactYardState
     {
-        public int version=2;public int money,experience,nextId=1,carriedId;
+        public int version=3;public int money,experience,nextId=1,carriedId;
         public float playerX,playerY=1.1f,playerZ=-13,yaw,pitch;public bool welcomeSeen;
         public List<CompactStack> items=new List<CompactStack>();public List<LargeScrapJob> scrap=new List<LargeScrapJob>();
         public List<EquipmentState> equipment=new List<EquipmentState>();public List<PowerLink> powerLinks=new List<PowerLink>();
+        public List<ConveyorLink> belts=new List<ConveyorLink>();
         public bool importedLegacy;public string legacySnapshot,legacyNotice;
     }
 }
