@@ -114,7 +114,13 @@ namespace Scrapshift
         [MenuItem("Scrapshift/Diagnose Rendering")]
         public static void Diagnose()
         {CaptureReport(true);}
-        static void CaptureReport(bool copy)
+        [MenuItem("Scrapshift/Save Rendering Report...")]
+        public static void SaveRenderingReport()
+        {
+            string path=EditorUtility.SaveFilePanel("Save SCRAPSHIFT rendering report","","ScrapshiftRenderingReport","txt");
+            if(!string.IsNullOrEmpty(path))CaptureReport(true,path);
+        }
+        static void CaptureReport(bool copy,string outputPath=null)
         {
             var report=new StringBuilder("SCRAPSHIFT rendering report\n");
             var pipeline=QualitySettings.renderPipeline!=null?QualitySettings.renderPipeline:GraphicsSettings.defaultRenderPipeline;
@@ -148,7 +154,7 @@ namespace Scrapshift
                 {lightCount++;report.AppendLine("Light: "+light.name+" / "+light.type+" / intensity "+light.intensity+" / shadows "+light.shadows);}
             report.AppendLine("Active lights: "+lightCount+" (generated yard normally has one sun and three task lights).");
             string text=report.ToString();if(copy)GUIUtility.systemCopyBuffer=text;
-            string path=Path.GetFullPath(Path.Combine(Application.dataPath,"../Temp/ScrapshiftRenderingReport.txt"));
+            string path=Path.GetFullPath(outputPath??Path.Combine(Application.dataPath,"../Temp/ScrapshiftRenderingReport.txt"));
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(path));File.WriteAllText(path,text);

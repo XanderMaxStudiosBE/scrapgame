@@ -71,7 +71,12 @@ namespace UnityEditor
     .Invoke(null,new object[]{new[]{path},new string[0],new string[0],new string[0]});
   }
  }
- public static class EditorUtility {public static void SetDirty(UnityEngine.Object value){}}
+ public static class EditorUtility
+ {
+  public static string savePath="";
+  public static string SaveFilePanel(string title,string directory,string defaultName,string extension){return savePath;}
+  public static void SetDirty(UnityEngine.Object value){}
+ }
  public static class ShaderUtil {public static bool ShaderHasError(Shader shader){return false;}}
 }
 namespace Scrapshift {public static class SurfaceTextureSampling {public static void Ensure(){}}}
@@ -127,5 +132,17 @@ class EditorMaterialRecoveryRunner
   YardMaterialRecovery.Diagnose();
   Check(GUIUtility.systemCopyBuffer==File.ReadAllText(reportPath)&&GUIUtility.systemCopyBuffer.StartsWith("SCRAPSHIFT rendering report\n"),"explicit Diagnose must copy the complete saved report");
   Console.WriteLine("PASS Play snapshot and explicit report clipboard/file output");
+
+  string selectedPath=Path.GetFullPath(Path.Combine(Application.dataPath,"../Desktop/ScrapshiftRenderingReport.txt"));
+  EditorUtility.savePath=selectedPath;int unchangedSaves=AssetDatabase.saves;
+  YardMaterialRecovery.SaveRenderingReport();
+  string exported=File.ReadAllText(selectedPath);
+  Check(exported==GUIUtility.systemCopyBuffer&&exported.Contains("Catalog ScrapshiftWorld/WorldProps")&&exported.Contains("Emission flags:"),"selected export must contain complete material data and match clipboard");
+  Check(AssetDatabase.saves==unchangedSaves,"report export must not save/change materials");
+  Console.WriteLine("PASS full report exports to a selected persistent location without material writes");
+  EditorUtility.savePath="";GUIUtility.systemCopyBuffer="clipboard before cancel";int logCount=Debug.logs.Count;
+  YardMaterialRecovery.SaveRenderingReport();
+  Check(GUIUtility.systemCopyBuffer=="clipboard before cancel"&&File.ReadAllText(selectedPath)==exported&&Debug.logs.Count==logCount,"cancel must leave clipboard/files/logs untouched");
+  Console.WriteLine("PASS export cancellation leaves clipboard and files intact");
  }
 }
