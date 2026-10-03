@@ -170,7 +170,8 @@ namespace Scrapshift.Compact
                     Model("PalletBundle",parent,new Vector3(0,0,0),new Vector3(.8f,.20f,1.5f),0);
                     if(variation==0)
                     {
-                        Model("CompactMotor",parent,new Vector3(0,.20f,-.45f),new Vector3(.60f,.60f,.55f),-20);
+                        if(!LocalCarPartsVisuals.TryPlace(parent,new Vector3(0,.20f,-.45f),-20))
+                            Model("CompactMotor",parent,new Vector3(0,.20f,-.45f),new Vector3(.60f,.60f,.55f),-20);
                         Model("CompactCompressor",parent,new Vector3(0,.20f,.30f),new Vector3(.60f,.65f,.55f),15);
                     }
                     else

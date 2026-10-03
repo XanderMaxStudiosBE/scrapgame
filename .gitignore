@@ -21,3 +21,9 @@
 # Python authoring caches
 __pycache__/
 *.py[cod]
+
+# Licensed Store source supplied for local-only car-part integration. Keep raw vendor art private.
+/Assets/Junk Car Parts/
+/Assets/Junk Car Parts.meta
+/Assets/RetroStyleGames/LastGuns/
+/Assets/RetroStyleGames/LastGuns.meta

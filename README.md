@@ -8,6 +8,8 @@ A first-person retro scrapyard automation prototype. The **48 × 36m compact yar
 
 Existing tyre piles now use a free **CC0 Old Tyre by MP/Poly Haven**, adapted to a shared 184-triangle mesh and 1K URP maps. Source/checksum/mask audits pass; actual Unity appearance and performance need local checks. See [tyre verification and Store import status](Design/OLD_TYRE_VERIFICATION.md). Store packs imported on the creator's machine are not included or placed by this change; keep their source files local/private because this repository is public.
 
+**Optional local Store piston:** if Junkyard Car Parts is installed, stop Play and run **Scrapshift → Enable Imported Car Parts**. It prepares an ignored local mesh for the office spares pocket with existing URP metal. Public checkouts keep the original motor; other Store packs remain unintegrated. [Local setup/verification](Design/LOCAL_CAR_PARTS_VERIFICATION.md) records private file handling and the required Unity checks.
+
 ## Open or update in Unity
 
 Use **Unity 6000.3.25f1** and the pinned **URP 17.3.0** packages. After pulling/importing, run **Scrapshift → Create or Open Compact Yard**, then press Play in `Generated/CompactScrapyard`. The original **Create or Open Prototype** command is an alias. It creates only missing generated assets/scenes, preserves existing scene/balance edits, makes the compact scene the first build scene and keeps `Generated/Scrapyard` as the legacy option. Opening the old scene directly still plays the old game; a pull alone does not reconstruct generated scenes.

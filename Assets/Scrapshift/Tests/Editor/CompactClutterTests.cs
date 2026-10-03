@@ -58,7 +58,7 @@ namespace Scrapshift.Tests
                 Assert.LessOrEqual(clutter.GetComponentsInChildren<MeshRenderer>(true).Length,260);
                 int triangles=0;
                 foreach(var filter in clutter.GetComponentsInChildren<MeshFilter>(true))triangles+=filter.sharedMesh.triangles.Length/3;
-                Assert.LessOrEqual(triangles,35000,"Keep startup salvage geometry bounded");
+                Assert.LessOrEqual(triangles,36000,"Keep startup salvage geometry bounded, including one optional local piston");
                 foreach(var patch in CompactYardClutter.Describe())
                 {
                     var cluster=Find(clutter.transform,patch.name);Assert.NotNull(cluster,patch.name);
