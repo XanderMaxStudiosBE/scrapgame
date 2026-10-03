@@ -1,0 +1,14 @@
+{
+  "source": "Original painted gravel/dust: ArtSource/build_compact_ground.py",
+  "scope": "PNG data/import metadata; not Unity visual verification",
+  "textures": {
+    "PackedGravel": {
+      "size": 256,
+      "sha256": "dc4368898b42920331788bc6838c1186e066d8c70d85f18c8c1354621f9c4eb7"
+    },
+    "WheelLane": {
+      "size": 256,
+      "sha256": "3b353fe9fa826c9da267d3a7d1ee35afce1b300bdb365526476e6bfef557e275"
+    }
+  }
+}

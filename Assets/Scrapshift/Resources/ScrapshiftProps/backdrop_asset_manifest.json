@@ -1,0 +1,119 @@
+{
+  "source": "Original Blender-authored geometry; ArtSource/build_compact_backdrop.py",
+  "pack": "CompactIndustrialBackdrop",
+  "units": "metres",
+  "atlas": "ScrapshiftWorld/WorldAtlas.png",
+  "runtimeMaterial": "ScrapshiftWorld/WorldProps",
+  "assets": {
+    "BackdropBrickWorkshop": {
+      "triangles": 2120,
+      "vertices": 1966,
+      "dimensions_blender": [
+        18.799999237060547,
+        10.014999389648438,
+        10.840001106262207
+      ],
+      "materials": 1,
+      "bounds_unity": {
+        "min": [
+          -9.399999618530273,
+          -0.3499999940395355,
+          -5.5
+        ],
+        "max": [
+          9.399999618530273,
+          10.49000072479248,
+          4.514999866485596
+        ]
+      }
+    },
+    "BackdropSawtoothWorks": {
+      "triangles": 1706,
+      "vertices": 1546,
+      "dimensions_blender": [
+        14.649999618530273,
+        11.59000015258789,
+        8.319999694824219
+      ],
+      "materials": 1,
+      "bounds_unity": {
+        "min": [
+          -7.324999809265137,
+          -0.3499999940395355,
+          -6.25
+        ],
+        "max": [
+          7.324999809265137,
+          7.96999979019165,
+          5.339999675750732
+        ]
+      }
+    },
+    "BackdropTreeGroup": {
+      "triangles": 2614,
+      "vertices": 2521,
+      "dimensions_blender": [
+        13.409422874450684,
+        5.146897792816162,
+        10.137550354003906
+      ],
+      "materials": 1,
+      "bounds_unity": {
+        "min": [
+          -6.637813568115234,
+          -0.18755030632019043,
+          -2.7392492294311523
+        ],
+        "max": [
+          6.771609306335449,
+          9.949999809265137,
+          2.4076485633850098
+        ]
+      }
+    },
+    "BackdropUtilityPole": {
+      "triangles": 332,
+      "vertices": 200,
+      "dimensions_blender": [
+        0.5300000309944153,
+        2.1500000953674316,
+        7.814999580383301
+      ],
+      "materials": 1,
+      "bounds_unity": {
+        "min": [
+          -0.17000000178813934,
+          -0.14999985694885254,
+          -1.0750000476837158
+        ],
+        "max": [
+          0.36000001430511475,
+          7.664999961853027,
+          1.0750000476837158
+        ]
+      }
+    },
+    "BackdropOverheadSpan": {
+      "triangles": 432,
+      "vertices": 288,
+      "dimensions_blender": [
+        23.00397491455078,
+        1.3280003070831299,
+        0.9278578758239746
+      ],
+      "materials": 1,
+      "bounds_unity": {
+        "min": [
+          -0.001988351345062256,
+          6.7360005378723145,
+          -0.6640001535415649
+        ],
+        "max": [
+          23.00198745727539,
+          7.663858413696289,
+          0.6640001535415649
+        ]
+      }
+    }
+  }
+}

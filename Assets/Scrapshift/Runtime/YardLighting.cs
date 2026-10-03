@@ -66,7 +66,7 @@ namespace Scrapshift
             var fan=YardBootstrap.StationPosition(YardLandmark.FanBench);
             WorkLights=taskLights==null
                 ?new[]{Spot("Stripping bench task light",bench+new Vector3(0,2.68f,-.35f),profile),Spot("Buyer task light",buyer+new Vector3(0,2.68f,-.35f),profile),Spot("Restoration task light",fan+new Vector3(0,2.5f,-.25f),profile)}
-                :new[]{Spot("Office shop light",taskLights[0],profile),Spot("Sales counter light",taskLights[1],profile),Spot("Delivery light",taskLights[2],profile)};
+                :new[]{Spot("Office shop light",taskLights[0],profile,true),Spot("Sales counter light",taskLights[1],profile,true),Spot("Delivery light",taskLights[2],profile,true)};
             var trackedBulb=YardMaterialBindings.Load("ScrapshiftMaterials/PropAtlas",transform);
             // Compact infrastructure supplies its own three fixture meshes; do not double them.
             if(trackedBulb!=null&&taskLights==null)
@@ -103,10 +103,11 @@ namespace Scrapshift
             var light=new GameObject(name).AddComponent<Light>();light.transform.SetParent(transform,false);light.transform.localPosition=position;
             light.type=type;light.color=color;light.intensity=intensity;light.shadows=LightShadows.None;return light;
         }
-        Light Spot(string name,Vector3 position,YardLightingProfile profile)
+        Light Spot(string name,Vector3 position,YardLightingProfile profile,bool compact=false)
         {
             var light=Source(name,LightType.Spot,position,profile.lampColor,profile.lampIntensity);
-            light.transform.localRotation=Quaternion.Euler(90,0,0);light.range=5;light.spotAngle=100;light.innerSpotAngle=65;
+            light.transform.localRotation=Quaternion.Euler(90,0,0);light.range=compact?4.5f:5;
+            light.spotAngle=compact?78:100;light.innerSpotAngle=compact?44:65;
             return light;
         }
         static Cubemap Reflection(YardLightingProfile profile)

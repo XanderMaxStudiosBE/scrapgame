@@ -1,0 +1,531 @@
+{
+  "scope": "Blender FBX round-trip, metre dimensions, atlas UVs, outward brick walls, actual rotated placement bounds and exterior/road clearance. Unity import/render/batching/FPS not run.",
+  "layout_sha256": "59ccfd2aad60eedead448062ce623db8f00f5bf2885cc903470b11d12c1a96d2",
+  "assets": [
+    {
+      "name": "BackdropBrickWorkshop",
+      "status": "passed",
+      "triangles": 2120,
+      "metre_dimensions": [
+        18.799999237060547,
+        10.015000343322754,
+        10.84000101685524
+      ],
+      "bounds_unity": {
+        "min": [
+          -9.399999618530273,
+          -0.3500002920627594,
+          -5.5
+        ],
+        "max": [
+          9.399999618530273,
+          10.49000072479248,
+          4.515000343322754
+        ]
+      },
+      "sha256": "b0f8d2375117181b4a00db7c89b34bdec1d9cf69978d718768da433d330581b7"
+    },
+    {
+      "name": "BackdropSawtoothWorks",
+      "status": "passed",
+      "triangles": 1706,
+      "metre_dimensions": [
+        14.649999618530273,
+        11.589999675750732,
+        8.320000171661377
+      ],
+      "bounds_unity": {
+        "min": [
+          -7.324999809265137,
+          -0.35000038146972656,
+          -6.25
+        ],
+        "max": [
+          7.324999809265137,
+          7.96999979019165,
+          5.339999675750732
+        ]
+      },
+      "sha256": "a6e4dd0cf4fd91703ed8f79bad50496c769d6c7b8352ca39f2c7eb0701a749cd"
+    },
+    {
+      "name": "BackdropTreeGroup",
+      "status": "passed",
+      "triangles": 2614,
+      "metre_dimensions": [
+        13.409422874450684,
+        5.146897792816162,
+        10.137550190091133
+      ],
+      "bounds_unity": {
+        "min": [
+          -6.637813568115234,
+          -0.1875503808259964,
+          -2.739248752593994
+        ],
+        "max": [
+          6.771609306335449,
+          9.949999809265137,
+          2.407649040222168
+        ]
+      },
+      "sha256": "2c45ef94795242cf758d7117af0d576b44dfbd39216f8a5e5bc45e1241051c1d"
+    },
+    {
+      "name": "BackdropUtilityPole",
+      "status": "passed",
+      "triangles": 332,
+      "metre_dimensions": [
+        0.5299999862909317,
+        2.1500000953674316,
+        7.814999833703041
+      ],
+      "bounds_unity": {
+        "min": [
+          -0.17000000178813934,
+          -0.14999987185001373,
+          -1.074999451637268
+        ],
+        "max": [
+          0.35999998450279236,
+          7.664999961853027,
+          1.0750006437301636
+        ]
+      },
+      "sha256": "8b2974ab9e1338a74f9aad16ffd482468da22c8b0c95398e4e35838b8ded98e1"
+    },
+    {
+      "name": "BackdropOverheadSpan",
+      "status": "passed",
+      "triangles": 432,
+      "metre_dimensions": [
+        23.003975808620453,
+        1.3280003666877747,
+        0.9278583526611328
+      ],
+      "bounds_unity": {
+        "min": [
+          -0.001988351345062256,
+          6.736000061035156,
+          -0.663999617099762
+        ],
+        "max": [
+          23.00198745727539,
+          7.663858413696289,
+          0.6640007495880127
+        ]
+      },
+      "sha256": "08d9ced5bcf4d5a755f9ec5edc492cf0ca2643b93138355eae91dcdd067559d2"
+    }
+  ],
+  "placements": [
+    {
+      "name": "North brick repair works",
+      "model": "BackdropBrickWorkshop",
+      "sector": 0,
+      "bounds_unity": {
+        "min": [
+          -18.399999618530273,
+          -0.3500002920627594,
+          25.5
+        ],
+        "max": [
+          0.39999961853027344,
+          10.49000072479248,
+          35.515000343322754
+        ]
+      }
+    },
+    {
+      "name": "North sawtooth workshops",
+      "model": "BackdropSawtoothWorks",
+      "sector": 0,
+      "bounds_unity": {
+        "min": [
+          6.675000190734863,
+          -0.35000038146972656,
+          26.75
+        ],
+        "max": [
+          21.324999809265137,
+          7.96999979019165,
+          38.33999967575073
+        ]
+      }
+    },
+    {
+      "name": "West brick workshop",
+      "model": "BackdropBrickWorkshop",
+      "sector": 1,
+      "bounds_unity": {
+        "min": [
+          -39.28925032615662,
+          -0.3325002774596214,
+          -2.9299996376037587
+        ],
+        "max": [
+          -29.775,
+          9.965500688552856,
+          14.929999637603759
+        ]
+      }
+    },
+    {
+      "name": "East engineering works",
+      "model": "BackdropSawtoothWorks",
+      "sector": 2,
+      "bounds_unity": {
+        "min": [
+          29.5625,
+          -0.3325003623962402,
+          -1.9587498188018797
+        ],
+        "max": [
+          40.5729996919632,
+          7.5714998006820675,
+          11.95874981880188
+        ]
+      }
+    },
+    {
+      "name": "West yard containers",
+      "model": "TealContainer",
+      "sector": 1,
+      "bounds_unity": {
+        "min": [
+          -36.15599989891052,
+          -0.05000022426247597,
+          -14.545000076293945
+        ],
+        "max": [
+          -31.90999984741211,
+          2.8500001430511475,
+          -5.454999923706055
+        ]
+      }
+    },
+    {
+      "name": "East yard containers",
+      "model": "TealContainer",
+      "sector": 2,
+      "bounds_unity": {
+        "min": [
+          33.34400010108948,
+          -0.05000022426247597,
+          -14.545000076293945
+        ],
+        "max": [
+          37.59000015258789,
+          2.8500001430511475,
+          -5.454999923706055
+        ]
+      }
+    },
+    {
+      "name": "North container stock",
+      "model": "TealContainer",
+      "sector": 0,
+      "bounds_unity": {
+        "min": [
+          -26.155999898910522,
+          -0.05000022426247597,
+          26.454999923706055
+        ],
+        "max": [
+          -21.90999984741211,
+          2.8500001430511475,
+          35.545000076293945
+        ]
+      }
+    },
+    {
+      "name": "East stacked container",
+      "model": "TealContainer",
+      "sector": 2,
+      "bounds_unity": {
+        "min": [
+          33.34400010108948,
+          2.899999775737524,
+          -14.545000076293945
+        ],
+        "max": [
+          37.59000015258789,
+          5.800000143051148,
+          -5.454999923706055
+        ]
+      }
+    },
+    {
+      "name": "Northern utility pole 0",
+      "model": "BackdropUtilityPole",
+      "sector": 0,
+      "bounds_unity": {
+        "min": [
+          -23.17000000178814,
+          -0.14999987185001373,
+          23.925000548362732
+        ],
+        "max": [
+          -22.640000015497208,
+          7.664999961853027,
+          26.075000643730164
+        ]
+      }
+    },
+    {
+      "name": "Northern utility pole 1",
+      "model": "BackdropUtilityPole",
+      "sector": 0,
+      "bounds_unity": {
+        "min": [
+          -0.17000000178813934,
+          -0.14999987185001373,
+          23.925000548362732
+        ],
+        "max": [
+          0.35999998450279236,
+          7.664999961853027,
+          26.075000643730164
+        ]
+      }
+    },
+    {
+      "name": "Northern utility pole 2",
+      "model": "BackdropUtilityPole",
+      "sector": 0,
+      "bounds_unity": {
+        "min": [
+          22.82999999821186,
+          -0.14999987185001373,
+          23.925000548362732
+        ],
+        "max": [
+          23.359999984502792,
+          7.664999961853027,
+          26.075000643730164
+        ]
+      }
+    },
+    {
+      "name": "Northern overhead cables 0",
+      "model": "BackdropOverheadSpan",
+      "sector": 0,
+      "bounds_unity": {
+        "min": [
+          -23.001988351345062,
+          6.736000061035156,
+          24.336000382900238
+        ],
+        "max": [
+          0.001987457275390625,
+          7.663858413696289,
+          25.664000749588013
+        ]
+      }
+    },
+    {
+      "name": "Northern overhead cables 1",
+      "model": "BackdropOverheadSpan",
+      "sector": 0,
+      "bounds_unity": {
+        "min": [
+          -0.001988351345062256,
+          6.736000061035156,
+          24.336000382900238
+        ],
+        "max": [
+          23.00198745727539,
+          7.663858413696289,
+          25.664000749588013
+        ]
+      }
+    },
+    {
+      "name": "North connected woodline 0",
+      "model": "BackdropTreeGroup",
+      "sector": 3,
+      "bounds_unity": {
+        "min": [
+          -35.25291355471748,
+          -0.1875503808259964,
+          35.672673539018966
+        ],
+        "max": [
+          -22.278591909466044,
+          9.949999809265137,
+          42.159365403296384
+        ]
+      }
+    },
+    {
+      "name": "North connected woodline 1",
+      "model": "BackdropTreeGroup",
+      "sector": 3,
+      "bounds_unity": {
+        "min": [
+          -16.372301025390627,
+          -0.18004836559295653,
+          37.37032119750977
+        ],
+        "max": [
+          -3.4992550659179686,
+          9.551999816894531,
+          42.311343078613284
+        ]
+      }
+    },
+    {
+      "name": "North connected woodline 2",
+      "model": "BackdropTreeGroup",
+      "sector": 3,
+      "bounds_unity": {
+        "min": [
+          2.362810913092291,
+          -0.19505239605903626,
+          37.79004673360456
+        ],
+        "max": [
+          16.049584142454222,
+          10.347999801635742,
+          43.92901760380762
+        ]
+      }
+    },
+    {
+      "name": "North connected woodline 3",
+      "model": "BackdropTreeGroup",
+      "sector": 3,
+      "bounds_unity": {
+        "min": [
+          22.519991473296923,
+          -0.17817286178469657,
+          37.53684458223009
+        ],
+        "max": [
+          35.28393942144918,
+          9.45249981880188,
+          42.74053374974323
+        ]
+      }
+    },
+    {
+      "name": "West layered grove 0",
+      "model": "BackdropTreeGroup",
+      "sector": 4,
+      "bounds_unity": {
+        "min": [
+          -44.4653238773346,
+          -0.16879534274339678,
+          -6.094448375701904
+        ],
+        "max": [
+          -39.833115863800046,
+          8.954999828338623,
+          5.974032211303711
+        ]
+      }
+    },
+    {
+      "name": "West layered grove 1",
+      "model": "BackdropTreeGroup",
+      "sector": 4,
+      "bounds_unity": {
+        "min": [
+          -44.739248752593994,
+          -0.1875503808259964,
+          8.22839069366455
+        ],
+        "max": [
+          -39.59235095977783,
+          9.949999809265137,
+          21.637813568115234
+        ]
+      }
+    },
+    {
+      "name": "West layered grove 2",
+      "model": "BackdropTreeGroup",
+      "sector": 4,
+      "bounds_unity": {
+        "min": [
+          -35.177494583129885,
+          -0.1462892970442772,
+          16.863385972976683
+        ],
+        "max": [
+          -24.71814474105835,
+          7.760999851226807,
+          20.87796625137329
+        ]
+      }
+    },
+    {
+      "name": "East layered grove 0",
+      "model": "BackdropTreeGroup",
+      "sector": 5,
+      "bounds_unity": {
+        "min": [
+          41.58946109771728,
+          -0.16504433512687683,
+          -8.959016189575195
+        ],
+        "max": [
+          46.11873115539551,
+          8.75599983215332,
+          2.841275939941406
+        ]
+      }
+    },
+    {
+      "name": "East layered grove 1",
+      "model": "BackdropTreeGroup",
+      "sector": 5,
+      "bounds_unity": {
+        "min": [
+          40.397713685035704,
+          -0.17817286178469657,
+          7.566971158981324
+        ],
+        "max": [
+          45.28726658821106,
+          9.45249981880188,
+          20.30592288970947
+        ]
+      }
+    },
+    {
+      "name": "East layered grove 2",
+      "model": "BackdropTreeGroup",
+      "sector": 5,
+      "bounds_unity": {
+        "min": [
+          25.822505416870115,
+          -0.1462892970442772,
+          17.863385972976683
+        ],
+        "max": [
+          36.28185525894165,
+          7.760999851226807,
+          21.87796625137329
+        ]
+      }
+    }
+  ],
+  "budget": {
+    "triangles": 39428,
+    "renderers_before_batch": 23,
+    "batching_sectors": 6,
+    "bounds_unity": {
+      "min": [
+        -44.739248752593994,
+        -0.35000038146972656,
+        -14.545000076293945
+      ],
+      "max": [
+        46.11873115539551,
+        10.49000072479248,
+        43.92901760380762
+      ]
+    }
+  }
+}

@@ -1,0 +1,236 @@
+{
+  "version": 1,
+  "provenance": "Original neighbouring scenery authored for this project; placement excludes the playable 48x36m yard and south road. Buildings are decorative and stock is not recoverable inventory.",
+  "placements": [
+    {
+      "name": "North brick repair works",
+      "model": "BackdropBrickWorkshop",
+      "sector": 0,
+      "x": -9,
+      "y": 0,
+      "z": 31,
+      "yaw": 0,
+      "scale": 1
+    },
+    {
+      "name": "North sawtooth workshops",
+      "model": "BackdropSawtoothWorks",
+      "sector": 0,
+      "x": 14,
+      "y": 0,
+      "z": 33,
+      "yaw": 0,
+      "scale": 1
+    },
+    {
+      "name": "West brick workshop",
+      "model": "BackdropBrickWorkshop",
+      "sector": 1,
+      "x": -35,
+      "y": 0,
+      "z": 6,
+      "yaw": -90,
+      "scale": 0.95
+    },
+    {
+      "name": "East engineering works",
+      "model": "BackdropSawtoothWorks",
+      "sector": 2,
+      "x": 35.5,
+      "y": 0,
+      "z": 5,
+      "yaw": 90,
+      "scale": 0.95
+    },
+    {
+      "name": "West yard containers",
+      "model": "TealContainer",
+      "sector": 1,
+      "x": -34,
+      "y": 0,
+      "z": -10,
+      "yaw": 90,
+      "scale": 1
+    },
+    {
+      "name": "East yard containers",
+      "model": "TealContainer",
+      "sector": 2,
+      "x": 35.5,
+      "y": 0,
+      "z": -10,
+      "yaw": 90,
+      "scale": 1
+    },
+    {
+      "name": "North container stock",
+      "model": "TealContainer",
+      "sector": 0,
+      "x": -24,
+      "y": 0,
+      "z": 31,
+      "yaw": 90,
+      "scale": 1
+    },
+    {
+      "name": "East stacked container",
+      "model": "TealContainer",
+      "sector": 2,
+      "x": 35.5,
+      "y": 2.95,
+      "z": -10,
+      "yaw": 90,
+      "scale": 1
+    },
+    {
+      "name": "Northern utility pole 0",
+      "model": "BackdropUtilityPole",
+      "sector": 0,
+      "x": -23,
+      "y": 0,
+      "z": 25,
+      "yaw": 0,
+      "scale": 1
+    },
+    {
+      "name": "Northern utility pole 1",
+      "model": "BackdropUtilityPole",
+      "sector": 0,
+      "x": 0,
+      "y": 0,
+      "z": 25,
+      "yaw": 0,
+      "scale": 1
+    },
+    {
+      "name": "Northern utility pole 2",
+      "model": "BackdropUtilityPole",
+      "sector": 0,
+      "x": 23,
+      "y": 0,
+      "z": 25,
+      "yaw": 0,
+      "scale": 1
+    },
+    {
+      "name": "Northern overhead cables 0",
+      "model": "BackdropOverheadSpan",
+      "sector": 0,
+      "x": -23,
+      "y": 0,
+      "z": 25,
+      "yaw": 0,
+      "scale": 1
+    },
+    {
+      "name": "Northern overhead cables 1",
+      "model": "BackdropOverheadSpan",
+      "sector": 0,
+      "x": 0,
+      "y": 0,
+      "z": 25,
+      "yaw": 0,
+      "scale": 1
+    },
+    {
+      "name": "North connected woodline 0",
+      "model": "BackdropTreeGroup",
+      "sector": 3,
+      "x": -29,
+      "y": 0,
+      "z": 39,
+      "yaw": 12,
+      "scale": 1
+    },
+    {
+      "name": "North connected woodline 1",
+      "model": "BackdropTreeGroup",
+      "sector": 3,
+      "x": -10,
+      "y": 0,
+      "z": 40,
+      "yaw": 0,
+      "scale": 0.96
+    },
+    {
+      "name": "North connected woodline 2",
+      "model": "BackdropTreeGroup",
+      "sector": 3,
+      "x": 9,
+      "y": 0,
+      "z": 41,
+      "yaw": 7,
+      "scale": 1.04
+    },
+    {
+      "name": "North connected woodline 3",
+      "model": "BackdropTreeGroup",
+      "sector": 3,
+      "x": 29,
+      "y": 0,
+      "z": 40,
+      "yaw": -9,
+      "scale": 0.95
+    },
+    {
+      "name": "West layered grove 0",
+      "model": "BackdropTreeGroup",
+      "sector": 4,
+      "x": -42,
+      "y": 0,
+      "z": 0,
+      "yaw": 90,
+      "scale": 0.9
+    },
+    {
+      "name": "West layered grove 1",
+      "model": "BackdropTreeGroup",
+      "sector": 4,
+      "x": -42,
+      "y": 0,
+      "z": 15,
+      "yaw": 90,
+      "scale": 1
+    },
+    {
+      "name": "West layered grove 2",
+      "model": "BackdropTreeGroup",
+      "sector": 4,
+      "x": -30,
+      "y": 0,
+      "z": 19,
+      "yaw": 0,
+      "scale": 0.78
+    },
+    {
+      "name": "East layered grove 0",
+      "model": "BackdropTreeGroup",
+      "sector": 5,
+      "x": 44,
+      "y": 0,
+      "z": -3,
+      "yaw": 90,
+      "scale": 0.88
+    },
+    {
+      "name": "East layered grove 1",
+      "model": "BackdropTreeGroup",
+      "sector": 5,
+      "x": 43,
+      "y": 0,
+      "z": 14,
+      "yaw": 90,
+      "scale": 0.95
+    },
+    {
+      "name": "East layered grove 2",
+      "model": "BackdropTreeGroup",
+      "sector": 5,
+      "x": 31,
+      "y": 0,
+      "z": 20,
+      "yaw": 0,
+      "scale": 0.78
+    }
+  ]
+}

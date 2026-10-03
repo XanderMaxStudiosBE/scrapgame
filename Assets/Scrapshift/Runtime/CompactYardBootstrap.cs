@@ -26,11 +26,27 @@ namespace Scrapshift.Compact
             cameraObject.AddComponent<AudioListener>();player.view=camera;
             var game=root.gameObject.AddComponent<CompactYardGame>();game.player=player;
             game.balance=balance!=null?balance:Resources.Load<CompactBalance>("ScrapshiftCompact/Balance");game.legacyBalance=legacyBalance;game.logo=logo;
-            var profile=lightingProfile!=null?lightingProfile:Resources.Load<YardLightingProfile>("ScrapshiftLighting/CozyAfternoon");
+            var profile=ResolveLightingProfile(lightingProfile);
             if(profile!=null)game.lighting=YardLighting.Build(root,camera,profile,new[]{
                 CompactYardWorld.ShopAnchor+new Vector3(0,2.65f,-.35f),
                 CompactYardWorld.SalesAnchor+new Vector3(0,2.65f,-.35f),CompactYardWorld.DeliveryLightAnchor});
-            else Debug.LogError("Missing CozyAfternoon lighting resource.");
+            else Debug.LogError("Missing compact afternoon lighting resource.");
+        }
+        // Existing generated scenes reference CozyAfternoon. Adopt the compact default only
+        // while that shared profile still has its original values; retain deliberately tuned profiles.
+        public static YardLightingProfile ResolveLightingProfile(YardLightingProfile selected)
+        {
+            var previous=Resources.Load<YardLightingProfile>("ScrapshiftLighting/CozyAfternoon");
+            if(selected!=null && (selected!=previous || !OriginalLighting(selected)))return selected;
+            return Resources.Load<YardLightingProfile>("ScrapshiftLighting/CompactAfternoon") ?? selected ?? previous;
+        }
+        static bool OriginalLighting(YardLightingProfile p)
+        {
+            return p.zenith==new Color(.22f,.38f,.52f) && p.horizon==new Color(.76f,.74f,.66f) && p.ground==new Color(.27f,.29f,.25f) &&
+                p.skyFill==new Color(.48f,.54f,.60f) && p.sideFill==new Color(.38f,.39f,.35f) && p.groundFill==new Color(.22f,.23f,.20f) &&
+                p.sunColor==new Color(1,.93f,.80f) && p.lampColor==new Color(1,.85f,.64f) &&
+                Mathf.Approximately(p.sunIntensity,1.25f) && Mathf.Approximately(p.sunElevation,38) && Mathf.Approximately(p.sunAzimuth,-35) &&
+                Mathf.Approximately(p.lampIntensity,3.4f) && Mathf.Approximately(p.fogStart,75) && Mathf.Approximately(p.fogEnd,160);
         }
         static void Attach(GameObject owner,CompactTargetKind kind)
         {var target=owner.AddComponent<CompactInteractionTarget>();target.kind=kind;}

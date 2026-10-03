@@ -11,7 +11,9 @@ namespace Scrapshift
             var importer = (TextureImporter)assetImporter;
             importer.textureType = TextureImporterType.Default; importer.textureShape = TextureImporterShape.Texture2D;
             importer.maxTextureSize = 512; importer.textureCompression = TextureImporterCompression.Uncompressed;
-            importer.filterMode = FilterMode.Bilinear; importer.wrapMode = assetPath.EndsWith("ChainLink.png", System.StringComparison.Ordinal) ? TextureWrapMode.Repeat : TextureWrapMode.Clamp;
+            bool repeat=assetPath.EndsWith("ChainLink.png", System.StringComparison.Ordinal) ||
+                assetPath.EndsWith("PackedGravel.png", System.StringComparison.Ordinal) || assetPath.EndsWith("WheelLane.png", System.StringComparison.Ordinal);
+            importer.filterMode = FilterMode.Bilinear; importer.wrapMode = repeat ? TextureWrapMode.Repeat : TextureWrapMode.Clamp;
             importer.mipmapEnabled = true; importer.sRGBTexture = !assetPath.EndsWith("WorldMetalGloss.png", System.StringComparison.Ordinal);
             importer.alphaSource = TextureImporterAlphaSource.FromInput; importer.alphaIsTransparency = !assetPath.EndsWith("WorldMetalGloss.png", System.StringComparison.Ordinal);
             importer.isReadable = false;

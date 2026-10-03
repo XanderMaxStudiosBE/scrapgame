@@ -120,16 +120,16 @@ namespace Scrapshift.Tests
                 int layers=0;
                 foreach(var mesh in root.GetComponentsInChildren<MeshFilter>())
                 {
-                    if(!mesh.name.StartsWith("Compact dust")&&!mesh.name.StartsWith("Compact shallow"))continue;
+                    if(!mesh.name.StartsWith("Compact dust")&&!mesh.name.StartsWith("Compact shallow")&&!mesh.name.StartsWith("Worn entry"))continue;
                     layers++;
                     Assert.AreSame(mesh.sharedMesh,mesh.GetComponent<ProceduralMeshOwner>().mesh);
                     Assert.IsNull(mesh.GetComponent<Collider>());
-                    Assert.Less(mesh.sharedMesh.vertexCount,250);
+                    Assert.Less(mesh.sharedMesh.vertexCount,320);
                     foreach(var normal in mesh.sharedMesh.normals)Assert.Greater(normal.y,.99f);
                     foreach(var p in mesh.sharedMesh.vertices)
-                    {Assert.Less(Mathf.Abs(p.x),24);Assert.Less(Mathf.Abs(p.z),18);Assert.That(p.y,Is.InRange(.009f,.012f));}
+                    {Assert.Less(Mathf.Abs(p.x),24);Assert.LessOrEqual(Mathf.Abs(p.z),18);Assert.That(p.y,Is.InRange(.009f,.013f));}
                 }
-                Assert.AreEqual(2,layers,"Both the wear and puddle resources must be available");
+                Assert.AreEqual(3,layers,"Wear, puddles and connecting wheel lanes must be available");
             }
             finally{Object.DestroyImmediate(root);}
         }

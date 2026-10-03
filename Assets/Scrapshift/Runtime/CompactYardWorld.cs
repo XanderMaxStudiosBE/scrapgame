@@ -23,8 +23,12 @@ namespace Scrapshift.Compact
         public static CompactWorldHandles Build(Transform parent,bool combine=true)
         {
             var ground=Sector(parent,"Compact ground");
-            YardGeometry.SurfaceBox("48 x 36 metre packed gravel",ground,new Vector3(0,-.2f,0),new Vector3(48,.4f,36),RetroSurface.Gravel);
+            var yardSurface=YardGeometry.SurfaceBox("48 x 36 metre packed gravel",ground,new Vector3(0,-.2f,0),new Vector3(48,.4f,36),RetroSurface.Gravel);
+            var surfaces=ground.gameObject.AddComponent<CompactGroundSurface>();
+            var packed=surfaces.Create("ScrapshiftMaterials/Gravel","ScrapshiftWorld/PackedGravel",new Vector2(.4f,.4f));
+            if(packed!=null)yardSurface.GetComponent<MeshRenderer>().sharedMaterial=packed;
             GroundLayers(ground);
+            GroundLanes(ground,surfaces);
             Batch(ground,combine);
 
             var north=Sector(parent,"Compact north boundary");
@@ -56,9 +60,7 @@ namespace Scrapshift.Compact
             var officeCollision=new GameObject("Fixed office collision");officeCollision.transform.SetParent(office,false);officeCollision.transform.localPosition=OfficeAnchor;
             var body=officeCollision.AddComponent<BoxCollider>();body.center=new Vector3(0,1.5f,0);body.size=new Vector3(8,3,6);
             if(YardWorldDressing.TryPlace("OfficeDetails",office,OfficeAnchor,out GameObject trim))trim.transform.localRotation=Quaternion.Euler(0,180,0);
-            Label(office,"SCRAPSHIFT / OFFICE",OfficeAnchor+new Vector3(0,2.56f,3.19f),180,4.2f,.42f);
-            Label(office,"YARD SHOP",ShopAnchor+new Vector3(0,2.02f,-.65f),180,1.9f,.40f);
-            Label(office,"MATERIAL SALES",SalesAnchor+new Vector3(0,2.02f,-.65f),180,2.1f,.40f);
+            Label(office,"SCRAPSHIFT / SALVAGE YARD",OfficeAnchor+new Vector3(0,2.65f,3.19f),180,4.1f,.35f);
             // Shallow covered counter lamps reuse the existing four-light lighting budget.
             foreach(float x in new[]{-19f,-15f})
             {
@@ -92,26 +94,18 @@ namespace Scrapshift.Compact
             Batch(delivery,combine);
 
             var outside=Sector(parent,"Compact neighbouring landscape");
-            var land=YardGeometry.SurfaceBox("Outside verge",outside,new Vector3(0,-.50f,0),new Vector3(95,.35f,78),RetroSurface.Gravel,false);
-            land.GetComponent<MeshRenderer>().shadowCastingMode=ShadowCastingMode.Off;
+            // Separate exterior strips meet the yard surface without a coplanar floor under it.
+            // Keep the road verge slightly lower so the existing asphalt/markings remain visible.
+            Verge(outside,new Vector3(0,-.175f,32),new Vector3(96,.35f,28),packed);
+            Verge(outside,new Vector3(-36,-.175f,0),new Vector3(24,.35f,36),packed);
+            Verge(outside,new Vector3(36,-.175f,0),new Vector3(24,.35f,36),packed);
+            Verge(outside,new Vector3(0,-.225f,-32),new Vector3(96,.35f,28),packed);
             var road=YardGeometry.SurfaceBox("Neighbourhood service road",outside,new Vector3(0,-.008f,-23),new Vector3(90,.016f,7),RetroSurface.DarkMetal,false);
             road.GetComponent<MeshRenderer>().shadowCastingMode=ShadowCastingMode.Off;
             for(int i=0;i<13;i++)
                 YardGeometry.SurfaceBox("Faded service-road marking",outside,new Vector3(-42+i*7,.003f,-23),new Vector3(2.6f,.008f,.09f),RetroSurface.CorrugatedMetal,false);
-            for(int i=0;i<15;i++)
-            {
-                float angle=i*Mathf.PI*2/15;
-                var p=new Vector3(Mathf.Cos(angle)*31,0,Mathf.Sin(angle)*25);
-                // Keep the entrance and service-road skyline open.
-                if(p.z< -18 && Mathf.Abs(p.x)<17)continue;
-                if(AuthoredYardProps.TryPlace("CompactBoundaryTree",outside,p,out GameObject tree))
-                {
-                    tree.transform.localRotation=Quaternion.Euler(0,i*47,0);
-                    tree.transform.localScale=Vector3.one*(.8f+(i%3)*.14f);
-                }
-            }
-            if(YardWorldDressing.TryPlace("IndustrialWorks",outside,new Vector3(9,0,42),out GameObject factory))factory.transform.localRotation=Quaternion.Euler(0,10,0);
             Batch(outside,combine);
+            CompactYardBackdrop.Build(parent,combine);
             return handles;
         }
 
@@ -137,6 +131,13 @@ namespace Scrapshift.Compact
         }
         static void Fixture(Transform parent,Vector3 position)
         {YardWorldDressing.TryPlace("FluorescentFixture",parent,position,out _);}
+        static void Verge(Transform parent,Vector3 position,Vector3 size,Material material)
+        {
+            var surface=YardGeometry.SurfaceBox("Outside packed-gravel verge",parent,position,size,RetroSurface.Gravel,false);
+            var renderer=surface.GetComponent<MeshRenderer>();
+            if(material!=null)renderer.sharedMaterial=material;
+            renderer.shadowCastingMode=ShadowCastingMode.Off;
+        }
         static void Label(Transform parent,string text,Vector3 p,float yaw,float width,float height)
         {YardSignText.Plate(parent,text,p,width,height,yaw);}
         static void Fence(Transform parent,Vector3 p,Vector3 size)
@@ -179,22 +180,60 @@ namespace Scrapshift.Compact
         static void GroundLayers(Transform parent)
         {
             var wear=new GroundLayer();var wet=new GroundLayer();
-            // Fixed receiving/entry tyre trails are purely surface detail, not machine pads.
-            wear.Patch(-.85f,-13,.40f,4.5f,1,0,.009f);
-            wear.Patch(.85f,-13,.40f,4.5f,1,0,.009f);
-            wear.Patch(7,-8,.40f,10,1,60,.009f);
-            wear.Patch(8.4f,-7.3f,.40f,10,1,60,.009f);
-            for(int i=0;i<12;i++)wear.Patch(-18+(i%4)*12,-5+(i/4)*9,2.8f,1.65f,i%4==0 ? 3 : 0,i*47,.010f);
-            wet.Patch(4,-11,1.5f,.60f,2,25,.012f);
-            wet.Patch(-17,8,1.0f,.65f,2,-10,.012f);
+            // Wear follows the working areas; moss gathers by the fence rather than a repeated grid.
+            wear.Patch(-17,-9,3.4f,.8f,0,-4,.010f);
+            wear.Patch(20,-13.5f,2.7f,1.7f,0,12,.010f);
+            wear.Patch(14,-7.5f,1.4f,.9f,0,37,.010f);
+            wear.Patch(-8,4,2.4f,1.1f,0,-23,.010f);
+            wear.Patch(6,7.4f,1.7f,1.3f,0,51,.010f);
+            for(int i=0;i<7;i++)
+                wear.Patch(-20+i*6.6f,16.8f-(i%2)*.25f,2.0f+(i%3)*.3f,.65f,3,i*53,.010f);
+            for(int i=0;i<5;i++)
+            {
+                wear.Patch(-23.0f+(i%2)*.15f,-6.5f+i*4.8f,.60f,1.1f+(i%3)*.25f,3,i*41,.010f);
+                wear.Patch(23.0f-(i%2)*.25f,-8+i*5.2f,.55f,1.25f,3,i*37,.010f);
+            }
+            wet.Patch(3.7f,-11.2f,1.2f,.43f,2,17,.013f);
+            wet.Patch(16.8f,-10.7f,.75f,.38f,2,-31,.013f);
+            wet.Patch(-18.1f,12.4f,.95f,.50f,2,-10,.013f);
             wear.Build(parent,"Compact dust, moss and tyre wear","ScrapshiftWorld/GroundWear");
             wet.Build(parent,"Compact shallow rough puddles","ScrapshiftWorld/RoughPuddles");
+        }
+        static void GroundLanes(Transform parent,CompactGroundSurface surfaces)
+        {
+            var material=surfaces.Create("ScrapshiftWorld/GroundWear","ScrapshiftWorld/WheelLane",Vector2.one);
+            if(material==null)return;
+            var lane=new GroundLayer();
+            lane.Lane(new[]{new Vector3(0,0,-17.8f),new Vector3(.2f,0,-12),new Vector3(-1,0,-7),Vector3.zero},3.0f);
+            lane.Lane(new[]{new Vector3(-.6f,0,-9.5f),new Vector3(-5,0,-8.4f),new Vector3(-10,0,-8.7f),new Vector3(-15,0,-9)},2.0f);
+            lane.Lane(new[]{new Vector3(.2f,0,-12),new Vector3(7,0,-11.8f),new Vector3(13,0,-12.5f),new Vector3(19,0,-13)},2.2f);
+            lane.Build(parent,"Worn entry and receiving wheel lanes",material);
         }
         sealed class GroundLayer
         {
             readonly List<Vector3> vertices=new List<Vector3>();
             readonly List<Vector2> uv=new List<Vector2>();
             readonly List<int> triangles=new List<int>();
+            public void Lane(Vector3[] points,float width)
+            {
+                int start=vertices.Count;float length=0,travel=0;
+                for(int i=1;i<points.Length;i++)length+=Vector3.Distance(points[i-1],points[i]);
+                for(int i=0;i<points.Length;i++)
+                {
+                    var before=(points[i]-points[Mathf.Max(0,i-1)]).normalized;
+                    var after=(points[Mathf.Min(points.Length-1,i+1)]-points[i]).normalized;
+                    var direction=(before+after).normalized;
+                    var side=new Vector3(direction.z,0,-direction.x)*width*.5f;
+                    var p=points[i]+Vector3.up*.009f;
+                    if(i>0)travel+=Vector3.Distance(points[i-1],points[i]);
+                    vertices.Add(p-side);vertices.Add(p+side);
+                    uv.Add(new Vector2(0,travel/length));uv.Add(new Vector2(1,travel/length));
+                    if(i==0)continue;
+                    int a=start+(i-1)*2,b=a+2;
+                    triangles.Add(a);triangles.Add(b+1);triangles.Add(a+1);
+                    triangles.Add(a);triangles.Add(b);triangles.Add(b+1);
+                }
+            }
             public void Patch(float x,float z,float rx,float rz,int tile,float yaw,float y)
             {
                 int start=vertices.Count;const int sides=12;
@@ -213,6 +252,10 @@ namespace Scrapshift.Compact
             public void Build(Transform parent,string name,string resource)
             {
                 var material=YardMaterialBindings.Load(resource,parent);if(material==null)return;
+                Build(parent,name,material);
+            }
+            public void Build(Transform parent,string name,Material material)
+            {
                 var root=new GameObject(name);root.transform.SetParent(parent,false);
                 var mesh=new Mesh{name=name};mesh.SetVertices(vertices);mesh.SetUVs(0,uv);mesh.SetTriangles(triangles,0);mesh.RecalculateNormals();mesh.RecalculateBounds();
                 root.AddComponent<MeshFilter>().sharedMesh=mesh;root.AddComponent<ProceduralMeshOwner>().mesh=mesh;

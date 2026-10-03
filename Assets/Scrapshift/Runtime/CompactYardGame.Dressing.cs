@@ -11,7 +11,7 @@ namespace Scrapshift.Compact
         {
             CompactDressingOccupancy.Collect(Model.State,Model.Rules,player.transform.localPosition,dressingOccupied);
             if(yardClutter==null)
-                yardClutter=CompactYardClutter.Build(transform,dressingOccupied);
+                yardClutter=CompactYardClutter.Build(transform,dressingOccupied,solidStock:true);
             else
             {
                 bool same=dressingOccupied.Count==lastDressingOccupied.Count;
