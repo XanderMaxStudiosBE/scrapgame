@@ -1,5 +1,9 @@
 # Scrapshift project handoff
 
+## Latest diagnosis: previous-session compiler log (2026-10-03)
+
+Read the privately uploaded Editor-prev.log after repeated generic Play-blocker messages. It contains 11 unique CS1069 locations, all WheelCollider in the imported bike/buggy/anti-roll scripts. Resolved package list and Assembly-CSharp compiler references both omit Vehicles. The existing pushed manifest fix supplies that module; the previous-session log does not show the current session's package state or prove whether the update was pulled. Verified direct local steps against Unity 6000.3 documentation: Window → Package Management → Package Manager → Built-in packages → Vehicles → Enable, then allow recompilation and verify Play. This retains other locally added packages. No additional game/vendor source fix is indicated by this log. Actual success after enabling remains unverified; obtain current Editor.log if still blocked. Raw uploaded log remains outside the public checkout. Read Design/LOCAL_CAR_PARTS_VERIFICATION.md.
+
 ## Current continuation: privately supplied piston and local setup (2026-10-03)
 
 Inspected fghfgfhfg.unitypackage without executing/importing scripts: 143 asset paths, 141 existing Scrapshift files plus Junk Car Parts Models folder and PistonSmooth.obj. Only the OBJ is new vendor art; no MTL/textures/other packs received. Private model review: 644 positions/1,250 UVs/2,150 normals/1,288 triangles, finite values/valid indices. Uploaded game scripts were not applied and vendor source stays outside the public checkout. Read Design/LOCAL_CAR_PARTS_VERIFICATION.md.
