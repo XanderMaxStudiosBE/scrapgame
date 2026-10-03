@@ -46,6 +46,8 @@ namespace Scrapshift.Compact
         public int[] levelThresholds={0,30,80,160,280,440,650,930,1290,1750,2320,3010};
         // Integer-euro quotes need 12% for a common €9 copper bundle to gain its first €1.
         public int[] saleBonusPercents={0,12,16,20,24,28,32,36,40,45,50,55};
+        public int careerRulesVersion=1;
+        public CompactContractDefinition[] contracts=DefaultContracts();
         public PartDefinition[] parts={
             new PartDefinition(PartKind.Wire,"Wiring",0,0,false),
             new PartDefinition(PartKind.Copper,"Copper",3,2,true),
@@ -103,7 +105,7 @@ namespace Scrapshift.Compact
         // Preserve positive tuning and custom catalogue names/availability; negatives stay invalid.
         public bool FillMissingAutomationDefaults()
         {
-            bool changed=false;
+            bool changed=FillMissingCareerDefaults();
             if(beltSpeed==0){beltSpeed=1.2f;changed=true;}
             if(beltSpacing==0){beltSpacing=.65f;changed=true;}
             if(beltMaxLength==0){beltMaxLength=12;changed=true;}
@@ -126,8 +128,33 @@ namespace Scrapshift.Compact
             }
             return changed;
         }
+        public bool FillMissingCareerDefaults()
+        {
+            bool changed=false;
+            // Unity may deserialize a newly added array as either null or empty.
+            // Version zero identifies that older asset; explicit version-one empty books remain disabled.
+            if(careerRulesVersion==0)
+            {
+                if(contracts==null || contracts.Length==0)contracts=DefaultContracts();
+                careerRulesVersion=1;changed=true;
+            }
+            if(contracts==null){contracts=DefaultContracts();changed=true;}
+            return changed;
+        }
+        static CompactContractDefinition[] DefaultContracts()
+        {
+            return new[]{
+                new CompactContractDefinition(1,"Workshop rewiring","Mara's repair shop",PartKind.Copper,6,6,1),
+                new CompactContractDefinition(2,"Bench frame stock","Riverside metalworks",PartKind.Steel,12,8,1),
+                new CompactContractDefinition(3,"Recycled casings","Neighbourhood makers",PartKind.Plastic,8,8,2),
+                new CompactContractDefinition(4,"Motor winding stock","Mara's repair shop",PartKind.Copper,12,10,3),
+                new CompactContractDefinition(5,"Repair shed supports","Riverside metalworks",PartKind.Steel,24,12,5),
+                new CompactContractDefinition(6,"Community workshop supply","Neighbourhood makers",PartKind.Copper,20,20,10)
+            };
+        }
         public void Validate()
         {
+            FillMissingCareerDefaults();
             if(startingMoney<0 || startingMoney>1000000 || startingCars<0 || startingCars>4 || startingRefrigerators<0 || startingRefrigerators>4 || startingCars+startingRefrigerators>4 ||
                 renewableWireQuantity<1 || renewableWireQuantity>64 || maxStacks<1 || maxStacks>512 || maxLargeScrap<1 || maxLargeScrap>16 ||
                 maxEquipment<1 || maxEquipment>128 || !Finite(CableRange) || CableRange<1 || CableRange>60 ||
@@ -148,6 +175,13 @@ namespace Scrapshift.Compact
                 if(p==null || !Enum.IsDefined(typeof(PartKind),p.kind) || !kinds.Add(p.kind) || string.IsNullOrEmpty(p.name) ||
                     p.unitPrice<0 || p.unitPrice>100000 || p.saleXp<0 || p.saleXp>10000 || (!p.isMaterial && p.saleXp!=0))
                     throw new ArgumentException("Invalid item prices or experience.");
+            if(careerRulesVersion!=1 || contracts.Length>64)throw new ArgumentException("Invalid customer request version or catalogue size.");
+            var contractIds=new HashSet<int>();
+            foreach(var request in contracts)
+                if(request==null || request.id<1 || !contractIds.Add(request.id) || string.IsNullOrEmpty(request.name) || string.IsNullOrEmpty(request.customer) ||
+                    request.name.Length>120 || request.customer.Length>120 || Part(request.kind)==null || !Part(request.kind).isMaterial || Part(request.kind).unitPrice<1 ||
+                    request.quantity<1 || request.quantity>4096 || request.bonus<0 || request.bonus>100000 || request.minimumLevel<1 || request.minimumLevel>MaxLevel)
+                    throw new ArgumentException("Invalid customer request material, quantity, bonus or unlock level.");
             if(recipes==null || recipes.Length<1 || recipes.Length>64) throw new ArgumentException("Missing component recipes.");
             var recipeIds=new HashSet<int>(); var inputs=new HashSet<PartKind>();
             foreach(var r in recipes)

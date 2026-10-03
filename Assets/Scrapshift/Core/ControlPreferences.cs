@@ -3,16 +3,16 @@ using System.Collections.Generic;
 
 namespace Scrapshift
 {
-    public enum ControlAction { MoveForward, MoveBackward, MoveLeft, MoveRight, Interact, Drop, ManualWork, BuildToggle, BuildRotate }
+    public enum ControlAction { MoveForward, MoveBackward, MoveLeft, MoveRight, Interact, Drop, ManualWork, BuildToggle, BuildRotate, Journal }
 
     [Serializable]
     public sealed class ControlPreferences
     {
         public int version = 1;
-        public string[] bindings = { "W", "S", "A", "D", "E", "Q", "Mouse0", "B", "R" };
+        public string[] bindings = { "W", "S", "A", "D", "E", "Q", "Mouse0", "B", "R", "J" };
         public float sensitivity = 2;
         public bool invertY;
-        static readonly string[] Defaults = { "W", "S", "A", "D", "E", "Q", "Mouse0", "B", "R" };
+        static readonly string[] Defaults = { "W", "S", "A", "D", "E", "Q", "Mouse0", "B", "R", "J" };
         static readonly string[] Arrows = { "UpArrow", "DownArrow", "LeftArrow", "RightArrow" };
         public static readonly ControlAction[] Actions = (ControlAction[])Enum.GetValues(typeof(ControlAction));
         public static readonly string[] SupportedCodes = CreateSupportedCodes();
@@ -57,15 +57,20 @@ namespace Scrapshift
         {
             bindings = (string[])Defaults.Clone(); sensitivity = 2; invertY = false;
         }
-        // Version one remains additive: never replace a player's seven existing choices.
+        // Version one remains additive: never replace a player's seven or nine existing choices.
         // Validate a copy before committing; malformed legacy arrays still recover via backup.
         public bool UpgradeLegacyBindings()
         {
-            if (version != 1 || bindings == null || bindings.Length != 7) return false;
+            if (version != 1 || bindings == null || (bindings.Length != 7 && bindings.Length != 9)) return false;
+            int originalLength = bindings.Length;
             var upgraded = new ControlPreferences { sensitivity = sensitivity, invertY = invertY };
-            Array.Copy(bindings, upgraded.bindings, 7);
-            upgraded.bindings[7] = UnusedBuildCode("B", upgraded, 7);
-            upgraded.bindings[8] = UnusedBuildCode("R", upgraded, 8);
+            Array.Copy(bindings, upgraded.bindings, originalLength);
+            if (originalLength == 7)
+            {
+                upgraded.bindings[7] = UnusedBuildCode("B", upgraded, 7);
+                upgraded.bindings[8] = UnusedBuildCode("R", upgraded, 8);
+            }
+            upgraded.bindings[9] = UnusedBuildCode("J", upgraded, 9);
             upgraded.Validate();
             bindings = upgraded.bindings;
             return true;
@@ -106,6 +111,7 @@ namespace Scrapshift
                 case ControlAction.Drop: return "Drop carried item";
                 case ControlAction.BuildToggle: return "Build catalogue";
                 case ControlAction.BuildRotate: return "Rotate construction";
+                case ControlAction.Journal: return "Yard journal";
                 default: return "Manual work";
             }
         }

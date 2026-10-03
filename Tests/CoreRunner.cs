@@ -6,6 +6,18 @@ class CoreRunner
     {
         int failed = 0;
         int total = 0;
+        foreach(var name in CompactCareerScenarios.Names)
+        {
+            total++;
+            try{CompactCareerScenarios.Run(name);Console.WriteLine("PASS "+name);}
+            catch(Exception ex){failed++;Console.WriteLine("FAIL "+name+": "+ex.Message);}
+        }
+        foreach(var name in CompactGuidanceScenarios.Names)
+        {
+            total++;
+            try{CompactGuidanceScenarios.Run(name);Console.WriteLine("PASS "+name);}
+            catch(Exception ex){failed++;Console.WriteLine("FAIL "+name+": "+ex.Message);}
+        }
         foreach(var name in CompactStageCIntegrationScenarios.Names)
         {
             total++;

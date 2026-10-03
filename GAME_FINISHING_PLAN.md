@@ -4,7 +4,11 @@ The goal is a cohesive cozy retro scrapyard game. This document is an implementa
 
 ## Active compact automation direction
 
-The creator's newer brief takes priority: see Design/COMPACT_AUTOMATION_BRIEF.md and Design/COMPACT_STAGE_C_VERIFICATION.md. A/B manual scrapping/XP/free construction/power/Tier1 and C purchased level-10 Tier2/ported storage/conveyors/corners/junctions are implemented in source. Stage C includes backpressure, conserved recovery eligibility, grouped withdrawal, cached/pooled transport and explicit schema-two-to-three save migration. Verify the full chain in Unity before extending state. Next is D: scheduled intake, primary whole-car/appliance dismantling, connected sorting and automated sale/export, currently unavailable. Final art acceptance, pacing, measured laptop performance and a verified desktop build remain. The following milestones describe the preserved legacy finishing track.
+The creator's newer brief takes priority: see Design/COMPACT_AUTOMATION_BRIEF.md and Design/COMPACT_STAGE_C_VERIFICATION.md. A/B manual scrapping/XP/free construction/power/Tier1 and C purchased level-10 Tier2/ported storage/conveyors/corners/junctions are implemented in source. Stage C includes backpressure, conserved recovery eligibility, grouped withdrawal, cached/pooled transport and explicit schema-two-to-three save migration.
+
+The compact finishing pass now adds a nine-goal career chapter, six persistent neighbourhood material requests, once-only recap/free play, live destination guidance, scrollable title/pause/journal/inspection pages, measured HUD text/progress, save feedback and rebindable J Journal. Original car/fridge parts visibly open/release/disappear with saved work; tool/machine feedback freezes with pause or blockage. See Design/COMPACT_FINISHING_VERIFICATION.md. Cloud passes 227 core scenarios and six controlled coordinator branches, but actual Unity compilation, JSON, input/GUI, visuals, sound, pacing and performance remain unverified.
+
+Next: verify the complete starter chapter locally and in a desktop player, address actual art/readability/pacing issues, then implement D: scheduled intake, primary whole-car/appliance dismantling, connected sorting and automated sale/export, currently unavailable. Final creator art acceptance, measured laptop performance and a verified desktop build remain. The following milestones describe the preserved legacy finishing track.
 
 ## 1. Establish the lighting and workshop look
 
@@ -34,6 +38,6 @@ Accept after a player can install/open the build, start or continue, complete bo
 
 ## 5. Validate the complete game
 
-Planned: real Unity test runs, player smoke tests, save migration/recovery and representative laptop performance profiling. Resolve reproducible bugs and art/readability feedback before adding more automation. Broader NPC, vehicle, crane, conveyor and power systems remain outside the implemented prototype.
+Planned: real Unity test runs, player smoke tests, save migration/recovery and representative laptop performance profiling. Resolve reproducible bugs and art/readability feedback before adding more automation. Compact conveyors/power are implemented; scheduled whole-object intake/export, NPCs, driving and crane operation remain future work.
 
 Completion requires a verified playable build and creator approval. Funding, release date, production platform promises and campaign publication remain undecided and outside this work.

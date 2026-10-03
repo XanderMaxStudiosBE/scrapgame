@@ -4,7 +4,7 @@ namespace Scrapshift.Tests
 {
     public static class ControlScenarios
     {
-        public static readonly string[] Names = { "ControlDefaults", "ControlRebindAndCancel", "ControlConflicts", "ControlArrowConflicts", "ControlRestoreDefaults", "ControlInvalidPreferences", "ControlLabels" };
+        public static readonly string[] Names = { "ControlDefaults", "ControlRebindAndCancel", "ControlConflicts", "ControlArrowConflicts", "ControlRestoreDefaults", "ControlInvalidPreferences", "ControlLabels", "JournalControlsMigration", "JournalControlsMalformedMigration" };
         static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
         static void Reject(Action action)
         {
@@ -52,6 +52,22 @@ namespace Scrapshift.Tests
                 case "ControlLabels":
                     Check(ControlPreferences.CodeLabel("Mouse0") == "Left mouse" && ControlPreferences.CodeLabel("Alpha8") == "8", "readable labels");
                     p.SetBinding(ControlAction.Interact, "F", false); Check(ControlPreferences.CodeLabel(p.Binding(ControlAction.Interact)) == "F", "dynamic label"); break;
+                case "JournalControlsMigration":
+                    p.bindings = new[] { "W", "S", "A", "D", "J", "Q", "Mouse1", "B", "R" };
+                    p.sensitivity=4;p.invertY=true;
+                    Check(p.UpgradeLegacyBindings(), "nine bindings upgraded");
+                    Check(p.Binding(ControlAction.Interact)=="J" && p.Binding(ControlAction.Journal)=="F2", "journal does not steal existing J");
+                    Check(p.Binding(ControlAction.ManualWork)=="Mouse1" && p.sensitivity==4 && p.invertY, "look and mouse preferences retained");
+                    Check(!p.UpgradeLegacyBindings(), "migration once only");
+                    p.bindings = new[] { "W", "S", "A", "D", "E", "Q", "Mouse0" };
+                    Check(p.UpgradeLegacyBindings() && p.Binding(ControlAction.BuildToggle)=="B" && p.Binding(ControlAction.Journal)=="J", "seven actions upgraded together");
+                    r.Begin(ControlAction.Journal);Check(!r.Capture("E") && r.Conflict==ControlAction.Interact && r.Swap(), "journal conflict swap");
+                    Check(p.Binding(ControlAction.Journal)=="E" && p.Binding(ControlAction.Interact)=="J", "journal dynamic binding");break;
+                case "JournalControlsMalformedMigration":
+                    p.bindings = new[] { "W", "S", "A", "D", "Escape", "Q", "Mouse0", "B", "R" };
+                    string[] original=p.bindings;
+                    Reject(()=>p.UpgradeLegacyBindings());Check(ReferenceEquals(original,p.bindings) && p.bindings.Length==9, "bad old preferences unchanged for recovery");
+                    p.RestoreDefaults();break;
                 default: throw new Exception("Unknown control scenario: " + name);
             }
             p.Validate();

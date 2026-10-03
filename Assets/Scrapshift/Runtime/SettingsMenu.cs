@@ -179,7 +179,7 @@ namespace Scrapshift
             }
             else DrawPresentation();
             GUILayout.EndScrollView();
-            if (GUILayout.Button(rebind.Action.HasValue ? "Cancel rebinding / Back (Escape)" : "Back to pause menu (Escape)", GUILayout.Height(36))) HandleEscape();
+            if (GUILayout.Button(rebind.Action.HasValue ? "Cancel rebinding / Back (Escape)" : "Back (Escape)", GUILayout.Height(36))) HandleEscape();
             GUILayout.EndArea();
             // Give every MouseUp/Cancel event a complete release frame before committing
             // on a later Repaint. A Cancel/Back click clears the pending candidate above;

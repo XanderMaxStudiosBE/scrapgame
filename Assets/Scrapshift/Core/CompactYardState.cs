@@ -42,6 +42,8 @@ namespace Scrapshift.Compact
         public List<CompactStack> items=new List<CompactStack>();public List<LargeScrapJob> scrap=new List<LargeScrapJob>();
         public List<EquipmentState> equipment=new List<EquipmentState>();public List<PowerLink> powerLinks=new List<PowerLink>();
         public List<ConveyorLink> belts=new List<ConveyorLink>();
+        // Optional in existing schema 2/3 saves. Constructor adds evidence-only career tracking.
+        public CompactCareerState career;
         public bool importedLegacy;public string legacySnapshot,legacyNotice;
     }
 }

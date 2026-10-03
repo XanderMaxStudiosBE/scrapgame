@@ -7,11 +7,17 @@ namespace Scrapshift.Compact
 {
     public sealed partial class CompactYardGame
     {
-        GUIStyle wrap,small,hudBody,hudHeading;
+        GUIStyle wrap,small,hudBody,hudHeading,menuHeading,eyebrow,card,primaryButton;
+        bool showLegacyMenus;
+        Page drawnPage=Page.None;
         Vector2 menuScroll;
+        readonly GUIContent measuredText=new GUIContent();
+        float MeasuredHeight(GUIStyle style,string text,float width)
+        {measuredText.text=text??"";return style.CalcHeight(measuredText,width);}
         void OnGUI()
         {
             if(Model==null)return;
+            if(page!=drawnPage||settings.IsOpen){ResetRequestReview();drawnPage=page;}
             float scale=Mathf.Clamp(Mathf.Min(Screen.height/800f,Screen.width/960f),.25f,2);
             using(theme.Begin(scale))
             {
@@ -20,6 +26,11 @@ namespace Scrapshift.Compact
                 {
                     wrap=new GUIStyle(GUI.skin.label){wordWrap=true};small=new GUIStyle(wrap){fontSize=14};
                     hudBody=new GUIStyle(wrap){fontSize=16};hudHeading=new GUIStyle(wrap){fontSize=19,fontStyle=FontStyle.Bold};
+                    menuHeading=new GUIStyle(wrap){fontSize=23,fontStyle=FontStyle.Bold};
+                    eyebrow=new GUIStyle(small){fontSize=13,fontStyle=FontStyle.Bold};
+                    eyebrow.normal.textColor=new Color(.79f,.71f,.49f);
+                    card=new GUIStyle(GUI.skin.box){padding=new RectOffset(16,16,12,12)};
+                    primaryButton=new GUIStyle(GUI.skin.button){fontSize=19,fontStyle=FontStyle.Bold};
                 }
                 if(paused){GUI.color=new Color(0,0,0,.46f);GUI.DrawTexture(new Rect(0,0,width,height),Texture2D.whiteTexture);GUI.color=Color.white;}
                 if(settings.IsOpen){settings.Draw(width,height);return;}
@@ -27,7 +38,7 @@ namespace Scrapshift.Compact
                 if(page==Page.Title){DrawTitle(width,height);return;}
                 if(page==Page.Pause){DrawPause(width,height);return;}
                 var panel=Panel(width,height,PageTitle(),780,720);
-                GUILayout.BeginArea(new Rect(panel.x+22,panel.y+52,panel.width-44,panel.height-145));
+                GUILayout.BeginArea(new Rect(panel.x+22,panel.y+66,panel.width-44,panel.height-171));
                 menuScroll=GUILayout.BeginScrollView(menuScroll);
                 switch(page)
                 {
@@ -39,9 +50,12 @@ namespace Scrapshift.Compact
                     case Page.Sales:DrawSales();break;
                     case Page.Delivery:DrawDelivery();break;
                     case Page.Import:DrawImport();break;
+                    case Page.Journal:DrawJournal();break;
+                    case Page.Contracts:DrawContracts();break;
+                    case Page.Credits:DrawCredits();break;
                 }
                 GUILayout.EndScrollView();GUILayout.EndArea();
-                if(Time.unscaledTime<messageUntil)GUI.Label(new Rect(panel.x+22,panel.yMax-92,panel.width-44,34),message,small);
+                if(Time.unscaledTime<messageUntil)GUI.Label(new Rect(panel.x+22,panel.yMax-99,panel.width-44,43),message,small);
                 if(GUI.Button(new Rect(panel.x+22,panel.yMax-54,panel.width-44,38),page==Page.Welcome?"Open the yard / Escape":"Back / Escape"))
                 {if(page==Page.Welcome)FinishWelcome();else Back();}
             }
@@ -50,20 +64,24 @@ namespace Scrapshift.Compact
         {
             float w=Mathf.Min(desiredWidth,width-40),h=Mathf.Min(desiredHeight,height-40);
             var r=new Rect((width-w)*.5f,(height-h)*.5f,w,h);GUI.Box(r,"");
-            GUI.Label(new Rect(r.x+22,r.y+13,r.width-44,34),title);return r;
+            Fill(new Rect(r.x+1,r.y+1,r.width-2,5),new Color(.66f,.53f,.31f));
+            GUI.Label(new Rect(r.x+22,r.y+18,r.width-44,37),title,menuHeading);return r;
         }
         string PageTitle()
         {
             switch(page)
             {
-                case Page.Welcome:return "YOUR FIRST SCRAPSHIFT";
-                case Page.Help:return "HOW TO PLAY / CURRENT CONTROLS";
-                case Page.Catalogue:return "EQUIPMENT CATALOGUE / €"+Model.State.money+" / LEVEL "+Model.Level;
-                case Page.Equipment:return "EQUIPMENT / OUTPUT / POWER";
-                case Page.LargeScrap:return "SCRAP INSPECTION";
-                case Page.Sales:return "SALES COUNTER / LEVEL "+Model.Level+" / +"+Model.SaleBonusPercent+"%";
-                case Page.Delivery:return "SCRAP DELIVERY";
-                case Page.Import:return "OPTIONAL LEGACY PROGRESS IMPORT";
+                case Page.Welcome:return "Welcome to your yard";
+                case Page.Help:return "The yard handbook";
+                case Page.Catalogue:return "Equipment catalogue  /  €"+Model.State.money;
+                case Page.Equipment:return "Equipment & connections";
+                case Page.LargeScrap:return "Scrap inspection";
+                case Page.Sales:return "Material sales";
+                case Page.Delivery:return "The receiving yard";
+                case Page.Import:return "Bring progress from your earlier yard";
+                case Page.Journal:return "Your workshop journal";
+                case Page.Contracts:return "Neighbourhood requests";
+                case Page.Credits:return "Made for a quieter kind of shift";
                 default:return "SCRAPSHIFT";
             }
         }
@@ -73,61 +91,133 @@ namespace Scrapshift.Compact
             bool previous=GUI.enabled;GUI.enabled=previous&&enabled;
             bool clicked=GUILayout.Button(text,GUILayout.MinHeight(36));GUI.enabled=previous;return clicked;
         }
+        void Section(string title,string body=null)
+        {
+            GUILayout.Space(10);GUILayout.Label(title,eyebrow);
+            if(!string.IsNullOrEmpty(body))Text(body);
+        }
+        void BeginCard(string heading)
+        {GUILayout.BeginVertical(card);if(!string.IsNullOrEmpty(heading))GUILayout.Label(heading,hudHeading);}
+        void EndCard(){GUILayout.EndVertical();GUILayout.Space(10);}
+        bool Primary(string text,bool enabled=true)
+        {
+            bool before=GUI.enabled;GUI.enabled=before&&enabled;
+            bool clicked=GUILayout.Button(text,primaryButton,GUILayout.MinHeight(44));GUI.enabled=before;return clicked;
+        }
+        void Progress(float fraction,string label)
+        {
+            GUILayout.Label(label,small);
+            Rect line=GUILayoutUtility.GetRect(1,8,GUILayout.ExpandWidth(true));
+            Fill(line,new Color(.24f,.29f,.25f));
+            Fill(new Rect(line.x,line.y,line.width*Mathf.Clamp01(fraction),line.height),new Color(.70f,.62f,.38f));
+            GUILayout.Space(8);
+        }
+        string YardSummary()
+        {
+            return "€"+Model.State.money+" in the till  •  Level "+Model.Level+"  •  "+Model.State.equipment.Count+" equipment"+
+                (Model.State.belts.Count>0?"  •  "+Model.State.belts.Count+" conveyor lines":"");
+        }
         void DrawTitle(float width,float height)
         {
-            var r=Panel(width,height,"SCRAPSHIFT / YOUR YARD, YOUR WAY",690,690);
-            if(logo!=null)GUI.DrawTexture(new Rect(r.x+70,r.y+51,r.width-140,105),logo,ScaleMode.ScaleToFit,true);
-            GUI.Label(new Rect(r.x+24,r.y+163,r.width-48,57),"Start small. Take forgotten machines apart, sell what you recover and build a yard that works for you.",wrap);
-            float x=r.x+24,w=r.width-48,y=r.y+238;
-            bool previous=GUI.enabled;GUI.enabled=!saveBlocked;
-            if(GUI.Button(new Rect(x,y,w,42),hasSave?"Continue compact yard":"Start compact yard"))BeginYard();GUI.enabled=previous;
-            if(GUI.Button(new Rect(x,y+48,w,38),"Settings"))settings.Open();
-            if(GUI.Button(new Rect(x,y+92,w,38),"How to play"))Show(Page.Help);
-            if(GUI.Button(new Rect(x,y+136,w,38),confirmNew?"Confirm new yard / current compact files archived":"New compact yard"))
+            var r=Panel(width,height,"SCRAPSHIFT",730,740);
+            GUILayout.BeginArea(new Rect(r.x+24,r.y+62,r.width-48,r.height-91));
+            menuScroll=GUILayout.BeginScrollView(menuScroll);
+            if(logo!=null)
+            {
+                Rect logoRect=GUILayoutUtility.GetRect(1,86,GUILayout.ExpandWidth(true));
+                GUI.DrawTexture(logoRect,logo,ScaleMode.ScaleToFit,true);
+            }
+            GUILayout.Label("Start with your bare hands.",menuHeading);
+            Text("Turn forgotten machines into something useful. Build a scrapyard that works for you.");
+            BeginCard(hasSave?"Your yard is waiting":"A small yard. A fresh start.");
+            if(hasSave)
+            {
+                Text(YardSummary());
+                if(Model.Career.CurrentGoal!=null)GUILayout.Label("Next in your journal: "+Model.Career.CurrentGoal.title,small);
+                else GUILayout.Label("Starter chapter complete • Continue building your own production lines.",small);
+            }
+            else Text("A manual bench, a scrap car and a refrigerator are ready for your first shift. Take your time; there are no daily fees or deadlines.");
+            if(Primary(hasSave?"Continue your yard":"Start your first shift",!saveBlocked))BeginYard();
+            if(saveBlocked)Text("Your existing save could not be opened and is protected. Start a new yard below to keep the old files in an archive.");
+            else if(!string.IsNullOrEmpty(saveStatus))GUILayout.Label(saveStatus,small);
+            EndCard();
+            if(Button("Settings"))settings.Open();
+            if(Button("How to play"))Show(Page.Help);
+            if(Button("Credits"))Show(Page.Credits);
+            GUILayout.Space(8);
+            if(Button(confirmNew?"Confirm new yard — archive current progress":"Start a new yard…"))
             {if(confirmNew)NewYard();else confirmNew=true;}
-            if(File.Exists(LegacyPath)||File.Exists(LegacyPath+".bak"))
-                if(GUI.Button(new Rect(x,y+180,w,38),"Import compatible legacy progress…"))Show(Page.Import);
-            if(GUI.Button(new Rect(x,y+224,w,38),"Open legacy yard"))OpenLegacy();
-            if(GUI.Button(new Rect(x,y+268,w,38),"Quit"))Quit();
-            GUI.Label(new Rect(x,r.yMax-82,w,67),saveBlocked?saveNotice:Model.State.importedLegacy?"Legacy source and full snapshot retained. Old repairs and requests continue in the legacy scene.":saveNotice,small);
+            if(confirmNew)
+            {
+                Text("Current compact-yard saves will be archived before a fresh yard is created. Your separate Settings and earlier yard remain available.");
+                if(Button("Keep my current yard"))confirmNew=false;
+            }
+            if(Button(showLegacyMenus?"Hide earlier yard options":"Earlier yard options…"))showLegacyMenus=!showLegacyMenus;
+            if(showLegacyMenus)
+            {
+                BeginCard("Your earlier yard");
+                Text("Revisit the original workshop and its restoration jobs, or bring compatible progress into the compact yard.");
+                if(File.Exists(LegacyPath)||File.Exists(LegacyPath+".bak"))
+                    if(Button("Import earlier progress…"))Show(Page.Import);
+                if(Button("Open earlier yard"))OpenLegacy();EndCard();
+            }
+            if(Button("Quit"))Quit();
+            if(saveBlocked&&!string.IsNullOrEmpty(saveNotice))GUILayout.Label(saveNotice,small);
+            if(Time.unscaledTime<messageUntil&&!string.IsNullOrEmpty(message))GUILayout.Label(message,small);
+            GUILayout.EndScrollView();GUILayout.EndArea();
         }
         void DrawPause(float width,float height)
         {
-            var r=Panel(width,height,"YARD PAUSED / €"+Model.State.money+" / LEVEL "+Model.Level,650,635);
-            float x=r.x+24,w=r.width-48,y=r.y+60;
-            if(GUI.Button(new Rect(x,y,w,42),"Resume / Escape")){page=Page.None;Pause(false);}
-            if(GUI.Button(new Rect(x,y+50,w,40),"Settings"))settings.Open();
-            if(GUI.Button(new Rect(x,y+98,w,40),"Buy and place equipment"))Show(Page.Catalogue);
-            if(GUI.Button(new Rect(x,y+146,w,40),"How to play / controls"))Show(Page.Help);
-            if(GUI.Button(new Rect(x,y+194,w,40),"Save yard")){if(Save())Tell("Compact yard saved.");}
-            if(GUI.Button(new Rect(x,y+242,w,40),"Return to title")){if(Save()){page=Page.Title;Pause(true);}}
-            if(GUI.Button(new Rect(x,y+290,w,40),"Save and quit"))Quit();
-            GUI.Label(new Rect(x,y+352,w,85),Time.unscaledTime<messageUntil?message:"Only the office, sales counter, receiving area and fence are fixed. Place your equipment anywhere the preview shows clear ground.",wrap);
-            GUI.Label(new Rect(x,r.yMax-62,w,45),"Your yard and Settings are saved separately. Escape always stays available.",small);
+            var r=Panel(width,height,"Shift paused",650,740);
+            GUILayout.BeginArea(new Rect(r.x+24,r.y+64,r.width-48,r.height-92));
+            menuScroll=GUILayout.BeginScrollView(menuScroll);
+            Text(YardSummary());
+            if(Primary("Back to the yard / Escape")){page=Page.None;Pause(false);}
+            if(Button("Workshop journal ["+controls.Label(ControlAction.Journal)+"]"))Show(Page.Journal);
+            if(Button("Neighbourhood requests"))Show(Page.Contracts);
+            if(Button("Buy and place equipment ["+controls.Label(ControlAction.BuildToggle)+"]"))Show(Page.Catalogue);
+            if(Button("Settings"))settings.Open();
+            if(Button("How to play / controls"))Show(Page.Help);
+            Section("YOUR PROGRESS");
+            if(!string.IsNullOrEmpty(saveStatus))GUILayout.Label(saveStatus,small);
+            if(Button("Save yard")){if(Save())Tell("Your yard is saved.");}
+            if(Button("Save and return to title")){if(Save()){page=Page.Title;Pause(true);}}
+            if(Button("Save and quit"))Quit();
+            if(Time.unscaledTime<messageUntil&&!string.IsNullOrEmpty(message))Text(message);
+            else GUILayout.Label("Machines and conveyors take a break with you. Escape always returns you from a menu.",small);
+            GUILayout.EndScrollView();GUILayout.EndArea();
         }
         void DrawWelcome()
         {
-            Text(Model.State.importedLegacy?"Your compatible progress is in the compact yard. Existing bundles and wire jobs are retained. Order replacement scrap at delivery, or use free wiring. Your old yard remains available from the title.":"A compact 48 × 36 metre yard, one manual bench, a scrap car and a refrigerator. There are no daily fees or deadlines. Your equipment layout is yours to design.");
-            Text("1. Look at a car or refrigerator and press ["+controls.Label(ControlAction.Interact)+"] to inspect it. Close the inspection, then use separate ["+controls.Label(ControlAction.ManualWork)+"] strokes with empty hands. Inspect again to remove each component.");
-            Text("2. Carry a motor, compressor, wiring or metal casing to your manual bench. ["+controls.Label(ControlAction.Interact)+"] loads it; ["+controls.Label(ControlAction.ManualWork)+"] processes it. Collect every output, then sell materials at the office counter.");
-            Text("3. Earn money and sale XP. Open the equipment catalogue ["+controls.Label(ControlAction.BuildToggle)+"], buy a generator and a Tier 1 scrapper, and connect their power ports. Its powered work replaces hand strokes; input and collection still need you.");
-            Text("Free wiring at delivery keeps you earning if cash is low. Put items down with ["+controls.Label(ControlAction.Drop)+"]. Escape pauses work and opens Settings.");
-            Text("At level 10, buy ported storage, conveyors, junctions and a Tier 2 scrapper. Connect storage output to its input, supply power, then send recovered materials into storage. Equipment unlocks let you purchase it; they do not grant free machines.");
-            if(Model.State.importedLegacy)Text(Model.State.legacyNotice);
-            if(Button("Settings"))settings.Open();
+            Section("YOUR FIRST SHIFT",Model.State.importedLegacy?
+                "Your earlier work has a new home. The original workshop and its full progress are still available from the title.":
+                "This little yard is yours now. Start with the car or refrigerator at the receiving area; your first bench is ready nearby.");
+            BeginCard("01  /  Find something worth saving");
+            Text("Look at delivered scrap and press ["+controls.Label(ControlAction.Interact)+"] to inspect it. Close its inspection, then use ["+controls.Label(ControlAction.ManualWork)+"] for each dismantling stroke with empty hands.");EndCard();
+            BeginCard("02  /  Work it down");
+            Text("Collect a motor, compressor, wiring or casing. Carry it to the manual bench: ["+controls.Label(ControlAction.Interact)+"] loads it, ["+controls.Label(ControlAction.ManualWork)+"] does the work. Collect each recovered material.");EndCard();
+            BeginCard("03  /  Make your first sale");
+            Text("Bring recovered materials to the office counter. Sales earn money and experience. Neighbours also have small requests, with an extra bonus when you finish their order.");EndCard();
+            Section("A LITTLE HELP WHEN YOU NEED IT");
+            Text("Press ["+controls.Label(ControlAction.Journal)+"] for your next step. Put down items with ["+controls.Label(ControlAction.Drop)+"]. Free wiring at delivery keeps you earning when money is low. Escape opens Pause and Settings.");
+            Text("Later, use ["+controls.Label(ControlAction.BuildToggle)+"] to buy and place generators and powered scrappers. Level 10 opens conveyors, storage and Tier 2 equipment. There is no rush to build it all today.");
+            if(Button("Adjust my controls & settings"))settings.Open();
         }
         void DrawHelp()
         {
-            Text("CURRENT BINDINGS\nWalk: ["+controls.Label(ControlAction.MoveForward)+"] forward, ["+controls.Label(ControlAction.MoveBackward)+"] back, ["+controls.Label(ControlAction.MoveLeft)+"] left, ["+controls.Label(ControlAction.MoveRight)+"] right. Mouse look.\n["+controls.Label(ControlAction.Interact)+"] inspect/use/pick up; ["+controls.Label(ControlAction.ManualWork)+"] one work stroke; ["+controls.Label(ControlAction.Drop)+"] put down.\n["+controls.Label(ControlAction.BuildToggle)+"] catalogue/cancel construction; ["+controls.Label(ControlAction.BuildRotate)+"] rotate preview. Escape cancels construction or returns from menus.");
+            Section("CONTROLS THAT FIT YOUR HANDS");
+            Text("Walk: ["+controls.Label(ControlAction.MoveForward)+"] forward, ["+controls.Label(ControlAction.MoveBackward)+"] back, ["+controls.Label(ControlAction.MoveLeft)+"] left, ["+controls.Label(ControlAction.MoveRight)+"] right. Mouse look.\n["+controls.Label(ControlAction.Interact)+"] inspect/use/pick up; ["+controls.Label(ControlAction.ManualWork)+"] one work stroke; ["+controls.Label(ControlAction.Drop)+"] put down.\n["+controls.Label(ControlAction.Journal)+"] workshop journal. ["+controls.Label(ControlAction.BuildToggle)+"] catalogue/cancel construction; ["+controls.Label(ControlAction.BuildRotate)+"] rotate preview. Escape cancels construction or returns from menus.");
             Text("CAR → MOTOR / WIRING / BODY METAL\nREFRIGERATOR → COMPRESSOR / WIRING / CASING / PLASTIC\nInspect, finish its individual dismantling steps, then remove the components. Whole cars and refrigerators stay in the receiving area. Hands must be empty for manual work.");
             foreach(var recipe in Model.Rules.recipes)
                 Text(Model.Rules.Part(recipe.input).name+" → "+YieldText(recipe.yields)+" / "+recipe.strokes+" strokes per "+recipe.inputQuantity+" input");
             Text("Each input is reserved once, then its exact outputs remain until collected. A machine with uncollected output cannot accept another load. Power cuts and overloaded networks preserve inputs and progress. Pause/Settings stop every processing clock.");
             Text("POWER & BUILDING\nSelect a catalogue item, aim at nearby gravel and rotate its ghost. Green is valid; red explains the blockage. Toggle optional grid snap in the catalogue. Confirm with ["+controls.Label(ControlAction.Interact)+"]. Cancel is free. Keep the entrance and receiving area clear. Empty equipment and disconnect its cables and conveyors before moving or dismantling it. Keep at least one manual bench.");
-            Text("Inspect powered equipment to connect or disconnect a cable to another nearby port. A generator supplies its connected network; if combined machine demand exceeds supply every consumer pauses. Generators have no fuel cost in this stage.");
+            Text("Inspect powered equipment to connect or disconnect a cable to another nearby port. A generator supplies its connected network; if combined machine demand exceeds supply every consumer pauses. Generators have no fuel cost.");
             Text("PROGRESSION\nOnly completed sales of eligible recovered materials earn XP. Collection, moving, purchases and repeated button presses do not. Levels increase the editable material-sale bonus. Replacement cars and refrigerators are bought at delivery; renewable free wiring protects the basic earning loop.");
             Text("CONVEYORS & STORAGE\nInspect storage to deposit/withdraw bundles and choose an output filter. Select an output port, then aim at an input port to snap a conveyor preview. ["+controls.Label(ControlAction.BuildRotate)+"] switches the corner; ["+controls.Label(ControlAction.Interact)+"] confirms. Splitters rotate between free outputs; mergers combine incoming lines. Full destinations hold items on the belt. Connect a generator to Tier 2; it reserves supported components from its buffer, processes them, then outputs recovered materials. Recipe selection filters its intake. No transport grants XP.");
-            Text("CURRENT STAGES\nManual dismantling, component processing, sales/XP, free placement, generators, Tier 1 and level-10 conveyor/storage/Tier 2 networks are implemented in source. Automatic whole-car/appliance intake and export remain later stages.");
+            Section("YOUR OWN PACE");
+            Text("Your journal follows your first dismantling job through sales, powered work and a connected storage line. Neighbourhood requests pay for matching recovered materials, with an extra bonus on the last delivery. Partial deliveries count and there are no deadlines.");
+            Text("There are no daily fees. Free wiring remains available if your till is empty. Pause and Settings stop all work, and your yard saves automatically as you go.");
             if(Model.State.importedLegacy)Text(Model.State.legacyNotice);
             if(Button("Settings"))settings.Open();
         }
@@ -143,11 +233,13 @@ namespace Scrapshift.Compact
             build.GridSnap=GUILayout.Toggle(build.GridSnap,"Snap previews to a 0.5 metre grid");GUILayout.Space(12);
             foreach(var d in Model.Rules.equipment)
             {
-                string requirement=!d.available?"Planned stage / level "+d.unlockLevel:Model.Level<d.unlockLevel?"Requires level "+d.unlockLevel:Model.State.money<d.price?"Save €"+(d.price-Model.State.money)+" more":"Ready to place";
+                if(!d.available)continue;
+                string requirement=Model.Level<d.unlockLevel?"Requires level "+d.unlockLevel:Model.State.money<d.price?"Save €"+(d.price-Model.State.money)+" more":"Ready to place";
                 string size=d.kind==EquipmentKind.Conveyor?" per 2m section / select equipment ports": " / "+d.width.ToString("0.#")+" × "+d.depth.ToString("0.#")+"m";
-                Text(d.name+" / €"+d.price+size+"\n"+requirement+(d.powerOutput>0?" / supplies "+d.powerOutput+" kW":"")+(d.powerDemand>0?" / draws "+d.powerDemand+" kW":""));
+                BeginCard(d.name);
+                Text("€"+d.price+size+"\n"+requirement+(d.powerOutput>0?" / supplies "+d.powerOutput+" kW":"")+(d.powerDemand>0?" / draws "+d.powerDemand+" kW":""));
                 if(Button("Choose "+d.name,d.available&&Model.Level>=d.unlockLevel&&Model.State.money>=d.price))BeginBuild(d.kind);
-                GUILayout.Space(12);
+                EndCard();
             }
         }
         void DrawLargeScrap()
@@ -161,8 +253,11 @@ namespace Scrapshift.Compact
                 if(Button("Inspect this scrap",Model.State.carriedId==0))Act(()=>Model.InspectScrap(selectedId));
                 return;
             }
-            Text(recipe.name+" / "+scrap.strokes+" of "+Model.RequiredScrapStrokes(scrap.id)+" dismantling steps");
-            Text(Model.ScrapWorkStage(scrap.id));Text("Recover: "+YieldText(scrap.remaining??recipe.yields));
+            Section(recipe.name.ToUpperInvariant());
+            Progress(scrap.requiredStrokes>0?(float)scrap.strokes/scrap.requiredStrokes:0,
+                scrap.strokes+" / "+Model.RequiredScrapStrokes(scrap.id)+" dismantling steps");
+            BeginCard(scrap.strokes<scrap.requiredStrokes?Model.ScrapWorkStage(scrap.id):"Ready to recover");
+            Text("Components: "+YieldText(scrap.remaining??recipe.yields));EndCard();
             if(scrap.strokes<scrap.requiredStrokes)
                 Text("Close this page and use ["+controls.Label(ControlAction.ManualWork)+"] at the object with empty hands. Each stroke finishes one stage.");
             else
@@ -175,41 +270,59 @@ namespace Scrapshift.Compact
         }
         void DrawEquipment()
         {
-            var equipment=Model.FindEquipment(selectedId);if(equipment==null){Text("Equipment was removed.");return;}
+            var equipment=Model.FindEquipment(selectedId);if(equipment==null){Text("This equipment has been removed.");return;}
             var definition=Model.Rules.Equipment(equipment.kind);
-            Text(definition.name+" / "+definition.width.ToString("0.#")+" × "+definition.depth.ToString("0.#")+"m");
+            Section(definition.name.ToUpperInvariant(),definition.width.ToString("0.#")+" × "+definition.depth.ToString("0.#")+" metre footprint");
+            BeginCard(equipment.job!=null&&equipment.job.ready?"Your recovered materials are ready":"At the work station");
             if(equipment.job!=null)
             {
                 var job=equipment.job;
-                Text(Model.Rules.Part(job.input).name+" ×"+job.inputQuantity+" reserved / output: "+YieldText(job.yields));
-                Text(job.ready?"Ready to collect":equipment.kind==EquipmentKind.Workbench?"Hand work "+job.strokes+" / "+job.requiredStrokes+". Close this page and use ["+controls.Label(ControlAction.ManualWork)+"].":"Processing time left: "+job.remaining.ToString("0.0")+"s. "+Model.ProcessingBlockReason(equipment.id));
+                Text("Loaded: "+Model.Rules.Part(job.input).name+" ×"+job.inputQuantity+"\nRecover: "+YieldText(job.yields));
+                float fraction=job.ready?1:equipment.kind==EquipmentKind.Workbench?(job.requiredStrokes>0?(float)job.strokes/job.requiredStrokes:0):
+                    job.duration>0?1-job.remaining/job.duration:0;
+                string progress=job.ready?"Ready to collect":equipment.kind==EquipmentKind.Workbench?
+                    job.strokes+" / "+job.requiredStrokes+" work strokes":job.remaining.ToString("0.0")+"s processing left";
+                Progress(fraction,progress);
+                if(!job.ready)
+                    Text(equipment.kind==EquipmentKind.Workbench?
+                        "Return to the yard and use ["+controls.Label(ControlAction.ManualWork)+"] with empty hands to keep working.":
+                        Model.ProcessingBlockReason(equipment.id)+". Menus pause processing; close when you are ready.");
                 for(int i=0;i<job.yields.Length;i++)
                 {
                     int slot=i;var output=job.yields[i];if(output.quantity<=0)continue;
                     if(Button("Collect "+Model.Rules.Part(output.kind).name+" ×"+output.quantity,job.ready&&Model.State.carriedId==0))
-                        if(Act(()=>Model.CollectOutput(selectedId,slot))){page=Page.None;Pause(false);return;}
+                        if(Act(()=>Model.CollectOutput(selectedId,slot))){page=Page.None;Pause(false);EndCard();return;}
                 }
+                if(Model.State.carriedId!=0)GUILayout.Label("Put down your carried item before collecting another bundle.",small);
             }
-            else if(equipment.kind==EquipmentKind.Generator)Text("Supplies its connected power network. Connect enough generators for the combined machine demand.");
-            else if(equipment.kind==EquipmentKind.Tier2Scrapper)Text("Waiting for buffered input. Deposit a supported component or connect an incoming conveyor; power advances each reserved recipe.");
-            else if(equipment.kind==EquipmentKind.Storage||equipment.kind==EquipmentKind.Splitter||equipment.kind==EquipmentKind.Merger)Text("Deposit and withdraw items below. Connected conveyors transfer them without granting experience.");
-            else Text("Empty. Carry a component here and use ["+controls.Label(ControlAction.Interact)+"] to load it.");
-            DrawAutomation(equipment);
+            else if(equipment.kind==EquipmentKind.Generator)Text("Ready to supply its connected network. Link enough generators to cover your machines' combined power demand.");
+            else if(equipment.kind==EquipmentKind.Tier2Scrapper)Text("Waiting for buffered input. Deposit a supported component or connect an incoming conveyor. A powered machine works through each load.");
+            else if(equipment.kind==EquipmentKind.Storage||equipment.kind==EquipmentKind.Splitter||equipment.kind==EquipmentKind.Merger)Text("Deposit or withdraw bundles below. Connected conveyors take care of moving them between stations.");
+            else Text("Ready for the next load. Carry a component here and use ["+controls.Label(ControlAction.Interact)+"] to place it inside.");
+            EndCard();
+            if(AutomationModel.PortCount(equipment.kind,false)>0||AutomationModel.PortCount(equipment.kind,true)>0)
+            {Section("CONTENTS & CONVEYOR ROUTES");DrawAutomation(equipment);}
             if(definition.powerOutput>0||definition.powerDemand>0)
             {
-                var power=Construction.PowerFor(selectedId);Text("POWER / "+power.reason+"\nSupply "+power.supply+" kW / demand "+power.demand+" kW. Cable range "+Model.Rules.CableRange+"m.");
+                var power=Construction.PowerFor(selectedId);
+                BeginCard("Power network / "+power.reason);
+                Text("Supply "+power.supply+" kW  •  Demand "+power.demand+" kW\nCable reach: "+Model.Rules.CableRange+" metres");
                 foreach(var other in Model.State.equipment)
                 {
                     if(other.id==selectedId)continue;var d=Model.Rules.Equipment(other.kind);if(d.powerOutput<=0&&d.powerDemand<=0)continue;
                     int partner=other.id;bool linked=Construction.CanDisconnect(selectedId,partner,out string reason);
                     bool allowed=linked||Construction.CanConnect(selectedId,partner,out reason);
-                    if(Button((linked?"Disconnect from ":"Connect to ")+d.name+" #"+partner,allowed))
+                    float dx=equipment.x-other.x,dz=equipment.z-other.z;
+                    string label=d.name+" / "+Mathf.Sqrt(dx*dx+dz*dz).ToString("0.0")+"m away";
+                    if(Button((linked?"Disconnect ":"Connect ")+label,allowed))
                         ConstructionAct(()=>linked?Construction.Disconnect(selectedId,partner):Construction.Connect(selectedId,partner));
                     if(!allowed)GUILayout.Label(reason,small);
                 }
+                EndCard();
             }
+            Section("MAKE IT FIT YOUR YARD");
             bool canMove=Construction.CanMove(selectedId,out string moveReason);
-            Text("PLACEMENT / "+moveReason);
+            Text(moveReason);
             if(Button("Move this equipment",canMove))BeginBuild(equipment.kind,selectedId);
             bool canRemove=Construction.CanRemove(selectedId,out string removeReason);
             if(Button(confirmRemove?"Confirm dismantle / refund €"+Construction.RefundFor(selectedId):"Dismantle / refund €"+Construction.RefundFor(selectedId),canRemove))
@@ -217,35 +330,51 @@ namespace Scrapshift.Compact
                 if(confirmRemove){if(ConstructionAct(()=>Construction.Remove(selectedId))){page=Page.None;Pause(false);}}
                 else confirmRemove=true;
             }
+            if(confirmRemove&&Button("Keep this equipment"))confirmRemove=false;
             if(!canRemove)Text(removeReason);
         }
         bool ConstructionAct(Func<bool> action)
         {
             bool changed=action();Tell(Construction.LastMessage);
-            if(changed){sounds.Play(YardSound.Tool);SyncViews();Save();}return changed;
+            if(changed){sounds.Play(YardSound.Tool);SyncViews();RefreshCareer();Save();}return changed;
         }
         void DrawSales()
         {
+            Section("TODAY'S MATERIAL RATE","Level "+Model.Level+" gives +"+Model.SaleBonusPercent+"% on material sales. "+
+                (Model.XPToNextLevel>0?Model.XPToNextLevel+" XP until your next level.":"You have reached the current maximum level."));
             var quote=Model.SaleQuote();
-            if(Model.Carried==null)Text("Carry a recovered material bundle to this counter. Prices below are per unit before the level bonus.");
+            BeginCard(Model.Carried==null?"Bring your recovered materials":"On the counter / "+quote.name+" ×"+quote.quantity);
+            if(Model.Carried==null)Text("Carry a material bundle here to see its value. You can sell it directly or deliver matching material to a neighbour below.");
             else
             {
-                Text(quote.name+" ×"+quote.quantity+" / unit €"+quote.unitPrice+"\nBase €"+quote.baseTotal+" + "+quote.bonusPercent+"% material bonus (€"+quote.bonusTotal+") = €"+quote.total+"\nSale XP: "+quote.experience+" / "+quote.reason);
-                if(Button("Sell carried bundle for €"+quote.total,quote.allowed))
-                    if(Act(()=>Model.Sell(),YardSound.Sale)){page=Page.None;Pause(false);return;}
+                Text("€"+quote.unitPrice+" per unit  •  Base €"+quote.baseTotal+"  •  Level bonus €"+quote.bonusTotal);
+                GUILayout.Label("Sale total  €"+quote.total,hudHeading);
+                Text(quote.experience+" sale XP  /  "+quote.reason);
+                if(Primary("Sell carried bundle / €"+quote.total,quote.allowed))
+                    if(Act(()=>Model.Sell(),YardSound.Sale)){page=Page.None;Pause(false);EndCard();return;}
             }
-            Text("LEVEL "+Model.Level+" / total "+Model.State.experience+" XP / "+(Model.XPToNextLevel>0?Model.XPToNextLevel+" XP to next level":"maximum configured level"));
+            EndCard();
+            DrawCustomerOffer(false);
+            if(Button("Open neighbourhood requests"))Show(Page.Contracts);
+            Section("PRICE BOARD","Prices per unit before your level bonus. Process components at a bench or scrapper to recover their valuable materials.");
             foreach(var part in Model.Rules.parts)if(part.unitPrice>0)
-                Text(part.name+" / €"+part.unitPrice+" per unit / "+(part.isMaterial?part.saleXp+" XP per eligible unit":"no recovery XP"));
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(part.name,wrap,GUILayout.ExpandWidth(true));
+                GUILayout.Label("€"+part.unitPrice+" / unit",small,GUILayout.Width(120));
+                GUILayout.Label(part.isMaterial?part.saleXp+" XP":"—",small,GUILayout.Width(75));
+                GUILayout.EndHorizontal();
+            }
         }
         void DrawDelivery()
         {
             Text("Buy another full-size object when its receiving space is clear. These objects stay in the yard while you dismantle them. The free wiring crate remains available if cash is low.");
             foreach(var recipe in Model.Rules.largeRecipes)
             {
-                var kind=recipe.kind;Text(recipe.name+" / €"+recipe.purchasePrice+" / "+recipe.strokes+" manual stages\nComponents: "+YieldText(recipe.yields));
-                if(Button("Buy "+recipe.name,Model.State.money>=recipe.purchasePrice))Act(()=>Model.BuyScrap(kind));
-                GUILayout.Space(12);
+                var kind=recipe.kind;BeginCard(recipe.name);
+                Text("€"+recipe.purchasePrice+" / "+recipe.strokes+" manual stages\nComponents: "+YieldText(recipe.yields));
+                if(Button("Buy "+recipe.name+" / €"+recipe.purchasePrice,Model.State.money>=recipe.purchasePrice))Act(()=>Model.BuyScrap(kind));
+                EndCard();
             }
         }
         void DrawImport()
@@ -300,31 +429,78 @@ namespace Scrapshift.Compact
         }
         void DrawHud(float width,float height)
         {
-            float statusWidth=Mathf.Min(430,width-40),objectiveWidth=Mathf.Min(510,width*.49f);
-            GUI.Box(new Rect(18,18,statusWidth,72),"");
-            Fill(new Rect(18,18,4,72),new Color(.68f,.57f,.34f));
-            GUI.Label(new Rect(33,27,statusWidth-30,30),hudTitle,hudHeading);
-            Fill(new Rect(33,67,statusWidth-30,5),new Color(.25f,.29f,.24f));
-            Fill(new Rect(33,67,(statusWidth-30)*Model.LevelFraction,5),new Color(.69f,.62f,.34f));
-            if(presentation.Preferences.showFrameRate){GUI.Box(new Rect(width-232,18,215,35),"");GUI.Label(new Rect(width-220,23,191,25),fpsLabel,small);}
-            GUI.Box(new Rect(18,99,objectiveWidth,67),"");GUI.Label(new Rect(31,108,objectiveWidth-26,50),hudObjective,hudBody);
-            if(hudHeld.Length>0){GUI.Box(new Rect(width*.5f-315,height-198,630,52),"");GUI.Label(new Rect(width*.5f-302,height-191,604,42),hudHeld,hudBody);}
+            float statusWidth=Mathf.Min(450,width-40),objectiveWidth=Mathf.Min(520,width*.52f);
+            float titleHeight=Mathf.Max(28,MeasuredHeight(hudHeading,hudTitle,statusWidth-30));
+            float statusHeight=titleHeight+46;
+            GUI.Box(new Rect(18,18,statusWidth,statusHeight),"");
+            Fill(new Rect(18,18,4,statusHeight),new Color(.68f,.57f,.34f));
+            GUI.Label(new Rect(33,26,statusWidth-30,titleHeight),hudTitle,hudHeading);
+            string levelText=Model.XPToNextLevel>0?Model.XPToNextLevel+" XP to level "+(Model.Level+1):"Highest level reached";
+            GUI.Label(new Rect(33,28+titleHeight,statusWidth-30,24),levelText,small);
+            Fill(new Rect(33,statusHeight+10,statusWidth-30,4),new Color(.25f,.29f,.24f));
+            Fill(new Rect(33,statusHeight+10,(statusWidth-30)*Model.LevelFraction,4),new Color(.69f,.62f,.34f));
+            if(presentation.Preferences.showFrameRate)
+            {GUI.Box(new Rect(width-232,18,215,35),"");GUI.Label(new Rect(width-220,23,191,25),fpsLabel,small);}
+            float objectiveTop=28+statusHeight;
+            float objectiveTextHeight=MeasuredHeight(hudBody,hudObjective,objectiveWidth-26);
+            float directionHeight=string.IsNullOrEmpty(hudDirection)?0:MeasuredHeight(small,hudDirection,objectiveWidth-26)+5;
+            GUI.Box(new Rect(18,objectiveTop,objectiveWidth,objectiveTextHeight+46+directionHeight),"");
+            GUI.Label(new Rect(31,objectiveTop+9,objectiveWidth-26,19),Model.Career.Completed?"YOUR YARD, YOUR WAY":"NEXT IN YOUR JOURNAL",eyebrow);
+            GUI.Label(new Rect(31,objectiveTop+34,objectiveWidth-26,objectiveTextHeight+3),hudObjective,hudBody);
+            if(directionHeight>0)GUI.Label(new Rect(31,objectiveTop+39+objectiveTextHeight,objectiveWidth-26,directionHeight),hudDirection,small);
+            float contextWidth=Mathf.Min(690,width-40),contextLeft=(width-contextWidth)*.5f;
+            string footer="["+controls.Label(ControlAction.Journal)+"] Journal   ["+controls.Label(ControlAction.BuildToggle)+"] Equipment   Esc Pause / Settings";
+            float footerHeight=Mathf.Max(25,MeasuredHeight(small,footer,Mathf.Min(700,width-40)-24)+6);
+            float contextBottom=height-footerHeight-24;
+            float hintHeight=MeasuredHeight(hudBody,hudHint,contextWidth-28);
+            float progressHeight=hudProgress>=0?MeasuredHeight(small,hudProgressLabel,contextWidth-28)+20:0;
+            float contextHeight=hintHeight+24+progressHeight;
+            if(hudHeld.Length>0)
+            {
+                float heldWidth=Mathf.Min(650,width-60);
+                float heldHeight=MeasuredHeight(hudBody,hudHeld,heldWidth-26)+18;
+                float heldTop=contextBottom-(IsBuilding?108:contextHeight+8)-heldHeight;
+                GUI.Box(new Rect((width-heldWidth)*.5f,heldTop,heldWidth,heldHeight),"");
+                GUI.Label(new Rect((width-heldWidth)*.5f+13,heldTop+8,heldWidth-26,heldHeight-15),hudHeld,hudBody);
+            }
             if(IsBuilding)
             {
                 Fill(new Rect(width*.5f-2,height*.5f-2,4,4),previewClear?new Color(.48f,.78f,.66f):Color.white);
-                GUI.Box(new Rect(width*.5f-330,height-136,660,88),"");
-                GUI.Label(new Rect(width*.5f-316,height-130,632,70),(beltStage>0?"Conveyor":Model.Rules.Equipment(build.SelectedKind).name)+" / "+buildReason+"\n["+controls.Label(ControlAction.Interact)+"] "+(beltStage==1?"choose output":"confirm")+"   ["+controls.Label(ControlAction.BuildRotate)+"] "+(beltStage>0?"change elbow":"rotate")+"   Escape cancel",hudBody);
+                string buildHint=(beltStage>0?"Conveyor":Model.Rules.Equipment(build.SelectedKind).name)+" / "+buildReason+"\n["+
+                    controls.Label(ControlAction.Interact)+"] "+(beltStage==1?"choose output":"confirm")+"   ["+
+                    controls.Label(ControlAction.BuildRotate)+"] "+(beltStage>0?"change elbow":"rotate")+"   Escape cancel";
+                float buildHeight=MeasuredHeight(hudBody,buildHint,contextWidth-28)+22;
+                GUI.Box(new Rect(contextLeft,contextBottom-buildHeight,contextWidth,buildHeight),"");
+                GUI.Label(new Rect(contextLeft+14,contextBottom-buildHeight+9,contextWidth-28,buildHeight-17),buildHint,hudBody);
             }
             else
             {
                 Fill(new Rect(width*.5f-2,height*.5f-2,4,4),target!=null?new Color(.79f,.72f,.44f):Color.white);
                 if(hudHint.Length>0)
-                {GUI.Box(new Rect(width*.5f-330,height-126,660,75),"");GUI.Label(new Rect(width*.5f-316,height-120,632,63),hudHint,hudBody);}
+                {
+                    float top=contextBottom-contextHeight;
+                    GUI.Box(new Rect(contextLeft,top,contextWidth,contextHeight),"");
+                    Fill(new Rect(contextLeft+1,top+1,3,contextHeight-2),new Color(.62f,.61f,.39f));
+                    GUI.Label(new Rect(contextLeft+14,top+9,contextWidth-28,hintHeight+3),hudHint,hudBody);
+                    if(hudProgress>=0)
+                    {
+                        GUI.Label(new Rect(contextLeft+14,top+hintHeight+15,contextWidth-28,progressHeight-17),hudProgressLabel,small);
+                        Fill(new Rect(contextLeft+14,contextBottom-11,contextWidth-28,5),new Color(.25f,.29f,.24f));
+                        Fill(new Rect(contextLeft+14,contextBottom-11,(contextWidth-28)*Mathf.Clamp01(hudProgress),5),new Color(.70f,.62f,.38f));
+                    }
+                }
             }
             if(Time.unscaledTime<messageUntil&&message.Length>0)
-            {GUI.Box(new Rect(18,height-273,560,64),"");GUI.Label(new Rect(31,height-264,534,48),message,hudBody);}
-            GUI.Box(new Rect(18,height-45,460,30),"");
-            GUI.Label(new Rect(30,height-41,436,24),"["+controls.Label(ControlAction.BuildToggle)+"] Equipment catalogue     Esc Pause / Settings",small);
+            {
+                float noticeWidth=Mathf.Min(380,width*.4f);
+                float noticeHeight=MeasuredHeight(hudBody,message,noticeWidth-26)+22;
+                GUI.Box(new Rect(width-noticeWidth-18,69,noticeWidth,noticeHeight),"");
+                Fill(new Rect(width-noticeWidth-17,70,noticeWidth-2,3),new Color(.68f,.57f,.34f));
+                GUI.Label(new Rect(width-noticeWidth-5,79,noticeWidth-26,noticeHeight-17),message,hudBody);
+            }
+            float footerWidth=Mathf.Min(700,width-40),footerTop=height-footerHeight-12;
+            GUI.Box(new Rect(18,footerTop,footerWidth,footerHeight),"");
+            GUI.Label(new Rect(30,footerTop+2,footerWidth-24,footerHeight-3),footer,small);
         }
         static void Fill(Rect rect,Color color)
         {Color before=GUI.color;GUI.color=color;GUI.DrawTexture(rect,Texture2D.whiteTexture);GUI.color=before;}

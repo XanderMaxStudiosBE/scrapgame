@@ -16,6 +16,7 @@ namespace Scrapshift.Compact
     {
         public CompactRules Rules { get; private set; }
         public CompactYardState State { get; private set; }
+        public CompactCareerModel Career { get; private set; }
         public string LastNotice { get; private set; }
         // Missing or disconnected power safely pauses machines, including immediately after load.
         public Func<int,bool> HasPower;
@@ -49,6 +50,7 @@ namespace Scrapshift.Compact
             rules.Validate(); Rules=rules;
             State=state??FreshState(rules);
             Validate(State,rules);
+            Career=new CompactCareerModel(this);
             LastNotice="Inspect delivered scrap, or collect renewable wiring.";
         }
         static CompactYardState FreshState(CompactRules rules)
@@ -124,6 +126,7 @@ namespace Scrapshift.Compact
             var recipe=Rules.LargeRecipe(s.kind);
             if(!CanReserve(recipe.yields.Length))return Fail("Make room for the components before dismantling.");
             s.remaining=CloneYields(recipe.yields);s.requiredStrokes=recipe.strokes;s.inspected=true;
+            Career.RecordInspect();
             LastNotice="Inspected "+recipe.name+". "+recipe.strokes+" dismantling stages; recovered components are reserved.";return true;
         }
         public bool WorkScrap(int id)
@@ -132,7 +135,7 @@ namespace Scrapshift.Compact
             if(State.carriedId!=0)return Fail("Put down your carried item to use the manual tools.");
             if(!s.inspected)return Fail("Inspect this object first.");
             if(s.strokes>=s.requiredStrokes)return Fail("Dismantling is complete; remove its components.");
-            s.strokes++;LastNotice=ScrapWorkStage(id);return true;
+            s.strokes++;if(s.strokes==s.requiredStrokes)Career.RecordDismantle();LastNotice=ScrapWorkStage(id);return true;
         }
         public bool CollectScrap(int id,int outputIndex)
         {
@@ -291,7 +294,7 @@ namespace Scrapshift.Compact
             if(e==null || e.kind!=EquipmentKind.Workbench || e.job==null)return Fail("Load a component into a manual workbench first.");
             if(State.carriedId!=0)return Fail("Put down your carried item before using the tools.");
             if(e.job.ready)return Fail("Output is ready; collect it before working again.");
-            e.job.strokes++;if(e.job.strokes==e.job.requiredStrokes)e.job.ready=true;
+            e.job.strokes++;if(e.job.strokes==e.job.requiredStrokes){e.job.ready=true;Career.RecordProcessing(e.kind);}
             LastNotice=e.job.ready?"Recovered materials are ready to collect.":"Manual work "+e.job.strokes+" / "+e.job.requiredStrokes+".";return true;
         }
         public int OutputQuantity(int equipmentId)
@@ -316,7 +319,7 @@ namespace Scrapshift.Compact
                 if((e.kind!=EquipmentKind.Tier1Scrapper && e.kind!=EquipmentKind.Tier2Scrapper) || e.job==null || e.job.ready || HasPower==null || !HasPower(e.id))continue;
                 long stored=0;foreach(var item in e.contents)stored+=item.quantity;
                 if(stored+OutputUnits(e.job.yields)>Rules.Equipment(e.kind).outputCapacity)continue;
-                e.job.remaining=Math.Max(0,e.job.remaining-delta);if(e.job.remaining==0)e.job.ready=true;changed=true;
+                e.job.remaining=Math.Max(0,e.job.remaining-delta);if(e.job.remaining==0){e.job.ready=true;Career.RecordProcessing(e.kind);}changed=true;
             }
             return changed;
         }
@@ -333,13 +336,16 @@ namespace Scrapshift.Compact
             LastNotice="Collected "+Rules.Part(output.kind).name+" ×"+Carried.quantity+". Sale experience is awarded only when sold.";return true;
         }
         public CompactSaleQuote SaleQuote()
+        {return QuoteSale(Carried==null?0:Carried.quantity);}
+        internal CompactSaleQuote QuoteSale(int quantity)
         {
             var q=new CompactSaleQuote{reason="Carry recovered materials to sell."};var held=Carried;if(held==null)return q;
-            var part=Rules.Part(held.kind);q.kind=held.kind;q.name=part.name;q.quantity=held.quantity;q.unitPrice=part.unitPrice;q.bonusPercent=SaleBonusPercent;
+            if(quantity<1 || quantity>held.quantity){q.reason="Choose a valid quantity from your carried bundle.";return q;}
+            var part=Rules.Part(held.kind);q.kind=held.kind;q.name=part.name;q.quantity=quantity;q.unitPrice=part.unitPrice;q.bonusPercent=SaleBonusPercent;
             bool restored=held.kind==PartKind.RestoredFan || held.kind==PartKind.RestoredRadio;
             if((!part.isMaterial && !restored) || part.unitPrice==0){q.reason="Dismantle this component into saleable materials first.";return q;}
-            long baseTotal=(long)part.unitPrice*held.quantity,bonus=baseTotal*q.bonusPercent/100,total=baseTotal+bonus;
-            long xp=held.xpEligible && part.isMaterial?(long)part.saleXp*held.quantity:0;
+            long baseTotal=(long)part.unitPrice*quantity,bonus=baseTotal*q.bonusPercent/100,total=baseTotal+bonus;
+            long xp=held.xpEligible && part.isMaterial?(long)part.saleXp*quantity:0;
             if(total>int.MaxValue || total>int.MaxValue-(long)State.money || xp>int.MaxValue-(long)State.experience)
             {q.reason="Sale exceeds the cash or experience limit; your item is unchanged.";return q;}
             q.baseTotal=(int)baseTotal;q.bonusTotal=(int)bonus;q.total=(int)total;q.experience=(int)xp;q.allowed=true;
@@ -350,8 +356,7 @@ namespace Scrapshift.Compact
         public bool Sell()
         {
             var quote=SaleQuote();if(!quote.allowed)return Fail(quote.reason);
-            int oldLevel=Level;var held=Carried;
-            State.money+=quote.total;State.experience+=quote.experience;State.items.Remove(held);State.carriedId=0;
+            int oldLevel=Level;CommitSale(quote,0);
             LastNotice="Sold "+quote.name+" ×"+quote.quantity+" for €"+quote.total+" (+"+quote.experience+" XP).";
             if(Level>oldLevel)
             {
@@ -361,10 +366,19 @@ namespace Scrapshift.Compact
             }
             return true;
         }
+        internal void CommitSale(CompactSaleQuote quote,int completionBonus)
+        {
+            var held=Carried;bool eligible=held.xpEligible;
+            State.money+=quote.total+completionBonus;State.experience+=quote.experience;held.quantity-=quote.quantity;
+            if(held.quantity==0){State.items.Remove(held);State.carriedId=0;}
+            Career.RecordSale(quote.kind,quote.quantity,quote.total,eligible);
+        }
+        internal void CareerNotice(string notice){LastNotice=notice;}
         public static void Validate(CompactYardState s, CompactRules rules)
         {
             if(s==null || rules==null)throw new ArgumentException("Missing compact yard or rules.");
             rules.Validate();
+            CompactCareerModel.Validate(s.career,rules);
             if((s.version!=2 && s.version!=3) || s.money<0 || s.experience<0 || s.nextId<1 || s.carriedId<0 || s.items==null || s.scrap==null || s.equipment==null || s.powerLinks==null ||
                 (s.version==3 && s.belts==null) || (s.belts!=null && (s.belts.Count>128 || (s.version==2 && s.belts.Count>0))) ||
                 s.items.Count>512 || s.scrap.Count>16 || s.equipment.Count>128 || s.powerLinks.Count>256 ||

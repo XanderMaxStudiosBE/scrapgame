@@ -104,6 +104,8 @@ namespace Scrapshift
             }
             if (settings.IsOpen) settings.UpdateCapture();
             if (paused || settings.IsOpen) return;
+            if (controls.GameplayReady && controls.Pressed(ControlAction.Journal))
+            {helpPage=2;helpScroll=Vector2.zero;helpOpen=true;SetPaused(true);return;}
             if(chapterCheckPending && TryShowOpeningCompletion())return;
             frameElapsed += Time.unscaledDeltaTime; frameSamples++;
             if (frameElapsed >= .5f)

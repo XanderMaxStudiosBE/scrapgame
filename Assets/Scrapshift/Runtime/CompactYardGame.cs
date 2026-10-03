@@ -19,8 +19,10 @@ namespace Scrapshift.Compact
         public AutomationModel Automation { get; private set; }
         public bool IsPaused { get { return paused; } }
         public bool IsBuilding { get { return (build!=null&&build.Active)||beltStage>0; } }
-        enum Page {None,Title,Pause,Welcome,Help,Catalogue,Equipment,LargeScrap,Sales,Delivery,Import}
-        Page page=Page.Title,backPage;
+        enum Page {None,Title,Pause,Welcome,Help,Catalogue,Equipment,LargeScrap,Sales,Delivery,Import,Journal,Contracts,Credits}
+        Page page=Page.Title;
+        struct MenuFrame {public Page page;public int selectedId;public Vector2 scroll;}
+        readonly Stack<MenuFrame> pageHistory=new Stack<MenuFrame>();
         int selectedId;
         bool paused,saveBlocked,hasSave,sessionStarted,confirmNew,confirmRemove;
         PlayerInputSettings controls;
@@ -30,7 +32,10 @@ namespace Scrapshift.Compact
         CompactBuildMode build;
         readonly YardInterfaceTheme theme=new YardInterfaceTheme();
         CompactInteractionTarget target;
-        string message="",saveNotice="",hudTitle="",hudHint="",hudHeld="",hudObjective="",buildReason="";
+        string message="",saveNotice="",hudTitle="",hudHint="",hudHeld="",hudObjective="",hudDirection="",buildReason="";
+        string hudProgressLabel="",saveStatus="Not saved yet";
+        float hudProgress=-1,lastSaveAt=-1,nextCareer;
+        bool saveFailed;
         float messageUntil,nextSave,nextStroke,nextHud,nextViews,nextPower;
         readonly Dictionary<int,CompactPowerStatus> powerCache=new Dictionary<int,CompactPowerStatus>();
         bool hudDirty=true,previewHit,previewClear;
@@ -47,6 +52,7 @@ namespace Scrapshift.Compact
             try{state=CompactSaveStore.Read(SavePath,balance.PreparedRules,out saveNotice);hasSave=state!=null;}
             catch(Exception ex){saveBlocked=true;saveNotice=ex.Message;Debug.LogWarning(ex);}
             BindModel(state);RestorePlayer();SyncViews();Pause(true);Tell(saveNotice);
+            if(hasSave)saveStatus="Saved yard loaded";
             nextSave=Time.unscaledTime+15;
         }
         void BindModel(CompactYardState state)
@@ -56,6 +62,8 @@ namespace Scrapshift.Compact
             Construction=new ConstructionModel(Model.State,Model.Rules);
             Automation=new AutomationModel(Model,Construction);
             RebuildPower();Model.HasPower=id=>PowerStatus(id).powered;
+            Model.Career.RefreshProgress();completionPresented=false;
+            lastSaveAt=-1;saveFailed=false;saveStatus="Not saved yet";
             build=new CompactBuildMode(Construction);
         }
         void RestorePlayer()
@@ -66,15 +74,25 @@ namespace Scrapshift.Compact
         void Pause(bool value)
         {
             paused=value;Time.timeScale=value?0:1;
+            if(!value)pageHistory.Clear();
             if(sounds!=null)sounds.Pause(value);
             if(controls!=null)controls.SuppressUntilRelease();
             Cursor.lockState=value?CursorLockMode.None:CursorLockMode.Locked;Cursor.visible=value;
             hudDirty=true;
         }
         void Show(Page next,int id=0)
-        {backPage=page;page=next;selectedId=id;menuScroll=Vector2.zero;confirmNew=false;confirmRemove=false;Pause(true);}
+        {
+            pageHistory.Push(new MenuFrame{page=page,selectedId=selectedId,scroll=menuScroll});
+            page=next;selectedId=id;menuScroll=Vector2.zero;confirmNew=false;confirmRemove=false;Pause(true);
+        }
         void Back()
-        {page=backPage;backPage=Page.None;confirmNew=false;confirmRemove=false;Pause(page!=Page.None);}
+        {
+            if(page==Page.Journal&&Model.Career.AcknowledgeCompletion())Save();
+            if(pageHistory.Count>0)
+            {var previous=pageHistory.Pop();page=previous.page;selectedId=previous.selectedId;menuScroll=previous.scroll;}
+            else page=sessionStarted?Page.None:Page.Title;
+            confirmNew=false;confirmRemove=false;Pause(page!=Page.None);
+        }
         void BeginYard()
         {
             if(saveBlocked){Tell("The unreadable save is protected. Choose an archived new yard.");return;}
@@ -99,10 +117,14 @@ namespace Scrapshift.Compact
             }
             if(settings.IsOpen){settings.UpdateCapture();return;}
             if(paused||!controls.GameplayReady)return;
+            if(controls.Pressed(ControlAction.Journal)){Show(Page.Journal);return;}
             player.Step();
             if(Time.unscaledTime>=nextPower){RebuildPower();nextPower=Time.unscaledTime+1;}
             Model.Tick(Time.deltaTime);
             Automation.Tick(Time.deltaTime);UpdateTransportViews();
+            StepWorkViews();
+            if(Time.unscaledTime>=nextCareer)
+            {if(RefreshCareer())Save();nextCareer=Time.unscaledTime+.5f;if(paused)return;}
             if(Time.unscaledTime>=nextViews){RefreshProcessingViews();nextViews=Time.unscaledTime+.2f;}
             StepSound();
             fpsTime+=Time.unscaledDeltaTime;fpsFrames++;
@@ -116,8 +138,10 @@ namespace Scrapshift.Compact
             if(controls.Pressed(ControlAction.ManualWork)&&Time.time>=nextStroke)
             {
                 nextStroke=Time.time+.14f;
-                if(target!=null&&target.kind==CompactTargetKind.LargeScrap)Act(()=>Model.WorkScrap(target.id),YardSound.Tool);
-                else if(target!=null&&target.kind==CompactTargetKind.Equipment)Act(()=>Model.Work(target.id),YardSound.Tool);
+                if(target!=null&&target.kind==CompactTargetKind.LargeScrap)
+                {int id=target.id;if(Act(()=>Model.WorkScrap(id),YardSound.Tool))PulseWork(id);}
+                else if(target!=null&&target.kind==CompactTargetKind.Equipment)
+                {int id=target.id;if(Act(()=>Model.Work(id),YardSound.Tool))PulseWork(id);}
             }
         }
         void UpdateTarget()
@@ -155,16 +179,17 @@ namespace Scrapshift.Compact
         bool Act(Func<bool> action,YardSound sound=YardSound.Pickup)
         {
             int oldLevel=Model.Level;bool changed=action();Tell(Model.LastNotice);
-            if(changed){sounds.Play(sound);SyncViews();NoticeLevel(oldLevel);Save();}
+            if(changed){sounds.Play(sound);SyncViews();NoticeLevel(oldLevel);RefreshCareer();Save();}
             hudDirty=true;return changed;
         }
         void NoticeLevel(int oldLevel)
         {
             if(Model.Level<=oldLevel)return;
-            string unlock="";
+            int unlocked=0;
             foreach(var d in Model.Rules.equipment)if(d.unlockLevel>oldLevel&&d.unlockLevel<=Model.Level)
-                unlock+=" "+d.name+" ("+(d.available?"available in catalogue":"planned production stage")+").";
-            Tell("Level "+Model.Level+" reached! Material sale bonus "+Model.SaleBonusPercent+"%."+unlock);
+                if(d.available)unlocked++;
+            Tell("Level "+Model.Level+" reached! Material sale bonus +"+Model.SaleBonusPercent+"%."+
+                (unlocked>0?" "+unlocked+" equipment types unlocked to buy. ["+controls.Label(ControlAction.BuildToggle)+"] Catalogue.":""));
         }
         void Drop()
         {
@@ -198,13 +223,16 @@ namespace Scrapshift.Compact
         {
             if(Model==null||saveBlocked||(!sessionStarted&&!hasSave))return false;
             CapturePlayer();
-            try{CompactSaveStore.Write(SavePath,Model.State,Model.Rules);hasSave=true;return true;}
-            catch(Exception ex){Tell("SAVE FAILED: "+ex.Message);Debug.LogWarning(ex);return false;}
+            try{CompactSaveStore.Write(SavePath,Model.State,Model.Rules);hasSave=true;lastSaveAt=Time.unscaledTime;saveFailed=false;saveStatus="Saved just now";return true;}
+            catch(Exception ex){saveFailed=true;saveStatus="Save failed / retry from Pause";Tell("SAVE FAILED: "+ex.Message);Debug.LogWarning(ex);return false;}
         }
         void OnApplicationFocus(bool focused)
         {
             if(focused||Model==null)return;
-            if(IsBuilding)CancelBuild();settings.Close();page=sessionStarted?Page.Pause:Page.Title;Pause(true);Save();
+            bool welcoming=page==Page.Welcome;
+            if(IsBuilding)CancelBuild();settings.Close();
+            pageHistory.Clear();selectedId=0;menuScroll=Vector2.zero;confirmNew=false;confirmRemove=false;ResetRequestReview();
+            page=welcoming?Page.Welcome:sessionStarted?Page.Pause:Page.Title;Pause(true);Save();
         }
         void OnApplicationQuit(){Save();}
         void OnDestroy()

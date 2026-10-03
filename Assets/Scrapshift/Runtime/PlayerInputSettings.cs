@@ -25,7 +25,7 @@ namespace Scrapshift
                     preferences.Validate();
                     if (candidate != path) notice = "Controls restored from backup; latest preferences were unreadable.";
                     else notice = "";
-                    if (extended) notice += (notice.Length > 0 ? " " : "") + "Construction controls added; your existing bindings and mouse settings are preserved.";
+                    if (extended) notice += (notice.Length > 0 ? " " : "") + "New controls added; your existing bindings and mouse settings are preserved.";
                     return preferences;
                 }
                 catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is UnauthorizedAccessException)
