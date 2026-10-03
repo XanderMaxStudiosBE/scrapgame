@@ -1,5 +1,7 @@
 # SCRAPSHIFT original asset source
 
+The original authored packs below remain intact. The separately credited **CC0 Old Tyre by MP/Poly Haven** is now used in compact scenery. Its sources/license/checksums are under `ThirdParty/PolyHaven/OldTyre`; run `blender --background --python-exit-code 1 --python ArtSource/prepare_old_tyre.py` to re-export only that 184-triangle mesh, then `python3 Tests/audit-old-tyre.py` for source/mask/material packaging checks. This third-party prop uses its own 1K UV maps instead of the original shared palette. See [integration and native checks](../Design/OLD_TYRE_VERIFICATION.md). Store pack files stay local/private; they are not part of the original authored pack.
+
 The user chose worn retro realism and supplied Retro Rewind - Video Store Simulator as a style reference. SCRAPSHIFT uses its own industrial subjects and original meshes/textures. No reference-game assets, screenshots, trademarks or characters are embedded in the game.
 
 `build_yard_assets.py` authors and exports nineteen metre-scale FBX props (including separate fan frame/rotor meshes) in Blender 4.3.2, builds a shared 512 × 512 worn palette atlas, records triangle counts, and renders a contact sheet of those actual source meshes. The preview is **not Unity gameplay** and its studio light does not validate runtime lighting. Each prop currently has one shared atlas material and 176–1,684 triangles; coarse runtime collision volumes are assigned separately.

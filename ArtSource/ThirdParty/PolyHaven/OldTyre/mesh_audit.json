@@ -1,0 +1,11 @@
+{
+  "verification": "Blender FBX round-trip only; Unity import/rendering unverified",
+  "sourceTriangles": 2880,
+  "triangles": 184,
+  "dimensionsMetresBlender": [
+    0.5999999642372131,
+    0.6000000238418579,
+    0.16500000655651093
+  ],
+  "sha256": "3e4942473c0730a98c4edcd0796d9a8977516a832edb1a44a49465bc0bf56416"
+}

@@ -1,5 +1,15 @@
 # Scrapshift project handoff
 
+## Current continuation: free tyre asset and local Store imports (2026-10-03)
+
+The creator requested free tyres and uploaded a 4K Old Tyre Blender ZIP, which exceeds the 32 MiB transfer limit. Retrieved the matching official 1K Poly Haven CC0 FBX/albedo/normal/roughness sources and verified all publisher checksums. Credit/license/source hashes are retained under ArtSource/ThirdParty/PolyHaven/OldTyre. The runtime FBX is adapted to 184 triangles, flat .6m diameter/.165m height; actual Blender reimport verifies shape/bounds/UVs/finite vertices. Its worn tread was inspected in a Blender render, not Unity.
+
+Twenty-one existing scenery tyres now use the shared mesh and independent URP albedo/normal/nonmetallic inverse-roughness mask. Scoped importer adds Mikk tangents/readable mesh/1K compressed mips without affecting vendor/original assets. Original ring fallback remains. Stock positions, conservative bounds, pooling, batching, collision, original resources and saves stay unchanged. Estimated clutter count remains 203 renderers, with 34,860 triangles within the unchanged 35,000 native-test budget; no FPS claim. Read Design/OLD_TYRE_VERIFICATION.md.
+
+Executed new provenance/mesh/mask/reference/import audit, existing original packaging/nine material/six texture checks, warnings-as-errors runtime/importer compilation against minimal API adapters and four C# syntax parses. Two actual Unity import/reuse tests supplied but unrun. Unity compilation/import/tangents/rendering/presets/batching/collision/resource cleanup/player build/FPS and user approval remain local checks. No scene reset needed.
+
+The creator reports all three Store packs imported locally; their exact contents are unavailable here. These packs are **not placed or converted by this change**. Repository visibility was checked: public. Initial advice to commit vendor folders was corrected; Store package sources must stay local/private unless their actual license permits raw redistribution. The CC0 tyre is the only acquired third-party art added publicly. Further Store integration needs selected files privately, not a public vendor-art commit. No purchase or confirmed expenditure is claimed.
+
 ## Current milestone: compact yard composition and daylight (2026-10-03)
 
 The creator supplied actual screenshots after the previous push: textures and signs render, but the yard still feels empty, the skyline has isolated blob trees, gravel is uniform, and office lamps clip strongly. Their visual acceptance was negative. Implemented a larger atmosphere pass; read Design/COMPACT_ATMOSPHERE_VERIFICATION.md for exact scope and native checks.

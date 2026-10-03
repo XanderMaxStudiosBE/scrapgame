@@ -6,6 +6,8 @@ A first-person retro scrapyard automation prototype. The **48 × 36m compact yar
 
 [Stage C implementation, save migration and local checklist](Design/COMPACT_STAGE_C_VERIFICATION.md) records conveyors, corners, ported storage, Tier 2 and junctions. [A/B verification](Design/COMPACT_STAGE_AB_VERIFICATION.md) and [original compact art](Design/COMPACT_WORLD_VERIFICATION.md) record the earlier work. **Automatic whole-object intake/export and production completion remain future work.**
 
+Existing tyre piles now use a free **CC0 Old Tyre by MP/Poly Haven**, adapted to a shared 184-triangle mesh and 1K URP maps. Source/checksum/mask audits pass; actual Unity appearance and performance need local checks. See [tyre verification and Store import status](Design/OLD_TYRE_VERIFICATION.md). Store packs imported on the creator's machine are not included or placed by this change; keep their source files local/private because this repository is public.
+
 ## Open or update in Unity
 
 Use **Unity 6000.3.25f1** and the pinned **URP 17.3.0** packages. After pulling/importing, run **Scrapshift → Create or Open Compact Yard**, then press Play in `Generated/CompactScrapyard`. The original **Create or Open Prototype** command is an alias. It creates only missing generated assets/scenes, preserves existing scene/balance edits, makes the compact scene the first build scene and keeps `Generated/Scrapyard` as the legacy option. Opening the old scene directly still plays the old game; a pull alone does not reconstruct generated scenes.

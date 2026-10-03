@@ -1,0 +1,52 @@
+{
+  "asset": "Old Tyre",
+  "author": "MP",
+  "page": "https://polyhaven.com/a/old_tyre",
+  "license": "CC0-1.0",
+  "licensePage": "https://polyhaven.com/license",
+  "retrieved": "2026-10-03",
+  "publisherFiles": {
+    "source.fbx": {
+      "include": {
+        "textures/old_tyre_diff_1k.jpg": {
+          "size": 650708,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/old_tyre/old_tyre_diff_1k.jpg",
+          "md5": "f52b712b8373b1d1a7c46702613f76cb"
+        },
+        "textures/old_tyre_nor_gl_1k.exr": {
+          "size": 1630054,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/exr/1k/old_tyre/old_tyre_nor_gl_1k.exr",
+          "md5": "b5f8f67e48e1938ab05de25e7a48a77b"
+        },
+        "textures/old_tyre_rough_1k.exr": {
+          "size": 668075,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/exr/1k/old_tyre/old_tyre_rough_1k.exr",
+          "md5": "61cf2ef41ce702ca99945e9aec7dffcd"
+        }
+      },
+      "size": 96780,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/fbx/1k/old_tyre/old_tyre_1k.fbx",
+      "md5": "f43fdca9ad17ee17eda237136bee7270",
+      "sha256": "b5b6e3f5f43739e450f18112155386fae456a9e2e86a1db395ef48654d0cff70"
+    },
+    "Albedo.png": {
+      "size": 1363603,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/1k/old_tyre/old_tyre_diff_1k.png",
+      "md5": "ff4584652a38ef6eb249780bd34c6312",
+      "sha256": "979c46fbd237a25691704129359ab687ec8f9a184aed614fdbef0eea4424486c"
+    },
+    "Normal.png": {
+      "size": 1619159,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/1k/old_tyre/old_tyre_nor_gl_1k.png",
+      "md5": "7e122daf89ba8fb20a8bc03ef8af4a61",
+      "sha256": "b28dceb893b406c31885ab4e81fd25030ed969f5479952521b8f5c26d4b0eb5e"
+    },
+    "Roughness.png": {
+      "size": 842765,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/1k/old_tyre/old_tyre_rough_1k.png",
+      "md5": "421d5a62bd75c04d8849261a9b5f7653",
+      "sha256": "95a50d6ded74f2e0c6999bc1ecdc70380ded2fb5c154c1f3deef041f12c63993"
+    }
+  },
+  "note": "Matching official 1K source, not the user-uploaded 4K ZIP; ZIP exceeded the 32 MiB transfer limit."
+}

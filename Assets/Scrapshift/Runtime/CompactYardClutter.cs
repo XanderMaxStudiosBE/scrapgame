@@ -125,7 +125,11 @@ namespace Scrapshift.Compact
                     Model("PalletBundle",parent,new Vector3(0,0,.45f),new Vector3(1.4f,.25f,1.15f),0);
                     for(int column=0;column<3;column++)
                         for(int layer=0;layer<2+column%2;layer++)
-                            Ring("Discarded tyre",parent,new Vector3((column-1)*.86f,.14f+layer*.25f,-.30f),.38f,.20f,.23f,RetroSurface.WireInsulation);
+                        {
+                            var centre=new Vector3((column-1)*.86f,.14f+layer*.25f,-.30f);
+                            if(!OldTyreVisuals.TryPlace(parent,centre,variation*31+column*43+layer*67))
+                                Ring("Discarded tyre",parent,centre,.38f,.20f,.23f,RetroSurface.WireInsulation);
+                        }
                     Ring("Bare wheel rim",parent,new Vector3(1.38f,.17f,.38f),.31f,.19f,.25f,RetroSurface.DarkMetal);
                     break;
                 case 1: // Open metal sorting bin: broad bent panels produce a visible silhouette.
