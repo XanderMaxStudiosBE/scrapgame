@@ -47,9 +47,8 @@ namespace Scrapshift.Compact
             if(colliders)
             {
                 float labelY=height>.99f ? height-.46f : .82f;
-                string label=kind==EquipmentKind.Tier2Scrapper ? "TIER 2" : kind.ToString().ToUpperInvariant();
-                YardGeometry.Sign(root.transform,label,new Vector3(0,labelY,-definition.depth*.5f-.075f));
-                root.transform.GetChild(root.transform.childCount-1).GetComponent<TextMesh>().characterSize=.023f;
+                string label=kind==EquipmentKind.Tier2Scrapper ? "SCRAPPER / TIER 2" : kind.ToString().ToUpperInvariant();
+                YardSignText.Plate(root.transform,label,new Vector3(0,labelY,-definition.depth*.5f-.075f),Mathf.Min(1.8f,definition.width*.82f),.29f);
             }
             return root;
         }

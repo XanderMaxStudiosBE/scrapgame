@@ -78,24 +78,15 @@ namespace Scrapshift
         }
         public static void Sign(Transform parent, string text, Vector3 position, float yaw = 0)
         {
-            var sign = new GameObject(text);
-            sign.transform.SetParent(parent, false); sign.transform.localPosition = position;
-            sign.transform.localRotation = Quaternion.Euler(0, yaw, 0);
-            var mesh = sign.AddComponent<TextMesh>(); mesh.text = text; mesh.fontSize = 60; mesh.characterSize = .035f;
-            mesh.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            sign.GetComponent<MeshRenderer>().sharedMaterial = mesh.font.material;
-            mesh.anchor = TextAnchor.MiddleCenter; mesh.alignment = TextAlignment.Center; mesh.color = Ivory;
+            YardSignText.CreateLabel(parent, text, position, yaw);
         }
         public static void MountedSign(Transform parent, string text, Vector3 ground, float height = 1.72f, float width = 2.5f)
         {
             var root = new GameObject("Mounted yard sign").transform;
             root.SetParent(parent, false); root.localPosition = ground;
-            SurfaceBox("Painted signboard", root, new Vector3(0, height, .07f), new Vector3(width, .34f, .09f), RetroSurface.DarkMetal, false);
             foreach (float x in new[] { -width * .38f, width * .38f })
-                SurfaceBox("Sign support", root, new Vector3(x, height * .5f, .13f), new Vector3(.06f, height, .06f), RetroSurface.DarkMetal, false);
-            Sign(root, text, new Vector3(0, height, .01f));
-            var label = root.GetChild(root.childCount - 1).GetComponent<TextMesh>();
-            label.characterSize = Mathf.Min(.023f,width / Mathf.Max(1,text.Length) * .23f);
+                SurfaceBox("Sign support", root, new Vector3(x, height * .5f, .055f), new Vector3(.055f, height, .055f), RetroSurface.DarkMetal, false);
+            YardSignText.Plate(root, text, new Vector3(0, height, .02f), width, .40f);
             // Decorative only; targeting retains the station's original collision footprint.
         }
         public static GameObject Station(Transform parent, string name, TargetKind kind, Vector3 position, Color color)

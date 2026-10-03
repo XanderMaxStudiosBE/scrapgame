@@ -44,6 +44,16 @@ namespace Scrapshift.Compact
                 }
             }
             if(kind==EquipmentKind.Tier1Scrapper)CompactAutomationVisuals.BuildPorts(kind,root.transform,rules ?? new CompactRules());
+            if(colliders)
+            {
+                if(kind==EquipmentKind.Workbench)YardSignText.Plate(root.transform,"WORKBENCH",new Vector3(0,.94f,-.70f),1.55f,.24f);
+                else if(kind==EquipmentKind.Generator)YardSignText.Plate(root.transform,"GENERATOR",new Vector3(0,.83f,-.65f),1.12f,.23f);
+                else if(kind==EquipmentKind.Tier1Scrapper)
+                {
+                    float depth=rules!=null?rules.Equipment(kind).depth:2.3f;
+                    YardSignText.Plate(root.transform,"SCRAPPER / TIER 1",new Vector3(0,1.39f,-depth*.5f-.035f),1.65f,.28f);
+                }
+            }
             return root;
         }
 

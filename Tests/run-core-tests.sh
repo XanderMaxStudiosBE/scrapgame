@@ -29,3 +29,6 @@ run_checks "$test_dir/material-recovery.exe" "$repo_root/Assets/Scrapshift/Runti
 run_checks "$test_dir/editor-material-recovery.exe" -main:EditorMaterialRecoveryRunner \
     "$repo_root/Assets/Scrapshift/Runtime/YardMaterialCatalog.cs" "$repo_root/Assets/Scrapshift/Runtime/YardMaterialBindings.cs" \
     "$repo_root/Assets/Scrapshift/Editor/YardMaterialRecovery.cs" "$repo_root/Tests/MaterialRecoveryRunner.cs" "$repo_root/Tests/EditorMaterialRecoveryRunner.cs"
+# Actual scenery occupancy collector with small value-type adapters; not Unity rendering/collision.
+run_checks "$test_dir/dressing-occupancy.exe" "$repo_root"/Assets/Scrapshift/Core/*.cs \
+    "$repo_root/Assets/Scrapshift/Runtime/CompactDressingOccupancy.cs" "$repo_root/Tests/DressingOccupancyRunner.cs"

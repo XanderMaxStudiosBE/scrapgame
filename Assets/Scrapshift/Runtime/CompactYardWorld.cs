@@ -45,9 +45,8 @@ namespace Scrapshift.Compact
             Fence(south,new Vector3(0,1,-18),new Vector3(4,2,.12f));
             foreach(float x in new[]{-2.15f,2.15f})
                 YardGeometry.SurfaceBox("Entry gate upright",south,new Vector3(x,1.5f,-18),new Vector3(.18f,3,.18f),RetroSurface.DarkMetal);
-            YardGeometry.SurfaceBox("Scrapshift entrance plate",south,new Vector3(0,2.75f,-18.12f),new Vector3(3.6f,.42f,.05f),RetroSurface.RustPaint,false);
-            Label(south,"SCRAPSHIFT",new Vector3(0,2.75f,-18.16f),0,.035f);
-            Label(south,"SCRAPSHIFT",new Vector3(0,2.75f,-18.08f),180,.035f);
+            Label(south,"SCRAPSHIFT",new Vector3(0,2.75f,-18.16f),0,3.6f,.48f);
+            Label(south,"SCRAPSHIFT",new Vector3(0,2.75f,-18.08f),180,3.6f,.48f);
             Batch(south,combine);
 
             var office=Sector(parent,"Compact office and sales");
@@ -57,7 +56,9 @@ namespace Scrapshift.Compact
             var officeCollision=new GameObject("Fixed office collision");officeCollision.transform.SetParent(office,false);officeCollision.transform.localPosition=OfficeAnchor;
             var body=officeCollision.AddComponent<BoxCollider>();body.center=new Vector3(0,1.5f,0);body.size=new Vector3(8,3,6);
             if(YardWorldDressing.TryPlace("OfficeDetails",office,OfficeAnchor,out GameObject trim))trim.transform.localRotation=Quaternion.Euler(0,180,0);
-            Label(office,"OFFICE / SALES",OfficeAnchor+new Vector3(0,2.56f,3.19f),180,.021f);
+            Label(office,"SCRAPSHIFT / OFFICE",OfficeAnchor+new Vector3(0,2.56f,3.19f),180,4.2f,.42f);
+            Label(office,"YARD SHOP",ShopAnchor+new Vector3(0,2.02f,-.65f),180,1.9f,.40f);
+            Label(office,"MATERIAL SALES",SalesAnchor+new Vector3(0,2.02f,-.65f),180,2.1f,.40f);
             // Shallow covered counter lamps reuse the existing four-light lighting budget.
             foreach(float x in new[]{-19f,-15f})
             {
@@ -65,8 +66,8 @@ namespace Scrapshift.Compact
                 Fixture(office,new Vector3(x,2.69f,-10.6f));
             }
             var handles=new CompactWorldHandles();
-            handles.Shop=Counter(office,"Equipment and scrap shop",ShopAnchor,"SHOP",false);
-            handles.Sales=Counter(office,"Recovered-material buyer",SalesAnchor,"SELL MATERIALS",true);
+            handles.Shop=Counter(office,"Equipment and scrap shop",ShopAnchor,"YARD SHOP",false);
+            handles.Sales=Counter(office,"Recovered-material buyer",SalesAnchor,"MATERIAL SALES",true);
             Batch(office,combine);
 
             var delivery=Sector(parent,"Compact receiving bay");
@@ -84,10 +85,10 @@ namespace Scrapshift.Compact
             foreach(float x in new[]{-.63f,.63f})YardGeometry.SurfaceBox("Delivery crate side",handles.Delivery.transform,new Vector3(x,.30f,0),new Vector3(.055f,.50f,.70f),RetroSurface.WeatheredWood,false);
             YardGeometry.SurfaceBox("Delivery crate back",handles.Delivery.transform,new Vector3(0,.30f,-.32f),new Vector3(1.3f,.50f,.055f),RetroSurface.WeatheredWood,false);
             YardGeometry.SurfaceBox("Delivery crate lid",handles.Delivery.transform,new Vector3(0,.40f,0),new Vector3(1.45f,.10f,.80f),RetroSurface.WeatheredWood,false);
-            Label(handles.Delivery.transform,"SCRAP DELIVERY",new Vector3(0,.71f,.37f),180,.016f);
+            Label(handles.Delivery.transform,"DELIVERIES",new Vector3(0,.47f,.37f),180,1.18f,.27f);
             handles.Wire=Target(delivery,"Renewable wire offcuts",WireAnchor,new Vector3(2.3f,1.05f,1.3f));
             AuthoredYardProps.TryPlace("WireCrate",handles.Wire.transform,Vector3.zero,out _);
-            Label(handles.Wire.transform,"FREE WIRE OFFCUTS",new Vector3(0,1.12f,.70f),180,.016f);
+            Label(handles.Wire.transform,"FREE WIRE OFFCUTS",new Vector3(0,.83f,.70f),180,2.05f,.31f);
             Batch(delivery,combine);
 
             var outside=Sector(parent,"Compact neighbouring landscape");
@@ -125,8 +126,7 @@ namespace Scrapshift.Compact
                 foreach(float x in new[]{-.72f,.72f})YardGeometry.SurfaceBox("Counter steel leg",root.transform,new Vector3(x,.44f,-.1f),new Vector3(.065f,.88f,.55f),RetroSurface.DarkMetal,false);
                 YardGeometry.SurfaceBox("Purchase clipboard",root.transform,new Vector3(.25f,1.0f,-.05f),new Vector3(.26f,.02f,.33f),RetroSurface.WeatheredWood,false);
             }
-            YardGeometry.SurfaceBox("Small counter plaque",root.transform,new Vector3(0,.78f,.255f),new Vector3(1.30f,.22f,.025f),RetroSurface.DarkMetal,false);
-            Label(root.transform,label,new Vector3(0,.78f,.275f),180,.016f);
+            Label(root.transform,label,new Vector3(0,.78f,.275f),180,1.48f,.25f);
             return root;
         }
         static GameObject Target(Transform parent,string name,Vector3 p,Vector3 size)
@@ -137,11 +137,8 @@ namespace Scrapshift.Compact
         }
         static void Fixture(Transform parent,Vector3 position)
         {YardWorldDressing.TryPlace("FluorescentFixture",parent,position,out _);}
-        static void Label(Transform parent,string text,Vector3 p,float yaw,float size)
-        {
-            YardGeometry.Sign(parent,text,p,yaw);
-            parent.GetChild(parent.childCount-1).GetComponent<TextMesh>().characterSize=size;
-        }
+        static void Label(Transform parent,string text,Vector3 p,float yaw,float width,float height)
+        {YardSignText.Plate(parent,text,p,width,height,yaw);}
         static void Fence(Transform parent,Vector3 p,Vector3 size)
         {
             var boundary=YardGeometry.SurfaceBox("Fixed fence",parent,p,size,RetroSurface.CorrugatedMetal);

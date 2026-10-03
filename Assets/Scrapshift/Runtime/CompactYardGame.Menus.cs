@@ -7,7 +7,7 @@ namespace Scrapshift.Compact
 {
     public sealed partial class CompactYardGame
     {
-        GUIStyle wrap,small;
+        GUIStyle wrap,small,hudBody,hudHeading;
         Vector2 menuScroll;
         void OnGUI()
         {
@@ -16,7 +16,11 @@ namespace Scrapshift.Compact
             using(theme.Begin(scale))
             {
                 float width=Screen.width/scale,height=Screen.height/scale;
-                if(wrap==null){wrap=new GUIStyle(GUI.skin.label){wordWrap=true};small=new GUIStyle(wrap){fontSize=14};}
+                if(wrap==null)
+                {
+                    wrap=new GUIStyle(GUI.skin.label){wordWrap=true};small=new GUIStyle(wrap){fontSize=14};
+                    hudBody=new GUIStyle(wrap){fontSize=16};hudHeading=new GUIStyle(wrap){fontSize=19,fontStyle=FontStyle.Bold};
+                }
                 if(paused){GUI.color=new Color(0,0,0,.46f);GUI.DrawTexture(new Rect(0,0,width,height),Texture2D.whiteTexture);GUI.color=Color.white;}
                 if(settings.IsOpen){settings.Draw(width,height);return;}
                 if(page==Page.None){DrawHud(width,height);return;}
@@ -296,24 +300,31 @@ namespace Scrapshift.Compact
         }
         void DrawHud(float width,float height)
         {
-            GUI.Box(new Rect(18,18,370,65),"");GUI.Label(new Rect(30,25,347,26),hudTitle);
-            Fill(new Rect(30,57,347,5),new Color(.25f,.29f,.24f));Fill(new Rect(30,57,347*Model.LevelFraction,5),new Color(.69f,.62f,.34f));
-            if(presentation.Preferences.showFrameRate)GUI.Label(new Rect(width-232,18,215,30),fpsLabel,small);
-            GUI.Label(new Rect(23,91,540,48),hudObjective,small);
-            if(hudHeld.Length>0){GUI.Box(new Rect(width*.5f-285,height-155,570,35),"");GUI.Label(new Rect(width*.5f-273,height-152,546,29),hudHeld,small);}
+            float statusWidth=Mathf.Min(430,width-40),objectiveWidth=Mathf.Min(510,width*.49f);
+            GUI.Box(new Rect(18,18,statusWidth,72),"");
+            Fill(new Rect(18,18,4,72),new Color(.68f,.57f,.34f));
+            GUI.Label(new Rect(33,27,statusWidth-30,30),hudTitle,hudHeading);
+            Fill(new Rect(33,67,statusWidth-30,5),new Color(.25f,.29f,.24f));
+            Fill(new Rect(33,67,(statusWidth-30)*Model.LevelFraction,5),new Color(.69f,.62f,.34f));
+            if(presentation.Preferences.showFrameRate){GUI.Box(new Rect(width-232,18,215,35),"");GUI.Label(new Rect(width-220,23,191,25),fpsLabel,small);}
+            GUI.Box(new Rect(18,99,objectiveWidth,67),"");GUI.Label(new Rect(31,108,objectiveWidth-26,50),hudObjective,hudBody);
+            if(hudHeld.Length>0){GUI.Box(new Rect(width*.5f-315,height-198,630,52),"");GUI.Label(new Rect(width*.5f-302,height-191,604,42),hudHeld,hudBody);}
             if(IsBuilding)
             {
                 Fill(new Rect(width*.5f-2,height*.5f-2,4,4),previewClear?new Color(.48f,.78f,.66f):Color.white);
-                GUI.Box(new Rect(width*.5f-330,height-113,660,88),"");
-                GUI.Label(new Rect(width*.5f-316,height-107,632,70),(beltStage>0?"Conveyor":Model.Rules.Equipment(build.SelectedKind).name)+" / "+buildReason+"\n["+controls.Label(ControlAction.Interact)+"] "+(beltStage==1?"choose output":"confirm")+"   ["+controls.Label(ControlAction.BuildRotate)+"] "+(beltStage>0?"change elbow":"rotate")+"   Escape cancel",wrap);
+                GUI.Box(new Rect(width*.5f-330,height-136,660,88),"");
+                GUI.Label(new Rect(width*.5f-316,height-130,632,70),(beltStage>0?"Conveyor":Model.Rules.Equipment(build.SelectedKind).name)+" / "+buildReason+"\n["+controls.Label(ControlAction.Interact)+"] "+(beltStage==1?"choose output":"confirm")+"   ["+controls.Label(ControlAction.BuildRotate)+"] "+(beltStage>0?"change elbow":"rotate")+"   Escape cancel",hudBody);
             }
             else
             {
                 Fill(new Rect(width*.5f-2,height*.5f-2,4,4),target!=null?new Color(.79f,.72f,.44f):Color.white);
                 if(hudHint.Length>0)
-                {GUI.Box(new Rect(width*.5f-330,height-103,660,75),"");GUI.Label(new Rect(width*.5f-316,height-97,632,63),hudHint,wrap);}
+                {GUI.Box(new Rect(width*.5f-330,height-126,660,75),"");GUI.Label(new Rect(width*.5f-316,height-120,632,63),hudHint,hudBody);}
             }
-            if(Time.unscaledTime<messageUntil&&message.Length>0)GUI.Label(new Rect(22,height-218,540,55),message,small);
+            if(Time.unscaledTime<messageUntil&&message.Length>0)
+            {GUI.Box(new Rect(18,height-273,560,64),"");GUI.Label(new Rect(31,height-264,534,48),message,hudBody);}
+            GUI.Box(new Rect(18,height-45,460,30),"");
+            GUI.Label(new Rect(30,height-41,436,24),"["+controls.Label(ControlAction.BuildToggle)+"] Equipment catalogue     Esc Pause / Settings",small);
         }
         static void Fill(Rect rect,Color color)
         {Color before=GUI.color;GUI.color=color;GUI.DrawTexture(rect,Texture2D.whiteTexture);GUI.color=before;}

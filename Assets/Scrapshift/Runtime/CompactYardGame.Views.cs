@@ -89,7 +89,7 @@ namespace Scrapshift.Compact
             }
             staleViews.Clear();foreach(var pair in views)if(!active.Contains(pair.Key))staleViews.Add(pair.Key);
             foreach(int id in staleViews){RemoveView(id);}
-            SyncCables();SyncTransportGeometry();UpdateTransportViews();hudDirty=true;
+            SyncCables();SyncTransportGeometry();UpdateTransportViews();SyncDressing();hudDirty=true;
         }
         static string JobKey(ProcessingJob job)
         {
@@ -243,7 +243,7 @@ namespace Scrapshift.Compact
             var carried=Model.FindItem(Model.State.carriedId);
             hudHeld=carried==null?"":Model.Rules.Part(carried.kind).name+" ×"+carried.quantity+"   ["+controls.Label(ControlAction.Drop)+"] put down";
             hudObjective=carried!=null?(Model.Rules.Recipe(carried.kind)!=null?(Model.Level>=Model.Rules.Equipment(EquipmentKind.Tier2Scrapper).unlockLevel?"Process at a bench or scrapper; input storage can feed your line.":"Take this component to a manual bench or Tier 1 scrapper."):"Sell at the office counter."):
-                "Inspect delivery scrap, recover components and sell materials. ["+controls.Label(ControlAction.BuildToggle)+"] equipment catalogue";
+                "Inspect delivery scrap, recover components and sell materials.";
             hudHint=Hint();
         }
         string Hint()

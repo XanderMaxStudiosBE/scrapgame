@@ -46,12 +46,8 @@ namespace Scrapshift
             // Small worn tape strips pin each useful request to the shared wooden board.
             foreach(float edge in new[]{-.68f,.68f})
                 CozyYardDetails.Accent(board,"Note tape",new Vector3(x+edge,2.65f,-.112f),new Vector3(.2f,.13f,.012f),new Color(.67f,.64f,.49f));
-            var status=new GameObject(name+" live text").transform;
-            status.SetParent(board,false);status.localPosition=new Vector3(x,1.9f,-.125f);
-            var text=status.gameObject.AddComponent<TextMesh>();
-            text.font=Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");text.fontSize=48;text.characterSize=.022f;
-            text.anchor=TextAnchor.MiddleCenter;text.alignment=TextAlignment.Center;text.color=YardGeometry.Charcoal;
-            text.GetComponent<MeshRenderer>().sharedMaterial=text.font.material;
+            var text=YardSignText.CreateLabel(board,"",new Vector3(x,1.9f,-.125f));
+            text.gameObject.name=name+" live text";text.color=YardGeometry.Charcoal;
             return text;
         }
         static Transform Storage(Transform parent, Vector3 pos, MaterialKind kind)
@@ -88,6 +84,7 @@ namespace Scrapshift
             commissionText.text=request.customer+"\n"+(model.State.commissionAccepted?model.State.commissionDelivered+" / ":"")+request.quantity+
                 (request.kind==MaterialKind.RestoredRadio?" TESTED RADIO":" TESTED FAN")+(request.quantity==1?"":"S")+"\nREWARD / €"+model.CommissionReward+"\n"+
                 (model.State.commissionAccepted?"DELIVER TESTED ITEMS HERE":"VIEW HERE / NO DEADLINE");
+            YardSignText.Fit(orderText,1.85f,1.36f);YardSignText.Fit(commissionText,1.85f,1.36f);
         }
         static void UpdateStock(Transform stock, int count)
         {
