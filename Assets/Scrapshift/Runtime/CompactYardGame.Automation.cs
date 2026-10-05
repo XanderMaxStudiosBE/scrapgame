@@ -115,7 +115,7 @@ namespace Scrapshift.Compact
             if(gear.kind!=EquipmentKind.Tier1Scrapper)
             {
                 Text("BUFFER / "+Model.StoredUnits(gear.id)+" / "+Model.Rules.Equipment(gear.kind).outputCapacity+" units. Transfers grant no XP.");
-                if(Button("Deposit carried bundle",Model.Carried!=null))Act(()=>Model.Deposit(gear.id));
+                if(gear.kind!=EquipmentKind.PrimaryScrapper&&Button("Deposit carried bundle",Model.Carried!=null))Act(()=>Model.Deposit(gear.id));
                 // Present matching units as a single carry bundle, keeping recovered-sale eligibility separate.
                 var groups=new HashSet<int>();
                 foreach(var stack in gear.contents.ToArray())
@@ -125,11 +125,12 @@ namespace Scrapshift.Compact
                     int id=stack.id;
                     if(Button("Withdraw "+Model.Rules.Part(stack.kind).name+" ×"+quantity+(stack.xpEligible?" / sale XP":" / no sale XP"),Model.Carried==null))Act(()=>Model.WithdrawBatch(gear.id,id));
                 }
-                Text((gear.kind==EquipmentKind.Tier2Scrapper?"PROCESS RECIPE":"OUTPUT FILTER")+" / "+(gear.filterKind<0?"All supported items":Model.Rules.Part((PartKind)gear.filterKind).name));
+                Text((gear.kind==EquipmentKind.Tier2Scrapper?"PROCESS RECIPE":gear.kind==EquipmentKind.ExportStation?"DISPATCH FILTER":"OUTPUT FILTER")+" / "+(gear.filterKind<0?"All supported items":Model.Rules.Part((PartKind)gear.filterKind).name));
                 if(Button("Allow all supported items"))Act(()=>Model.SetFilter(gear.id,-1));
                 foreach(var part in Model.Rules.parts)
                 {
                     if(gear.kind==EquipmentKind.Tier2Scrapper&&Model.Rules.Recipe(part.kind)==null)continue;
+                    if(gear.kind==EquipmentKind.ExportStation&&!CompactIndustryModel.CanExportPart(Model.Rules,part.kind))continue;
                     int kind=(int)part.kind;
                     if(Button("Only "+part.name,gear.filterKind!=kind))Act(()=>Model.SetFilter(gear.id,kind));
                 }

@@ -104,7 +104,7 @@ namespace Scrapshift.Tests
                     var freshYard=new ScrappingModel(rules);int owned=freshYard.State.equipment.Count;freshYard.State.experience=rules.levelThresholds[9];
                     foreach(var kind in new[]{EquipmentKind.Storage,EquipmentKind.Tier2Scrapper,EquipmentKind.Conveyor,EquipmentKind.Splitter,EquipmentKind.Merger})
                         Check(rules.Equipment(kind).available && rules.Equipment(kind).unlockLevel==10 && rules.Equipment(kind).price>0,"purchased Stage C catalogue");
-                    Check(freshYard.Level==10 && freshYard.State.equipment.Count==owned && !rules.Equipment(EquipmentKind.ExportStation).available,"levels do not spawn free gear/export");break;
+                    Check(freshYard.Level==10 && freshYard.State.equipment.Count==owned && rules.Equipment(EquipmentKind.ExportStation).available && rules.Equipment(EquipmentKind.ExportStation).unlockLevel==12,"levels do not spawn free gear/export");break;
                 case "StorageInvalidBeltTuning":
                     var bad=new CompactRules{beltSpeed=0};Invalid(()=>bad.Validate(),"zero speed");bad=new CompactRules{beltSpacing=float.NaN};Invalid(()=>bad.Validate(),"nonfinite spacing");
                     bad=new CompactRules{beltCapacity=33};Invalid(()=>bad.Validate(),"bounded representation budget");bad=new CompactRules{beltMaxLength=49};Invalid(()=>bad.Validate(),"bounded reachable links");

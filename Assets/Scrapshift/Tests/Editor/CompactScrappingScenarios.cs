@@ -142,8 +142,8 @@ namespace Scrapshift.Tests
                     m.CollectOutput(bench,1);var smallQuote=m.SaleQuote();Check(smallQuote.baseTotal==2 && smallQuote.bonusTotal==0 && smallQuote.total==2,"small bonuses still use consistent floor rounding");break;
                 case "CompactLevelPriceBonusUnlock":
                     m.State.experience=m.Rules.levelThresholds[8];m.AcquireWire();m.BeginProcessing(bench);FinishManual(m,bench);m.CollectOutput(bench,0);
-                    m.Carried.quantity=100;m.State.experience=m.Rules.levelThresholds[9]-200;
-                    var quote=m.SaleQuote();Check(quote.baseTotal==300 && quote.bonusPercent==40 && quote.bonusTotal==120 && quote.total==420,"separately explained level bonus");
+                    m.Carried.quantity=75;m.State.experience=m.Rules.levelThresholds[9]-150;
+                    var quote=m.SaleQuote();Check(quote.baseTotal==225 && quote.bonusPercent==40 && quote.bonusTotal==90 && quote.total==315,"separately explained level bonus");
                     Check(m.Sell() && m.Level==10 && m.LastNotice.Contains("is now purchasable") && m.Rules.Equipment(EquipmentKind.Conveyor).available,"unlock grants purchase eligibility without gifting equipment");
                     Check(m.LevelFraction==0 && m.XPToNextLevel>0,"visible progress reset");break;
                 case "CompactRejectBuyResell":
@@ -201,7 +201,7 @@ namespace Scrapshift.Tests
                     bad=new CompactRules();bad.saleBonusPercents[1]=-1;Invalid(()=>bad.Validate(),"negative bonus");
                     bad=new CompactRules();bad.levelThresholds[2]=bad.levelThresholds[1];Invalid(()=>bad.Validate(),"nonincreasing curve");
                     bad=new CompactRules();bad.recipes[1].id=bad.recipes[0].id;Invalid(()=>bad.Validate(),"unstable recipe IDs");
-                    bad=new CompactRules();bad.Equipment(EquipmentKind.ExportStation).available=true;Invalid(()=>bad.Validate(),"cannot pretend export stage works");break;
+                    bad=new CompactRules();bad.Equipment(EquipmentKind.ExportStation).powerDemand=0;Invalid(()=>bad.Validate(),"dispatch requires generator demand");break;
                 case "CompactLegacyPortableSalesSalvage":
                     m.State.items.Add(new CompactStack{id=m.State.nextId++,kind=PartKind.RestoredFan,quantity=1});m.State.carriedId=m.State.items[0].id;
                     Check(m.SaleQuote().total==42 && m.SaleQuote().experience==0 && m.Sell(),"existing tested appliance remains saleable");

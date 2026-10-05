@@ -23,6 +23,9 @@ namespace Scrapshift.Compact
                 model.StoredUnits(e.id)+model.OutputQuantity(e.id)>model.Rules.Equipment(e.kind).outputCapacity);
             if(blocked!=null)return At(blocked,model,"Output blocked. Inspect "+use+" and withdraw stored materials to make room; processing progress is retained.");
             var goal=model.Career.CurrentGoal;
+            // Customer recovery and hand work stay ahead of optional industrial expansion.
+            if(goal!=null && goal.key=="contracts")return CustomerRecovery(model,playerX,playerZ,services,use,work);
+            var industry=IndustryWork(model,playerX,playerZ,use);if(industry!=null)return industry;
             if(goal!=null)
             {
                 if(goal.key=="inspect")
@@ -48,15 +51,109 @@ namespace Scrapshift.Compact
                 }
                 if(goal.key=="level10")return Acquire(model,playerX,playerZ,services,use,work,null,"Sell recovered materials for XP • "+model.XPToNextLevel+" XP to level "+(model.Level+1));
                 if(goal.key=="belts")return FirstBelt(model,playerX,playerZ,services,use,work);
-                if(goal.key=="contracts")
-                {
-                    var request=model.Career.CurrentContract;
-                    if(request!=null && model.Level>=request.minimumLevel)
-                        return Acquire(model,playerX,playerZ,services,use,work,request.kind,"Recover "+model.Rules.Part(request.kind).name+" for "+request.customer+" • "+request.Remaining+" needed");
-                    return Acquire(model,playerX,playerZ,services,use,work,null,"Sell recovered materials to unlock your next customer");
-                }
             }
+            if(goal==null)
+            {var expansion=IndustryExpansion(model,playerX,playerZ,services,use,work);if(expansion!=null)return expansion;}
             return Acquire(model,playerX,playerZ,services,use,work,null,goal==null?"Your yard is open • keep recovering and selling":"Continue your recovery work");
+        }
+        static CompactGuideStep CustomerRecovery(ScrappingModel model,float x,float z,CompactGuideServices services,string use,string work)
+        {
+            var request=model.Career.CurrentContract;
+            if(request!=null && model.Level>=request.minimumLevel)
+                return Acquire(model,x,z,services,use,work,request.kind,"Recover "+model.Rules.Part(request.kind).name+" for "+request.customer+" • "+request.Remaining+" needed");
+            return Acquire(model,x,z,services,use,work,null,"Sell recovered materials to unlock your next customer");
+        }
+        static CompactGuideStep IndustryWork(ScrappingModel model,float x,float z,string use)
+        {
+            // Read existing paid work first. A disabled purchase service does not cancel its object.
+            var interrupted=NearestEquipment(model,x,z,e=>PrimaryJob(e)!=null &&
+                (!Powered(model,e) || !PrimaryCanFinish(model,e)));
+            if(interrupted!=null)
+            {
+                if(!Powered(model,interrupted))return IndustryPower(model,interrupted,use,"Paid object and progress are retained");
+                return At(interrupted,model,"Paid object output is blocked. Inspect "+use+" to drain its component buffer; the object and progress are retained. "+model.Industry.Status(interrupted.id));
+            }
+            var output=NearestEquipment(model,x,z,e=>e.kind==EquipmentKind.PrimaryScrapper && UsefulStored(model,e,null));
+            var exporter=NearestEquipment(model,x,z,e=>e.kind==EquipmentKind.ExportStation && e.contents.Count>0);
+            if(exporter!=null && (output==null || Destination(exporter).Distance(x,z)<Destination(output).Distance(x,z)))
+                return ExportWork(model,exporter,use);
+            if(output!=null)return At(output,model,"Recovered components are ready. Inspect "+use+" to withdraw a batch or connect its output to storage and component processing. Process components before selling their materials.");
+            var running=NearestEquipment(model,x,z,e=>PrimaryJob(e)!=null);
+            if(running!=null)
+            {
+                var job=PrimaryJob(running);
+                return At(running,model,model.Rules.LargeRecipe(job.kind).name+" is being recovered • "+job.remaining.ToString("0.0")+"s of powered work left. Menus pause work; its paid object is retained even when standing deliveries are off.");
+            }
+            var standing=NearestEquipment(model,x,z,e=>e.kind==EquipmentKind.PrimaryScrapper && e.industry!=null && e.industry.enabled);
+            if(standing!=null)
+            {
+                if(!Powered(model,standing))return IndustryPower(model,standing,use,"Standing deliveries wait without buying an object");
+                var recipe=model.Rules.LargeRecipe(standing.industry.purchaseKind);
+                if(model.State.money<recipe.purchasePrice)
+                    return At(standing,model,"Standing deliveries wait for €"+recipe.purchasePrice+" for "+recipe.name+" • €"+(recipe.purchasePrice-model.State.money)+" more needed. Recover and sell materials or use free wiring for funds. Inspect "+use+" to turn purchases off; there is no fee or debt.");
+                return At(standing,model,model.Industry.Status(standing.id)+" Each "+recipe.name+" costs €"+recipe.purchasePrice+". Inspect "+use+" to review or stop purchases; processing follows the eligible idle delivery wait.");
+            }
+            return null;
+        }
+        static PrimaryScrapJob PrimaryJob(EquipmentState equipment)
+        {return equipment.kind==EquipmentKind.PrimaryScrapper && equipment.industry!=null?equipment.industry.primary:null;}
+        static bool PrimaryCanFinish(ScrappingModel model,EquipmentState equipment)
+        {
+            return (long)model.StoredUnits(equipment.id)+CompactIndustryModel.ReservedUnits(equipment)<=model.Rules.Equipment(equipment.kind).outputCapacity &&
+                (long)model.State.nextId+CompactIndustryModel.ReservedSlots(equipment)<=int.MaxValue;
+        }
+        static CompactGuideStep ExportWork(ScrappingModel model,EquipmentState equipment,string use)
+        {
+            var quote=model.Industry.DispatchQuote(equipment.id);
+            if(quote.quantity>0 && !Powered(model,equipment))return IndustryPower(model,equipment,use,"Stored materials and sale eligibility are retained");
+            if(!quote.allowed)return At(equipment,model,quote.reason+" Inspect "+use+" to review its material filter or withdraw the preserved stock.");
+            string timing=equipment.industry!=null && equipment.industry.enabled?
+                "Automatic dispatch waits "+equipment.industry.remaining.ToString("0.0")+"s of powered time.":"Automatic dispatch is off until explicitly approved.";
+            return At(equipment,model,quote.name+" ×"+quote.quantity+" ready for dispatch • €"+quote.total+" / +"+quote.experience+" sale XP. Inspect "+use+" to review and confirm. "+timing);
+        }
+        static CompactGuideStep IndustryPower(ScrappingModel model,EquipmentState equipment,string use,string retained)
+        {
+            var power=new ConstructionModel(model.State,model.Rules).PowerFor(equipment.id);
+            string need=power.overloaded?"Network overloaded • "+power.demand.ToString("0.##")+" / "+power.supply.ToString("0.##")+" kW. Connect more supply or disconnect idle consumers.":
+                "This station needs sufficient connected generator power • draws "+model.Rules.Equipment(equipment.kind).powerDemand.ToString("0.##")+" kW.";
+            var generator=NearestEquipment(model,equipment.x,equipment.z,e=>model.Rules.Equipment(e.kind).powerOutput>0);
+            if(generator!=null && Destination(generator).Distance(equipment.x,equipment.z)>model.Rules.CableRange)
+                need+=" Existing generator is beyond "+model.Rules.CableRange.ToString("0.#")+"m cable reach; place or connect supply nearby.";
+            return At(equipment,model,retained+". "+need+" Inspect "+use+" to manage its Power network.");
+        }
+        static CompactGuideStep IndustryExpansion(ScrappingModel model,float x,float z,CompactGuideServices services,string use,string work)
+        {
+            var primary=NearestEquipment(model,x,z,e=>e.kind==EquipmentKind.PrimaryScrapper);
+            var primaryDefinition=model.Rules.Equipment(EquipmentKind.PrimaryScrapper);
+            var exportDefinition=model.Rules.Equipment(EquipmentKind.ExportStation);
+            if(primary==null)
+            {
+                if(primaryDefinition==null || !primaryDefinition.available || model.Level<primaryDefinition.unlockLevel)return null;
+                var step=BuyEquipment(model,EquipmentKind.PrimaryScrapper,x,z,services,use,work);
+                step.action="Optional whole-object recovery • "+step.action+" Standing purchases start off.";return step;
+            }
+            var receiver=NearestEquipment(model,x,z,e=>e.kind==EquipmentKind.PrimaryScrapper && HasOwnedIntake(model,e));
+            if(receiver!=null)
+            {
+                var source=NearestScrap(model,x,z,s=>model.Industry.CanFeedScrap(receiver.id,s.id,out string reason));
+                return At(receiver,model,"Inspect "+use+" to review loading your owned "+model.Rules.LargeRecipe(source.kind).name+" directly from receiving. No second purchase charge; whole objects are never carried or put on component belts.");
+            }
+            if(!Powered(model,primary))return IndustryPower(model,primary,use,"Whole-object recovery is waiting");
+            var exporter=NearestEquipment(model,x,z,e=>e.kind==EquipmentKind.ExportStation);
+            if(exporter==null && exportDefinition!=null && exportDefinition.available && model.Level>=exportDefinition.unlockLevel)
+            {
+                var step=BuyEquipment(model,EquipmentKind.ExportStation,x,z,services,use,work);
+                step.action="Optional material export • "+step.action+" Components must be processed first; automatic export starts off.";return step;
+            }
+            var state=primary.industry;var kind=state==null?ScrapObjectKind.Car:state.purchaseKind;
+            var recipe=model.Rules.LargeRecipe(kind);
+            return At(primary,model,"Inspect "+use+" to load intact owned scrap or review standing deliveries • "+recipe.name+" €"+recipe.purchasePrice+" each / "+model.Rules.deliveryIntervalSeconds.ToString("0.#")+" eligible idle seconds. Purchases require explicit approval, power, funds and output space. Keep using your manual recovery loop whenever you prefer.");
+        }
+        static bool HasOwnedIntake(ScrappingModel model,EquipmentState equipment)
+        {
+            foreach(var source in model.State.scrap)
+                if(model.Industry.CanFeedScrap(equipment.id,source.id,out string reason))return true;
+            return false;
         }
         static CompactGuideStep Carry(ScrappingModel model,CompactStack held,float x,float z,CompactGuideServices services,string use,string work)
         {

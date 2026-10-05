@@ -1,0 +1,55 @@
+{
+  "scope": "Actual Blender FBX round-trip, metre footprint/height, finite normals/vertices, atlas UVs, one material and per-model triangle budgets; original loaded car/fridge cradle/head clearance; Unity unrun",
+  "assets": [
+    {
+      "name": "CompactPrimaryScrapper",
+      "status": "passed",
+      "triangles": 3032,
+      "metre_bounds_blender": [
+        [
+          -2.180000066757202,
+          -3.4149999618530273,
+          -2.5155901539619663e-07
+        ],
+        [
+          2.9449996948242188,
+          3.4499998092651367,
+          4.267000198364258
+        ]
+      ],
+      "sha256": "6b2c34c78d1ef36ed4381d68b64f540747718c6dabcb74dbe56b768409d339fe"
+    },
+    {
+      "name": "CompactExportStation",
+      "status": "passed",
+      "triangles": 1612,
+      "metre_bounds_blender": [
+        [
+          -1.3650000095367432,
+          -1.2149999141693115,
+          -8.818153673928464e-08
+        ],
+        [
+          1.415000081062317,
+          1.1799999475479126,
+          2.049999952316284
+        ]
+      ],
+      "sha256": "f8e81da4368a15c25841c671b5729d25745727f9e5a13d6d624718d43e2e98f8"
+    }
+  ],
+  "loaded_objects": [
+    {
+      "name": "WornHatchback",
+      "status": "passed",
+      "configurations": 4,
+      "scope": "Original imported load vertices remain within scaled primary footprint and below dismantling head"
+    },
+    {
+      "name": "CompactRefrigerator",
+      "status": "passed",
+      "configurations": 4,
+      "scope": "Original imported load vertices remain within scaled primary footprint and below dismantling head"
+    }
+  ]
+}

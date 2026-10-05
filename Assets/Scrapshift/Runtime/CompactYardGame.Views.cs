@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Unity.Profiling;
 
 namespace Scrapshift.Compact
 {
     public sealed partial class CompactYardGame
     {
-        sealed class EntityView {public GameObject root,details;public string key,geometryKey;}
+        sealed class EntityView {public GameObject root,details;public string key,geometryKey;public CompactEquipmentViewStamp equipmentStamp;}
         readonly Dictionary<int,EntityView> views=new Dictionary<int,EntityView>();
         readonly HashSet<int> viewActive=new HashSet<int>();
         readonly List<int> staleViews=new List<int>();
@@ -15,7 +16,10 @@ namespace Scrapshift.Compact
         bool lastPreviewValid;
         string cableKey="";
         readonly Collider[] placementHits=new Collider[32];
-        void SyncViews()
+        static readonly ProfilerMarker ViewsMarker=new ProfilerMarker("Scrapshift.Compact.SyncViews");
+        static readonly ProfilerMarker HudMarker=new ProfilerMarker("Scrapshift.Compact.RefreshHud");
+        void SyncViews(){using(ViewsMarker.Auto())SyncViewsNow();}
+        void SyncViewsNow()
         {
             RebuildPower();
             var active=viewActive;active.Clear();
@@ -47,14 +51,16 @@ namespace Scrapshift.Compact
             }
             foreach(var equipment in Model.State.equipment)
             {
-                active.Add(equipment.id);string key=EquipmentViewKey(equipment);
+                active.Add(equipment.id);
                 var definition=Model.Rules.Equipment(equipment.kind);
-                string geometryKey=equipment.kind+":"+equipment.x+":"+equipment.z+":"+equipment.yaw+":"+definition.width+":"+definition.depth;
+                var power=equipment.kind==EquipmentKind.Tier1Scrapper||equipment.kind==EquipmentKind.Tier2Scrapper?PowerStatus(equipment.id):null;
                 GameObject go;
-                if(views.TryGetValue(equipment.id,out EntityView previous)&&previous.root!=null&&previous.geometryKey==geometryKey)
+                if(views.TryGetValue(equipment.id,out EntityView previous)&&previous.root!=null&&previous.equipmentStamp!=null&&previous.equipmentStamp.GeometryMatches(equipment,definition))
                 {
-                    if(previous.key==key)continue;
-                    go=previous.root;if(previous.details!=null){previous.details.SetActive(false);DestroyOwnedView(previous.details);}
+                    go=previous.root;CompactIndustryVisuals.SyncJob(go,equipment,Model.Rules);
+                    if(previous.equipmentStamp.DetailsMatch(equipment,power!=null&&power.powered,power!=null&&power.overloaded))
+                    {previous.equipmentStamp.Capture(equipment,definition,power!=null&&power.powered,power!=null&&power.overloaded);continue;}
+                    if(previous.details!=null){previous.details.SetActive(false);DestroyOwnedView(previous.details);}
                 }
                 else
                 {
@@ -62,11 +68,11 @@ namespace Scrapshift.Compact
                     go=CompactEquipmentVisuals.Build(equipment.kind,transform,new Vector3(equipment.x,0,equipment.z),equipment.yaw,true,Model.Rules);
                     AttachTarget(go,CompactTargetKind.Equipment,equipment.id);
                     CompactWorkVisuals.PrepareEquipment(go,equipment.kind,Model.Rules);
+                    CompactIndustryVisuals.SyncJob(go,equipment,Model.Rules);
                 }
                 var details=new GameObject("Current contents and work status");details.transform.SetParent(go.transform,false);
                 if(equipment.kind==EquipmentKind.Tier1Scrapper||equipment.kind==EquipmentKind.Tier2Scrapper)
                 {
-                    var power=PowerStatus(equipment.id);
                     Color status=equipment.job!=null&&equipment.job.ready?new Color(.35f,.67f,.42f):power.overloaded?YardGeometry.Rust:
                         !power.powered?YardGeometry.Charcoal:equipment.job==null?new Color(.35f,.67f,.42f):new Color(.83f,.62f,.24f);
                     Vector3 indicator=equipment.kind==EquipmentKind.Tier2Scrapper?CompactAutomationVisuals.Tier2PowerSocket(Model.Rules)+Vector3.up*.25f:new Vector3(-.9f,1.25f,-.28f);
@@ -93,7 +99,9 @@ namespace Scrapshift.Compact
                     var part=CompactEquipmentVisuals.BuildPart(equipment.contents[slot].kind,details.transform,new Vector3((slot-1)*.35f,.78f,0),false);
                     part.transform.localScale=Vector3.one*.4f;
                 }
-                views[equipment.id]=new EntityView{root=go,details=details,key=key,geometryKey=geometryKey};
+                var stamp=previous!=null&&previous.root==go&&previous.equipmentStamp!=null?previous.equipmentStamp:new CompactEquipmentViewStamp();
+                stamp.Capture(equipment,definition,power!=null&&power.powered,power!=null&&power.overloaded);
+                views[equipment.id]=new EntityView{root=go,details=details,equipmentStamp=stamp};
             }
             staleViews.Clear();foreach(var pair in views)if(!active.Contains(pair.Key))staleViews.Add(pair.Key);
             foreach(int id in staleViews){RemoveView(id);}
@@ -104,20 +112,18 @@ namespace Scrapshift.Compact
             foreach(var pair in views)if(pair.Value.root!=null)CompactWorkVisuals.StepPulse(pair.Value.root,Time.deltaTime);
             foreach(var equipment in Model.State.equipment)
                 if(views.TryGetValue(equipment.id,out EntityView view)&&view.root!=null)
+                {
+                    bool industryRunning=equipment.kind==EquipmentKind.PrimaryScrapper&&IsWorkingMachine(equipment)||
+                        equipment.kind==EquipmentKind.ExportStation&&equipment.industry!=null&&equipment.industry.enabled&&Industry.DispatchQuote(equipment.id).allowed;
+                    CompactIndustryVisuals.Step(view.root,equipment,industryRunning,Time.deltaTime,Time.time);
                     CompactWorkVisuals.AnimateEquipment(view.root,equipment,
                         (equipment.kind==EquipmentKind.Tier1Scrapper||equipment.kind==EquipmentKind.Tier2Scrapper)&&
                         equipment.job!=null&&!equipment.job.ready&&PowerStatus(equipment.id).powered&&
                         Model.ProcessingBlockReason(equipment.id)=="Processing",Time.time);
+                }
         }
         void PulseWork(int id)
         {if(views.TryGetValue(id,out EntityView view)&&view.root!=null)CompactWorkVisuals.Pulse(view.root);}
-        static string JobKey(ProcessingJob job)
-        {
-            if(job==null)return "empty";
-            string key=job.input+":"+job.ready+":"+job.strokes;
-            foreach(var output in job.yields)key+=":"+output.kind+"="+output.quantity;
-            return key;
-        }
         bool Unchanged(int id,string key)
         {
             if(views.TryGetValue(id,out EntityView view)&&view.root!=null&&view.key==key)return true;
@@ -132,16 +138,12 @@ namespace Scrapshift.Compact
         void RefreshProcessingViews()
         {
             foreach(var equipment in Model.State.equipment)
-                if(views.TryGetValue(equipment.id,out EntityView view)&&view.key!=EquipmentViewKey(equipment))
+            {
+                var power=equipment.kind==EquipmentKind.Tier1Scrapper||equipment.kind==EquipmentKind.Tier2Scrapper?PowerStatus(equipment.id):null;
+                if(!views.TryGetValue(equipment.id,out EntityView view)||view.root==null||view.equipmentStamp==null||
+                    !view.equipmentStamp.Matches(equipment,Model.Rules.Equipment(equipment.kind),power!=null&&power.powered,power!=null&&power.overloaded))
                 {SyncViews();return;}
-        }
-        string EquipmentViewKey(EquipmentState equipment)
-        {
-            string key="equipment:"+equipment.kind+":"+equipment.x+":"+equipment.z+":"+equipment.yaw+":"+JobKey(equipment.job);
-            key+=":"+equipment.filterKind;
-            foreach(var item in equipment.contents)key+=":"+item.id+"="+item.quantity;
-            if(equipment.kind==EquipmentKind.Tier1Scrapper||equipment.kind==EquipmentKind.Tier2Scrapper){var p=PowerStatus(equipment.id);key+=":"+p.powered+":"+p.overloaded;}
-            return key;
+            }
         }
         static void AttachTarget(GameObject root,CompactTargetKind kind,int id)
         {var t=root.AddComponent<CompactInteractionTarget>();t.kind=kind;t.id=id;}
@@ -170,16 +172,35 @@ namespace Scrapshift.Compact
         Vector3 PowerPort(EquipmentState item)
         {
             Vector3 socket=item.kind==EquipmentKind.Generator?new Vector3(.45f,.75f,-.55f):
+                item.kind==EquipmentKind.PrimaryScrapper?CompactIndustryVisuals.PrimaryPowerSocket(Model.Rules):
+                item.kind==EquipmentKind.ExportStation?CompactIndustryVisuals.ExportPowerSocket(Model.Rules):
                 item.kind==EquipmentKind.Tier2Scrapper?CompactAutomationVisuals.Tier2PowerSocket(Model.Rules):new Vector3(-.9f,.9f,-.29f);
             return new Vector3(item.x,0,item.z)+Quaternion.Euler(0,item.yaw,0)*socket;
         }
+        bool IsWorkingMachine(EquipmentState equipment)
+        {
+            if(equipment.kind!=EquipmentKind.PrimaryScrapper&&equipment.kind!=EquipmentKind.Tier1Scrapper&&equipment.kind!=EquipmentKind.Tier2Scrapper)return false;
+            if(!PowerStatus(equipment.id).powered)return false;
+            if(equipment.kind==EquipmentKind.PrimaryScrapper)
+                return equipment.industry!=null&&equipment.industry.primary!=null&&
+                    Model.StoredUnits(equipment.id)+CompactIndustryModel.ReservedUnits(equipment)<=Model.Rules.Equipment(equipment.kind).outputCapacity&&
+                    (long)Model.State.nextId+CompactIndustryModel.ReservedSlots(equipment)<=int.MaxValue;
+            return (equipment.kind==EquipmentKind.Tier1Scrapper||equipment.kind==EquipmentKind.Tier2Scrapper)&&
+                equipment.job!=null&&!equipment.job.ready&&Model.ProcessingBlockReason(equipment.id)=="Processing";
+        }
         void StepSound()
         {
-            bool running=false;Vector3 machinePosition=Vector3.zero;
+            EquipmentState nearest=null;float nearestDistance=float.MaxValue;
+            var listener=player.transform.position;
             foreach(var equipment in Model.State.equipment)
-                if((equipment.kind==EquipmentKind.Tier1Scrapper||equipment.kind==EquipmentKind.Tier2Scrapper)&&equipment.job!=null&&!equipment.job.ready&&PowerStatus(equipment.id).powered&&Model.ProcessingBlockReason(equipment.id)=="Processing")
-                {running=true;machinePosition=new Vector3(equipment.x,1,equipment.z);break;}
-            sounds.StepCompact(running,machinePosition);
+            {
+                if(!IsWorkingMachine(equipment))continue;
+                float dx=equipment.x-listener.x,dz=equipment.z-listener.z;
+                float distance=dx*dx+dz*dz;
+                if(distance<nearestDistance||distance==nearestDistance&&(nearest==null||equipment.id<nearest.id))
+                {nearest=equipment;nearestDistance=distance;}
+            }
+            sounds.StepCompact(nearest!=null,nearest==null?Vector3.zero:new Vector3(nearest.x,1,nearest.z));
         }
         void BeginBuild(EquipmentKind kind,int movingId=0)
         {
@@ -257,7 +278,8 @@ namespace Scrapshift.Compact
         {if(value==null)return;if(Application.isPlaying)Destroy(value);else DestroyImmediate(value);}
         void LateUpdate()
         {if(Model!=null&&(hudDirty||(!paused&&Time.unscaledTime>=nextHud))){RefreshHud();nextHud=Time.unscaledTime+.1f;hudDirty=false;}}
-        void RefreshHud()
+        void RefreshHud(){using(HudMarker.Auto())RefreshHudNow();}
+        void RefreshHudNow()
         {
             hudTitle="€"+Model.State.money+"    •    LEVEL "+Model.Level+"    •    "+Model.State.experience+" XP";
             var carried=Model.FindItem(Model.State.carriedId);
@@ -285,7 +307,9 @@ namespace Scrapshift.Compact
                     return scrap.strokes<scrap.requiredStrokes?work+ScrapStage(scrap)+" / "+scrap.strokes+" of "+scrap.requiredStrokes+" • "+interact+"details":interact+"Collect dismantled components";
                 case CompactTargetKind.Equipment:
                     var gear=Model.FindEquipment(target.id);if(gear==null)return "";
-                    if(Model.State.carriedId!=0)return interact+(gear.kind==EquipmentKind.Storage||gear.kind==EquipmentKind.Tier2Scrapper||gear.kind==EquipmentKind.Splitter||gear.kind==EquipmentKind.Merger?"Deposit into ":"Load ")+Model.Rules.Equipment(gear.kind).name;
+                    if(gear.kind==EquipmentKind.PrimaryScrapper)return interact+"Whole-object intake / "+Industry.Status(gear.id);
+                    if(gear.kind==EquipmentKind.ExportStation&&Model.State.carriedId==0)return interact+"Material dispatch / "+Industry.Status(gear.id);
+                    if(Model.State.carriedId!=0)return interact+(gear.kind==EquipmentKind.Storage||gear.kind==EquipmentKind.Tier2Scrapper||gear.kind==EquipmentKind.Splitter||gear.kind==EquipmentKind.Merger||gear.kind==EquipmentKind.ExportStation?"Deposit into ":"Load ")+Model.Rules.Equipment(gear.kind).name;
                     if(gear.job==null)return interact+Model.Rules.Equipment(gear.kind).name+" / manage";
                     if(gear.job.ready)return interact+"Collect output / manage";
                     if(gear.kind==EquipmentKind.Workbench)return work+"Process component / "+gear.job.strokes+" of "+gear.job.requiredStrokes;

@@ -17,6 +17,7 @@ namespace Scrapshift.Compact
         public CompactRules Rules { get; private set; }
         public CompactYardState State { get; private set; }
         public CompactCareerModel Career { get; private set; }
+        public CompactIndustryModel Industry { get; private set; }
         public string LastNotice { get; private set; }
         // Missing or disconnected power safely pauses machines, including immediately after load.
         public Func<int,bool> HasPower;
@@ -38,7 +39,7 @@ namespace Scrapshift.Compact
             get
             {
                 int count=State.items.Count;
-                foreach(var e in State.equipment) { count+=e.contents.Count; if(e.job!=null) count+=PositiveSlots(e.job.yields); }
+                foreach(var e in State.equipment) { count+=e.contents.Count; if(e.job!=null) count+=PositiveSlots(e.job.yields);count+=CompactIndustryModel.ReservedSlots(e); }
                 foreach(var s in State.scrap) if(s.inspected) count+=PositiveSlots(s.remaining);
                 if(State.belts!=null)foreach(var belt in State.belts)count+=belt.items.Count;
                 return count;
@@ -51,6 +52,7 @@ namespace Scrapshift.Compact
             State=state??FreshState(rules);
             Validate(State,rules);
             Career=new CompactCareerModel(this);
+            Industry=new CompactIndustryModel(this);
             LastNotice="Inspect delivered scrap, or collect renewable wiring.";
         }
         static CompactYardState FreshState(CompactRules rules)
@@ -195,7 +197,8 @@ namespace Scrapshift.Compact
                 "Loaded "+recipe.name+". Complete "+job.requiredStrokes+" manual tool strokes.";return true;
         }
         public static bool HasBuffer(EquipmentKind kind)
-        {return kind==EquipmentKind.Storage || kind==EquipmentKind.Tier2Scrapper || kind==EquipmentKind.Splitter || kind==EquipmentKind.Merger;}
+        {return kind==EquipmentKind.Storage || kind==EquipmentKind.Tier2Scrapper || kind==EquipmentKind.Splitter || kind==EquipmentKind.Merger ||
+            kind==EquipmentKind.PrimaryScrapper || kind==EquipmentKind.ExportStation;}
         public int StoredUnits(int equipmentId)
         {var e=FindEquipment(equipmentId);int count=0;if(e!=null)foreach(var item in e.contents)count+=item.quantity;return count;}
         public bool Deposit(int equipmentId)
@@ -203,9 +206,12 @@ namespace Scrapshift.Compact
             var e=FindEquipment(equipmentId);var held=Carried;
             if(e==null || !HasBuffer(e.kind))return Fail("Choose storage, a Tier 2 input buffer or a conveyor junction.");
             if(held==null)return Fail("Carry a component or material to deposit it.");
+            if(e.kind==EquipmentKind.PrimaryScrapper)return Fail("Primary intake takes intact whole scrap; portable items cannot enter its output buffer.");
+            if(e.kind==EquipmentKind.ExportStation && (!CompactIndustryModel.CanExportPart(Rules,held.kind) || (e.filterKind>=0 && (int)held.kind!=e.filterKind)))
+                return Fail("Export input requires saleable materials matching its filter. Components must be processed first.");
             if(e.kind==EquipmentKind.Tier2Scrapper && (Rules.Recipe(held.kind)==null || (e.filterKind>=0 && (int)held.kind!=e.filterKind)))
                 return Fail("The Tier 2 input needs a supported component matching its recipe filter.");
-            int reserved=e.job==null?0:OutputUnits(e.job.yields);
+            int reserved=(e.job==null?0:OutputUnits(e.job.yields))+CompactIndustryModel.ReservedUnits(e);
             if((long)StoredUnits(equipmentId)+reserved+held.quantity>Rules.Equipment(e.kind).outputCapacity)
                 return Fail("Buffer is full; reserved machine outputs also occupy capacity. Your carried item is unchanged.");
             State.items.Remove(held);e.contents.Add(held);held.x=e.x;held.z=e.z;held.y=.25f;State.carriedId=0;
@@ -249,6 +255,8 @@ namespace Scrapshift.Compact
             if(kind< -1 || (kind>=0 && !Enum.IsDefined(typeof(PartKind),kind)))return Fail("Choose a supported item filter or All.");
             if(e.kind==EquipmentKind.Tier2Scrapper && kind>=0 && Rules.Recipe((PartKind)kind)==null)
                 return Fail("Choose a supported component recipe for Tier 2.");
+            if(e.kind==EquipmentKind.ExportStation && kind>=0 && !CompactIndustryModel.CanExportPart(Rules,(PartKind)kind))
+                return Fail("Choose a saleable material filter for export, or All materials.");
             if(e.filterKind==kind)return Fail("This filter is already selected.");
             e.filterKind=kind;
             LastNotice=kind<0?"Filter: all compatible items.":"Filter: "+Rules.Part((PartKind)kind).name+". Existing contents and jobs are preserved.";return true;
@@ -339,17 +347,28 @@ namespace Scrapshift.Compact
         {return QuoteSale(Carried==null?0:Carried.quantity);}
         internal CompactSaleQuote QuoteSale(int quantity)
         {
-            var q=new CompactSaleQuote{reason="Carry recovered materials to sell."};var held=Carried;if(held==null)return q;
+            var held=Carried;if(held==null)return new CompactSaleQuote{reason="Carry recovered materials to sell."};
+            var q=new CompactSaleQuote();
             if(quantity<1 || quantity>held.quantity){q.reason="Choose a valid quantity from your carried bundle.";return q;}
-            var part=Rules.Part(held.kind);q.kind=held.kind;q.name=part.name;q.quantity=quantity;q.unitPrice=part.unitPrice;q.bonusPercent=SaleBonusPercent;
-            bool restored=held.kind==PartKind.RestoredFan || held.kind==PartKind.RestoredRadio;
+            return QuoteSale(held.kind,quantity,held.xpEligible,false);
+        }
+        internal CompactSaleQuote QuoteMaterialSale(PartKind kind,int quantity,bool eligible)
+        {return QuoteSale(kind,quantity,eligible,true);}
+        CompactSaleQuote QuoteSale(PartKind kind,int quantity,bool eligible,bool materialOnly)
+        {
+            var q=new CompactSaleQuote{kind=kind,quantity=quantity};var part=Rules.Part(kind);
+            if(part==null || quantity<1 || quantity>4096){q.reason="Choose a supported sale bundle within the durable unit limit.";return q;}
+            if(part.unitPrice<0 || part.unitPrice>100000 || part.saleXp<0 || part.saleXp>10000)
+            {q.reason="Correct invalid sale prices or experience tuning before selling. Your stock is unchanged.";return q;}
+            q.name=part.name;q.unitPrice=part.unitPrice;q.bonusPercent=SaleBonusPercent;
+            bool restored=!materialOnly && (kind==PartKind.RestoredFan || kind==PartKind.RestoredRadio);
             if((!part.isMaterial && !restored) || part.unitPrice==0){q.reason="Dismantle this component into saleable materials first.";return q;}
             long baseTotal=(long)part.unitPrice*quantity,bonus=baseTotal*q.bonusPercent/100,total=baseTotal+bonus;
-            long xp=held.xpEligible && part.isMaterial?(long)part.saleXp*quantity:0;
+            long xp=eligible && part.isMaterial?(long)part.saleXp*quantity:0;
             if(total>int.MaxValue || total>int.MaxValue-(long)State.money || xp>int.MaxValue-(long)State.experience)
             {q.reason="Sale exceeds the cash or experience limit; your item is unchanged.";return q;}
             q.baseTotal=(int)baseTotal;q.bonusTotal=(int)bonus;q.total=(int)total;q.experience=(int)xp;q.allowed=true;
-            q.reason=held.xpEligible?"Valid recovered-material sale":"Existing/imported item: cash sale, no new recovery XP";return q;
+            q.reason=eligible?"Valid recovered-material sale":"Existing/imported item: cash sale, no new recovery XP";return q;
         }
         public bool CanSell(out string reason) {var q=SaleQuote();reason=q.reason;return q.allowed;}
         public bool CanSell() {return SaleQuote().allowed;}
@@ -369,9 +388,20 @@ namespace Scrapshift.Compact
         internal void CommitSale(CompactSaleQuote quote,int completionBonus)
         {
             var held=Carried;bool eligible=held.xpEligible;
-            State.money+=quote.total+completionBonus;State.experience+=quote.experience;held.quantity-=quote.quantity;
+            held.quantity-=quote.quantity;
             if(held.quantity==0){State.items.Remove(held);State.carriedId=0;}
-            Career.RecordSale(quote.kind,quote.quantity,quote.total,eligible);
+            CreditSale(quote,completionBonus,eligible);
+        }
+        void CreditSale(CompactSaleQuote quote,int completionBonus,bool eligible)
+        {State.money+=quote.total+completionBonus;State.experience+=quote.experience;Career.RecordSale(quote.kind,quote.quantity,quote.total,eligible);}
+        internal bool CommitBufferSale(EquipmentState equipment,CompactSaleQuote quote,bool eligible)
+        {
+            long quantity=0;foreach(var item in equipment.contents)if(item.kind==quote.kind && item.xpEligible==eligible)quantity+=item.quantity;
+            if(!quote.allowed || quantity!=quote.quantity)return false;
+            var fresh=QuoteMaterialSale(quote.kind,quote.quantity,eligible);
+            if(!fresh.allowed || fresh.total!=quote.total || fresh.experience!=quote.experience)return false;
+            for(int i=equipment.contents.Count-1;i>=0;i--)if(equipment.contents[i].kind==quote.kind && equipment.contents[i].xpEligible==eligible)equipment.contents.RemoveAt(i);
+            CreditSale(fresh,0,eligible);return true;
         }
         internal void CareerNotice(string notice){LastNotice=notice;}
         public static void Validate(CompactYardState s, CompactRules rules)
@@ -379,8 +409,8 @@ namespace Scrapshift.Compact
             if(s==null || rules==null)throw new ArgumentException("Missing compact yard or rules.");
             rules.Validate();
             CompactCareerModel.Validate(s.career,rules);
-            if((s.version!=2 && s.version!=3) || s.money<0 || s.experience<0 || s.nextId<1 || s.carriedId<0 || s.items==null || s.scrap==null || s.equipment==null || s.powerLinks==null ||
-                (s.version==3 && s.belts==null) || (s.belts!=null && (s.belts.Count>128 || (s.version==2 && s.belts.Count>0))) ||
+            if((s.version!=2 && s.version!=3 && s.version!=4) || s.money<0 || s.experience<0 || s.nextId<1 || s.carriedId<0 || s.items==null || s.scrap==null || s.equipment==null || s.powerLinks==null ||
+                (s.version>=3 && s.belts==null) || (s.belts!=null && (s.belts.Count>128 || (s.version==2 && s.belts.Count>0))) ||
                 s.items.Count>512 || s.scrap.Count>16 || s.equipment.Count>128 || s.powerLinks.Count>256 ||
                 !CompactRules.Finite(s.playerX) || !CompactRules.Finite(s.playerY) || !CompactRules.Finite(s.playerZ) ||
                 Math.Abs(s.playerX)>23.5f || Math.Abs(s.playerZ)>17.5f || s.playerY<.1f || s.playerY>5 ||
@@ -415,13 +445,20 @@ namespace Scrapshift.Compact
                 if(e==null || !ids.Add(e.id) || e.id<1 || e.id>=s.nextId || !Enum.IsDefined(typeof(EquipmentKind),e.kind) ||
                     !CompactRules.Finite(e.x) || !CompactRules.Finite(e.z) || !CompactRules.Finite(e.yaw) || Math.Abs(e.x)>24 || Math.Abs(e.z)>18 ||
                     Math.Abs(e.yaw)>360000 || e.paidPrice<0 || e.paidPrice>1000000 || e.contents==null || e.contents.Count>512 ||
-                    e.kind==EquipmentKind.Conveyor || e.kind==EquipmentKind.ExportStation ||
+                    e.kind==EquipmentKind.Conveyor || (s.version<4 && CompactIndustryModel.IsIndustrial(e.kind)) ||
                     (s.version==2 && e.kind!=EquipmentKind.Workbench && e.kind!=EquipmentKind.Generator && e.kind!=EquipmentKind.Tier1Scrapper) ||
-                    (s.version==3 && (e.filterKind< -1 || e.filterKind>11 || (!HasBuffer(e.kind) && e.filterKind!=-1))) || e.routeCursor<0)
+                    (s.version>=3 && (e.filterKind< -1 || e.filterKind>11 || (!HasBuffer(e.kind) && e.filterKind!=-1))) || e.routeCursor<0)
                     throw new ArgumentException("Invalid equipment identity, placement or contents.");
                 if(e.kind==EquipmentKind.Workbench)hasBench=true;
-                long stored=0;foreach(var item in e.contents){ValidateStack(item,s.nextId,ids);stored+=item.quantity;occupied++;}
-                if(stored>4096 || stored+(e.job==null?0:OutputUnits(e.job.yields))>4096)throw new ArgumentException("Stored contents and reserved output exceed the durable safety limit.");
+                if(e.kind==EquipmentKind.ExportStation && e.filterKind>=0 && !rules.Part((PartKind)e.filterKind).isMaterial)
+                    throw new ArgumentException("An export filter must select a material.");
+                long stored=0;foreach(var item in e.contents)
+                {
+                    ValidateStack(item,s.nextId,ids);stored+=item.quantity;occupied++;
+                    if(e.kind==EquipmentKind.ExportStation && !rules.Part(item.kind).isMaterial)throw new ArgumentException("Export buffers contain materials only.");
+                }
+                occupied+=CompactIndustryModel.ValidateEquipment(e,s.version,s.nextId,ids);
+                if(stored>4096 || stored+(e.job==null?0:OutputUnits(e.job.yields))+CompactIndustryModel.ReservedUnits(e)>4096)throw new ArgumentException("Stored contents and reserved output exceed the durable safety limit.");
                 if(e.job==null)continue;
                 var j=e.job;CompactRules.ValidateYields(j.yields,true);
                 if((e.kind!=EquipmentKind.Workbench && e.kind!=EquipmentKind.Tier1Scrapper && e.kind!=EquipmentKind.Tier2Scrapper) || j.recipeId<1 || !Enum.IsDefined(typeof(PartKind),j.input) ||

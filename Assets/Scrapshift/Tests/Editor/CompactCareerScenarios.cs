@@ -72,7 +72,7 @@ namespace Scrapshift.Tests
             switch(name)
             {
                 case "CareerFreshHasNoHistoricalAwards":
-                    Check(model.State.version==3 && model.State.money==8 && model.State.experience==0,"fresh balances unchanged");
+                    Check(model.State.version==4 && model.State.money==8 && model.State.experience==0,"fresh balances unchanged");
                     Check(model.Career.CurrentGoal.key=="inspect" && model.Career.CurrentContract.id==1,"clear first objective and request");
                     Check(model.Career.Stats.saleTransactions==0 && model.Career.Stats.contractsCompleted==0 && !model.Career.Completed,"no historical awards");break;
                 case "CareerSuccessfulTransactionsOnly":
@@ -135,13 +135,13 @@ namespace Scrapshift.Tests
                     model=new ScrappingModel(rules,Copy(model.State));model.HasPower=id=>true;Check(model.Tick(99) && model.Career.Stats.poweredBatches==1,"one powered completion");
                     model=new ScrappingModel(rules,Copy(model.State));model.HasPower=id=>true;Check(!model.Tick(99) && model.Career.Stats.poweredBatches==1,"ready powered job never repeats");break;
                 case "CareerLegacyEvidenceWithoutTotals":
-                    model.State.career=null;model.State.experience=rules.levelThresholds[9];var legacy=Copy(model.State);
+                    model.State.career=null;model.State.experience=rules.levelThresholds[9];int originalLegacyXp=model.State.experience;var legacy=Copy(model.State);
                     legacy.scrap[0].inspected=true;legacy.scrap[0].requiredStrokes=6;legacy.scrap[0].strokes=6;
                     legacy.scrap[0].remaining=new[]{new PartAmount(PartKind.Motor,1)};
                     model=new ScrappingModel(rules,legacy);
                     Check(Goal(model,"inspect") && Goal(model,"dismantle") && Goal(model,"sell") && Goal(model,"level10"),"visible existing evidence inferred");
                     Check(!Goal(model,"process") && !Goal(model,"powered") && model.Career.Stats.salesRevenue==0 && model.Career.Stats.materialUnitsSold==0 && model.Career.Stats.inspectedObjects==0 && model.Career.Stats.contractsCompleted==0,"historical totals and unseen work never invented");
-                    Check(model.State.money==8 && model.State.experience==1750,"no migration awards");break;
+                    Check(model.State.money==8 && model.State.experience==originalLegacyXp,"no migration awards");break;
                 case "CareerMissingAndCustomBalanceDefaults":
                     var missing=new CompactRules{contracts=null};missing.Validate();Check(missing.contracts.Length==6,"missing older field safely initialized");
                     var olderEmpty=new CompactRules{careerRulesVersion=0,contracts=new CompactContractDefinition[0]};olderEmpty.Validate();

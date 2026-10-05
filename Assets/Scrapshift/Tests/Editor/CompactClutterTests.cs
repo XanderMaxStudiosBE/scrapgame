@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 using Scrapshift.Compact;
@@ -55,10 +56,11 @@ namespace Scrapshift.Tests
                 Assert.IsEmpty(clutter.GetComponentsInChildren<Rigidbody>(true));
                 Assert.IsEmpty(clutter.GetComponentsInChildren<Light>(true));
                 Assert.IsEmpty(clutter.GetComponentsInChildren<CompactInteractionTarget>(true));
-                Assert.LessOrEqual(clutter.GetComponentsInChildren<MeshRenderer>(true).Length,260);
+                Assert.LessOrEqual(clutter.GetComponentsInChildren<MeshRenderer>(true).Length,228,
+                    "Recognizable stock must stay below the previous 203-renderer budget plus 25");
                 int triangles=0;
                 foreach(var filter in clutter.GetComponentsInChildren<MeshFilter>(true))triangles+=filter.sharedMesh.triangles.Length/3;
-                Assert.LessOrEqual(triangles,36000,"Keep startup salvage geometry bounded, including one optional local piston");
+                Assert.LessOrEqual(triangles,45012,"Keep stock below the previous 33012 triangles plus 12000, including one optional local piston");
                 foreach(var patch in CompactYardClutter.Describe())
                 {
                     var cluster=Find(clutter.transform,patch.name);Assert.NotNull(cluster,patch.name);
@@ -114,6 +116,96 @@ namespace Scrapshift.Tests
                 Assert.IsTrue(hidden.gameObject.activeSelf);
             }
             finally{Object.DestroyImmediate(yard);}
+        }
+
+        [TestCase("CompactSalvageShell",1596)]
+        [TestCase("CompactWasherLot",1648)]
+        [TestCase("CompactCableReel",1620)]
+        [TestCase("CompactRadiatorRack",780)]
+        public void NewRecognizableSalvageUsesReadableOriginalImportedMeshesWithoutOwnedSourceGeometry(string resource,int expectedTriangles)
+        {
+            var yard=new GameObject("Original salvage import test");
+            try
+            {
+                Assert.IsTrue(AuthoredYardProps.TryPlace(resource,yard.transform,Vector3.zero,out GameObject instance),resource);
+                var filters=instance.GetComponentsInChildren<MeshFilter>();Assert.AreEqual(1,filters.Length);
+                var mesh=filters[0].sharedMesh;Assert.NotNull(mesh);Assert.IsTrue(mesh.isReadable);
+                Assert.AreEqual(expectedTriangles,mesh.triangles.Length/3);Assert.LessOrEqual(expectedTriangles,3500);
+                Assert.Greater(mesh.vertexCount,0);Assert.AreEqual(mesh.vertexCount,mesh.normals.Length);
+                foreach(var vertex in mesh.vertices)
+                    Assert.IsFalse(float.IsNaN(vertex.x)||float.IsNaN(vertex.y)||float.IsNaN(vertex.z)||
+                                   float.IsInfinity(vertex.x)||float.IsInfinity(vertex.y)||float.IsInfinity(vertex.z),resource);
+                Assert.IsEmpty(instance.GetComponentsInChildren<ProceduralMeshOwner>(),"Imported meshes remain Unity-owned");
+                Assert.IsEmpty(instance.GetComponentsInChildren<Collider>());
+                Assert.IsEmpty(instance.GetComponentsInChildren<Rigidbody>());
+                Assert.IsEmpty(instance.GetComponentsInChildren<Light>());
+                Assert.AreSame(YardMaterialBindings.Load("ScrapshiftMaterials/PropAtlas",yard.transform),filters[0].GetComponent<MeshRenderer>().sharedMaterial);
+                Object.DestroyImmediate(instance);
+                Assert.IsTrue(mesh!=null,"Destroying a stock view must retain its shared imported source mesh");
+            }
+            finally{Object.DestroyImmediate(yard);}
+        }
+
+        [Test]
+        public void PerimeterStockVariesRecognizableSilhouettesWithinTheSamePooledRoots()
+        {
+            var yard=new GameObject("Recognizable salvage composition test");
+            try
+            {
+                var root=CompactYardClutter.Build(yard.transform,new Bounds[0],false,true);
+                Assert.AreEqual(1,Count(root,"CompactSalvageShell"));
+                Assert.AreEqual(2,Count(root,"CompactWasherLot"));
+                Assert.AreEqual(5,Count(root,"CompactCableReel"));
+                Assert.AreEqual(5,Count(root,"CompactRadiatorRack"));
+                Assert.AreEqual(8,Count(root,"Discarded rubber seal"));
+                Assert.AreEqual(29,CompactYardClutter.Describe().Length);
+                foreach(var patch in CompactYardClutter.Describe())Assert.NotNull(Find(root.transform,patch.name));
+                Assert.AreEqual(13,root.GetComponentsInChildren<BoxCollider>(true).Length);
+                var shell=Find(root.transform,"CompactSalvageShell");
+                Assert.AreEqual("West working stock 0",shell.parent.name);
+                var occupied=new[]{new Bounds(new Vector3(-20.8f,1,-1),new Vector3(2,2,2))};
+                CompactYardClutter.RefreshVisibility(root,occupied);
+                Assert.IsFalse(shell.gameObject.activeInHierarchy,"A saved build releases both the stock and existing collision");
+                CompactYardClutter.RefreshVisibility(root,new Bounds[0]);
+                Assert.AreSame(shell,Find(root.transform,"CompactSalvageShell"));
+                Assert.IsTrue(shell.gameObject.activeInHierarchy);
+            }
+            finally{Object.DestroyImmediate(yard);}
+        }
+
+        [Test]
+        public void MissingAuthoredStockReturnsFailureAndLeavesNoPhantomModel()
+        {
+            var yard=new GameObject("Missing optional stock test");
+            try
+            {
+                var place=typeof(CompactYardClutter).GetMethod("Model",BindingFlags.Static|BindingFlags.NonPublic);
+                Assert.NotNull(place);
+                Assert.IsFalse((bool)place.Invoke(null,new object[]{"IntentionallyMissingStock",yard.transform,Vector3.zero,Vector3.one,0f}));
+                Assert.AreEqual(0,yard.transform.childCount);
+                Assert.IsEmpty(yard.GetComponentsInChildren<MeshFilter>(true));
+            }
+            finally{Object.DestroyImmediate(yard);}
+        }
+
+        [Test]
+        public void MeshlessAndZeroExtentStockReturnsFailureWithoutOwningOrDestroyingItsSource()
+        {
+            const string resource="IntentionallyEmptySalvageSource";
+            var yard=new GameObject("Invalid optional stock test");var source=new GameObject(resource);var mesh=new Mesh();
+            var cache=(Dictionary<string,GameObject>)typeof(AuthoredYardProps).GetField("Models",BindingFlags.Static|BindingFlags.NonPublic).GetValue(null);
+            try
+            {
+                Assert.IsFalse(cache.ContainsKey(resource));cache.Add(resource,source);
+                var place=typeof(CompactYardClutter).GetMethod("Model",BindingFlags.Static|BindingFlags.NonPublic);
+                var parameters=new object[]{resource,yard.transform,Vector3.zero,Vector3.one,0f};
+                Assert.IsFalse((bool)place.Invoke(null,parameters));Assert.AreEqual(0,yard.transform.childCount);
+                source.AddComponent<MeshFilter>().sharedMesh=mesh;source.AddComponent<MeshRenderer>();
+                Assert.IsFalse((bool)place.Invoke(null,parameters));Assert.AreEqual(0,yard.transform.childCount);
+                Assert.IsTrue(source!=null && mesh!=null,"Fallback must dispose only its private failed instance");
+                Assert.AreSame(mesh,source.GetComponent<MeshFilter>().sharedMesh);
+            }
+            finally{cache.Remove(resource);Object.DestroyImmediate(yard);Object.DestroyImmediate(source);Object.DestroyImmediate(mesh);}
         }
 
         [Test]
@@ -194,6 +286,11 @@ namespace Scrapshift.Tests
         {
             foreach(var child in root.GetComponentsInChildren<Transform>(true))if(child.name==name)return child;
             return null;
+        }
+        static int Count(GameObject root,string name)
+        {
+            int count=0;foreach(var child in root.GetComponentsInChildren<Transform>(true))if(child.name==name)count++;
+            return count;
         }
     }
 }

@@ -21,7 +21,14 @@ namespace Scrapshift
         public bool IsCapturing { get { return rebind.IsCapturing; } }
         public SettingsMenu(PlayerInputSettings input, PresentationSettings presentation = null) { this.input = input; this.presentation = presentation; rebind = new ControlRebind(input.Preferences); }
         public void Open() { IsOpen = true; CancelRebind(); discardCaptureEvents = false; }
-        public void Close() { IsOpen = false; CancelRebind(); discardCaptureEvents = false; }
+        public void Close() { IsOpen = false; CancelRebind(); discardCaptureEvents = false; FlushPending(); }
+        public bool FlushPending()
+        {
+            // Attempt both stores even if one failed; values remain live and failures stay pending.
+            bool controlsSaved = input.FlushPending();
+            bool presentationSaved = presentation == null || presentation.FlushPending();
+            return controlsSaved && presentationSaved;
+        }
         void CancelRebind()
         {
             rebind.Cancel(); pendingMouseCode = null; pendingMouseReleaseFrame = -1; input.SuppressUntilRelease();
@@ -36,6 +43,8 @@ namespace Scrapshift
         public void UpdateCapture()
         {
             if (!IsOpen) return;
+            input.UpdatePending(Time.unscaledTime);
+            if (presentation != null) presentation.UpdatePending(Time.unscaledTime);
             if (discardCaptureEvents)
             {
                 if (input.AnySupportedHeld) captureReleasedFrame = -1;
@@ -110,7 +119,7 @@ namespace Scrapshift
                 changed |= VolumeSlider("Yard ambience", ref p.ambienceVolume);
                 GUILayout.Label("Tools, footsteps and machines stop while menus are open. Gentle outdoor ambience continues.", wrap);
             }
-            if (changed) presentation.Save();
+            if (changed) presentation.Preview(Time.unscaledTime, page == 1);
             GUILayout.Space(16);
             if (GUILayout.Button("Restore video and audio defaults", GUILayout.Height(34))) presentation.RestoreDefaults();
             if (!string.IsNullOrEmpty(presentation.Notice)) GUILayout.Label(presentation.Notice, wrap);
@@ -170,7 +179,7 @@ namespace Scrapshift
             GUILayout.Label("Mouse sensitivity: " + input.Sensitivity.ToString("0.00"));
             float sensitivity = GUILayout.HorizontalSlider(input.Sensitivity, .1f, 10);
             bool invert = GUILayout.Toggle(input.InvertY, "Invert mouse Y");
-            if (sensitivity != input.Sensitivity || invert != input.InvertY) input.SetLook(sensitivity, invert);
+            if (sensitivity != input.Sensitivity || invert != input.InvertY) input.PreviewLook(sensitivity, invert, Time.unscaledTime);
             GUILayout.Space(8);
             if (GUILayout.Button("Restore Defaults", GUILayout.Height(32))) input.RestoreDefaults();
             GUI.enabled = true;

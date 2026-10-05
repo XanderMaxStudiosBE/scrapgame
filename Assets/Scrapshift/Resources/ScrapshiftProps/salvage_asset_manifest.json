@@ -1,0 +1,97 @@
+{
+  "source": "Original Blender-authored models; ArtSource/build_compact_salvage.py",
+  "pack": "CompactRecognizableSalvage",
+  "units": "metres",
+  "atlas": "ScrapshiftPropAtlas.png",
+  "runtimeMaterial": "ScrapshiftMaterials/PropAtlas",
+  "assets": {
+    "CompactSalvageShell": {
+      "triangles": 1596,
+      "vertices": 912,
+      "dimensions_blender": [
+        1.6977999210357666,
+        3.3524999618530273,
+        1.2890000343322754
+      ],
+      "materials": 1,
+      "bounds_unity": {
+        "min": [
+          -0.8488999605178833,
+          0.0,
+          -1.71750009059906
+        ],
+        "max": [
+          0.8488999009132385,
+          1.2890000343322754,
+          1.6349999904632568
+        ]
+      }
+    },
+    "CompactWasherLot": {
+      "triangles": 1648,
+      "vertices": 944,
+      "dimensions_blender": [
+        1.6200001239776611,
+        1.052976369857788,
+        1.3949999809265137
+      ],
+      "materials": 1,
+      "bounds_unity": {
+        "min": [
+          -0.8100000023841858,
+          0.0,
+          -0.29600000381469727
+        ],
+        "max": [
+          0.8100000619888306,
+          1.3949999809265137,
+          0.756976306438446
+        ]
+      }
+    },
+    "CompactCableReel": {
+      "triangles": 1620,
+      "vertices": 872,
+      "dimensions_blender": [
+        0.7350287437438965,
+        1.001765489578247,
+        0.9600000381469727
+      ],
+      "materials": 1,
+      "bounds_unity": {
+        "min": [
+          -0.33000001311302185,
+          0.0,
+          -0.5317654609680176
+        ],
+        "max": [
+          0.405028760433197,
+          0.9600000381469727,
+          0.4699999988079071
+        ]
+      }
+    },
+    "CompactRadiatorRack": {
+      "triangles": 780,
+      "vertices": 488,
+      "dimensions_blender": [
+        1.1400001049041748,
+        0.5799999833106995,
+        0.9644999504089355
+      ],
+      "materials": 1,
+      "bounds_unity": {
+        "min": [
+          -0.5699999928474426,
+          0.0005000010132789612,
+          -0.28999999165534973
+        ],
+        "max": [
+          0.5700000524520874,
+          0.9649999737739563,
+          0.28999999165534973
+        ]
+      }
+    }
+  }
+}

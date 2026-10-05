@@ -54,16 +54,20 @@ namespace Scrapshift
         readonly string[] labelCodes = new string[ControlPreferences.Actions.Length];
         readonly string[] labelAliases = new string[ControlPreferences.Actions.Length];
         readonly string[] labels = new string[ControlPreferences.Actions.Length];
+        readonly DeferredPreferenceWrite pendingWrite = new DeferredPreferenceWrite();
+        readonly Func<bool> writePreferences;
         bool awaitingRelease;
         int suppressedFrame;
         public ControlPreferences Preferences { get; private set; }
         public string Notice { get; private set; }
         public float Sensitivity { get { return Preferences.sensitivity; } }
         public bool InvertY { get { return Preferences.invertY; } }
+        public bool HasPendingWrite { get { return pendingWrite.Pending; } }
         public PlayerInputSettings() : this(Path.Combine(Application.persistentDataPath, "controls-v1.json")) { }
         public PlayerInputSettings(string path)
         {
             this.path = path;
+            writePreferences = WritePreferences;
             string notice;
             Preferences = ControlSettingsStore.Read(path, out notice); Notice = notice;
             supportedKeys = new KeyCode[ControlPreferences.SupportedCodes.Length];
@@ -129,17 +133,32 @@ namespace Scrapshift
                 return Time.frameCount > suppressedFrame;
             }
         }
+        bool WritePreferences()
+        {
+            try { ControlSettingsStore.Write(path, Preferences); Notice = "Settings saved."; return true; }
+            catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is UnauthorizedAccessException || ex is NotSupportedException)
+            { Notice = "Settings applied, but could not save: " + ex.Message; return false; }
+        }
         public void Save()
         {
-            try { ControlSettingsStore.Write(path, Preferences); Notice = "Settings saved."; }
-            catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is UnauthorizedAccessException || ex is NotSupportedException)
-            { Notice = "Settings applied, but could not save: " + ex.Message; }
+            pendingWrite.Immediate(writePreferences);
             SuppressUntilRelease();
         }
+        public void UpdatePending(float unscaledTime) { pendingWrite.Tick(unscaledTime, writePreferences); }
+        public bool FlushPending() { return pendingWrite.Flush(writePreferences); }
         public void RestoreDefaults() { Preferences.RestoreDefaults(); Save(); }
         public void SetLook(float sensitivity, bool invertY)
         {
             Preferences.sensitivity = Mathf.Clamp(sensitivity, .1f, 10); Preferences.invertY = invertY; Save();
+        }
+        public void PreviewLook(float sensitivity, bool invertY, float unscaledTime)
+        {
+            if (float.IsNaN(sensitivity) || float.IsInfinity(sensitivity)) throw new ArgumentOutOfRangeException("sensitivity");
+            sensitivity = Mathf.Clamp(sensitivity, .1f, 10);
+            if (sensitivity == Preferences.sensitivity && invertY == Preferences.invertY) return;
+            pendingWrite.Queue(unscaledTime);
+            Preferences.sensitivity = sensitivity; Preferences.invertY = invertY;
+            Notice = "Settings applied.";
         }
     }
 }

@@ -1,0 +1,44 @@
+{
+  "source": "Original Blender-authored machinery; ArtSource/build_industry_assets.py",
+  "pack": "CompactIndustry",
+  "units": "metres",
+  "atlas": "ScrapshiftPropAtlas.png",
+  "footprints_unity": {
+    "CompactPrimaryScrapper": [
+      6,
+      7,
+      4.5
+    ],
+    "CompactExportStation": [
+      3,
+      2.5,
+      2.4
+    ]
+  },
+  "triangle_budgets": {
+    "CompactPrimaryScrapper": 4500,
+    "CompactExportStation": 2500
+  },
+  "assets": {
+    "CompactPrimaryScrapper": {
+      "triangles": 3032,
+      "vertices": 1760,
+      "dimensions_blender": [
+        5.125,
+        6.864999771118164,
+        4.267000198364258
+      ],
+      "materials": 1
+    },
+    "CompactExportStation": {
+      "triangles": 1612,
+      "vertices": 968,
+      "dimensions_blender": [
+        2.7800002098083496,
+        2.3949999809265137,
+        2.049999952316284
+      ],
+      "materials": 1
+    }
+  }
+}

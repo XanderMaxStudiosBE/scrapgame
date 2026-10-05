@@ -13,7 +13,7 @@ namespace Scrapshift.Tests
                 {
                     var rules=new CompactRules();var model=new ScrappingModel(rules);model.AcquireWire();model.BeginProcessing(model.State.equipment[0].id);model.Work(model.State.equipment[0].id);
                     var s=model.State;s.version=2;s.belts=null;s.equipment[0].filterKind=0;int cash=s.money,next=s.nextId;
-                    if(!CompactSaveMigration.Upgrade(s,rules)||s.version!=3||s.belts==null||s.belts.Count!=0||s.money!=cash||s.nextId!=next||s.equipment[0].job.strokes!=1||s.equipment[0].filterKind!=-1)
+                    if(!CompactSaveMigration.Upgrade(s,rules)||s.version!=4||s.belts==null||s.belts.Count!=0||s.money!=cash||s.nextId!=next||s.equipment[0].job.strokes!=1||s.equipment[0].filterKind!=-1)
                         throw new Exception("Version-two upgrade altered earning/manual progress.");
                     if(CompactSaveMigration.Upgrade(s,rules))throw new Exception("Upgrade repeats.");
                     ScrappingModel.Validate(s,rules);ConstructionModel.Validate(s,rules);AutomationModel.Validate(s,rules);break;

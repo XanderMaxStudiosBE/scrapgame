@@ -34,10 +34,10 @@ namespace Scrapshift.Compact
                 patches.Add(new Patch("East sorted salvage "+i,"East salvage",new Vector3(27,0,-5+i*15),new Vector3(3.4f,2,3.4f),i+2,i+8));
             }
             // Optional stock leaves the central 34 x 24m walking view open, and hides near any saved construction.
-            int[] northKinds={7,0,1,7,3};
+            int[] northKinds={7,0,1,9,3};
             for(int i=0;i<5;i++)
                 patches.Add(new Patch("North working stock "+i,"North working stock",new Vector3(-15+i*7.5f,0,15.8f),new Vector3(4.6f,2.6f,3.2f),northKinds[i],i,0,1.3f));
-            int[] westKinds={1,3,7},eastKinds={2,7,0};
+            int[] westKinds={8,3,7},eastKinds={2,9,0};
             for(int i=0;i<3;i++)
             {
                 patches.Add(new Patch("West working stock "+i,"West working stock",new Vector3(-20.8f,0,-1+i*6.5f),new Vector3(3.2f,2.6f,4.6f),westKinds[i],i+5,90,1.3f));
@@ -140,7 +140,8 @@ namespace Scrapshift.Compact
                         var panel=Box("Bent appliance panel",parent,new Vector3(-.8f+i*.53f,.55f+i%2*.1f,0),new Vector3(.68f,.045f,1.4f),i%2==0?RetroSurface.RustPaint:RetroSurface.CorrugatedMetal);
                         panel.transform.localRotation=Quaternion.Euler(0,(i-2)*9,15+i*4);
                     }
-                    Model("CompactMotor",parent,new Vector3(.7f,.18f,.44f),new Vector3(.46f,.48f,.40f),35);
+                    if(variation%2!=0 || !Model("CompactRadiatorRack",parent,new Vector3(.7f,.18f,.44f),new Vector3(.62f,.65f,.40f),15))
+                        Model("CompactMotor",parent,new Vector3(.7f,.18f,.44f),new Vector3(.46f,.48f,.40f),35);
                     break;
                 case 2: // Exposed pipe rack with offcuts and a compact appliance compressor.
                     foreach(float x in new[]{-.8f,.8f})Box("Pipe cradle",parent,new Vector3(x,.15f,0),new Vector3(.12f,.3f,1.25f),RetroSurface.RustPaint);
@@ -155,7 +156,8 @@ namespace Scrapshift.Compact
                         YardProps.Cylinder("Used salvage drum",parent,new Vector3(-.58f,.67f,z),.33f,.88f,RetroSurface.RustPaint,Quaternion.identity);
                         Ring("Drum rolled lip",parent,new Vector3(-.58f,1.11f,z),.335f,.30f,.035f,RetroSurface.DarkMetal);
                     }
-                    Model("CompactInsulationCoil",parent,new Vector3(.72f,0,-.34f),new Vector3(.75f,.4f,.75f),variation*23);
+                    if(variation<4 || !Model("CompactCableReel",parent,new Vector3(.72f,0,-.28f),new Vector3(.82f,.95f,.82f),-12))
+                        Model("CompactInsulationCoil",parent,new Vector3(.72f,0,-.34f),new Vector3(.75f,.4f,.75f),variation*23);
                     Model("CompactMotor",parent,new Vector3(.73f,0,.53f),new Vector3(.5f,.52f,.42f),variation*17);
                     break;
                 case 4: // Low fence remnants fit inside a 0.75m strip and hide near player equipment.
@@ -192,13 +194,37 @@ namespace Scrapshift.Compact
                     var door=Box("Detached appliance door",parent,new Vector3(-1.02f,.39f,-.50f),new Vector3(.64f,.065f,.90f),RetroSurface.CorrugatedMetal);
                     door.transform.localRotation=Quaternion.Euler(30,-15,0);
                     break;
+                case 8: // Missing glass/doors and bare hubs read as stripped stock, not a second playable car.
+                    if(!Model("CompactSalvageShell",parent,new Vector3(-.08f,0,.23f),new Vector3(3.10f,1.30f,1.58f),90))
+                    {
+                        BuildPatch(parent,1,variation);
+                        break;
+                    }
+                    if(!Model("CompactRadiatorRack",parent,new Vector3(.60f,0,-.75f),new Vector3(.75f,.72f,.36f),-8))
+                        Model("CompactMotor",parent,new Vector3(.60f,0,-.75f),new Vector3(.45f,.45f,.36f),-8);
+                    Ring("Loose stripped wheel rim",parent,new Vector3(-1.18f,.13f,-.75f),.30f,.18f,.20f,RetroSurface.DarkMetal);
+                    var carDoor=Box("Removed car door",parent,new Vector3(-.23f,.10f,-.75f),new Vector3(.70f,.045f,.55f),RetroSurface.RustPaint);
+                    carDoor.transform.localRotation=Quaternion.Euler(0,12,6);
+                    break;
+                case 9: // Washer drums, a discarded microwave and a timber cable reel vary the appliance row.
+                    if(!Model("CompactWasherLot",parent,new Vector3(-.53f,.12f,.23f),new Vector3(1.53f,1.65f,1.08f),-8))
+                    {
+                        BuildPatch(parent,7,variation);
+                        break;
+                    }
+                    Model("PalletBundle",parent,new Vector3(-.53f,0,.23f),new Vector3(1.72f,.18f,1.25f),0);
+                    if(!Model("CompactCableReel",parent,new Vector3(.87f,0,.34f),new Vector3(.81f,.98f,.95f),-14))
+                        Model("CompactInsulationCoil",parent,new Vector3(.87f,0,.34f),new Vector3(.78f,.36f,.78f),-14);
+                    if(!Model("CompactRadiatorRack",parent,new Vector3(.22f,0,-.77f),new Vector3(.83f,.75f,.38f),-12))
+                        Model("CompactMotor",parent,new Vector3(.22f,0,-.77f),new Vector3(.55f,.48f,.40f),-12);
+                    Ring("Loose appliance door gasket",parent,new Vector3(-.90f,.033f,-.71f),.24f,.195f,.038f,RetroSurface.WireInsulation);
+                    break;
                 case 6:
                     var tab=Box("Discarded sheet-metal tab",parent,new Vector3(-.22f,.01f,0),new Vector3(.52f,.016f,.25f),RetroSurface.RustPaint);
                     tab.transform.localRotation=Quaternion.Euler(0,variation*17,0);
                     var cut=Box("Flat cable clip",parent,new Vector3(.32f,.012f,.12f),new Vector3(.18f,.020f,.22f),RetroSurface.DarkMetal);
                     cut.transform.localRotation=Quaternion.Euler(0,variation*13,0);
-                    var strip=Box("Discarded rubber offcut",parent,new Vector3(.20f,.015f,-.11f),new Vector3(.38f,.018f,.08f),RetroSurface.WireInsulation);
-                    strip.transform.localRotation=Quaternion.Euler(0,-variation*19,0);
+                    Ring("Discarded rubber seal",parent,new Vector3(.20f,.015f,-.11f),.14f,.105f,.020f,RetroSurface.WireInsulation);
                     break;
             }
         }
@@ -238,9 +264,9 @@ namespace Scrapshift.Compact
         {return YardGeometry.SurfaceBox(name,parent,p,size,surface,false);}
 
         // Fit imported geometry after yaw, making our occupancy envelope independent of FBX authoring extents.
-        static void Model(string resource,Transform parent,Vector3 p,Vector3 maximum,float yaw)
+        static bool Model(string resource,Transform parent,Vector3 p,Vector3 maximum,float yaw)
         {
-            if(!AuthoredYardProps.TryPlace(resource,parent,Vector3.zero,out GameObject model))return;
+            if(!AuthoredYardProps.TryPlace(resource,parent,Vector3.zero,out GameObject model))return false;
             model.transform.localRotation=Quaternion.Euler(0,yaw,0);
             var filters=model.GetComponentsInChildren<MeshFilter>();
             bool found=false;var bounds=new Bounds();
@@ -255,10 +281,21 @@ namespace Scrapshift.Compact
                     if(!found){bounds=new Bounds(point,Vector3.zero);found=true;}else bounds.Encapsulate(point);
                 }
             }
-            if(!found)return;
+            if(!found || !Finite(bounds.center) || !Finite(bounds.size) ||
+               bounds.size.x<=.0001f || bounds.size.y<=.0001f || bounds.size.z<=.0001f)
+            {
+                if(Application.isPlaying)Object.Destroy(model);else Object.DestroyImmediate(model);
+                return false;
+            }
             float scale=Mathf.Min(maximum.x/Mathf.Max(.001f,bounds.size.x),Mathf.Min(maximum.y/Mathf.Max(.001f,bounds.size.y),maximum.z/Mathf.Max(.001f,bounds.size.z)));
             model.transform.localScale=Vector3.one*scale;
             model.transform.localPosition=p-new Vector3(bounds.center.x*scale,bounds.min.y*scale,bounds.center.z*scale);
+            return true;
+        }
+        static bool Finite(Vector3 value)
+        {
+            return !float.IsNaN(value.x) && !float.IsNaN(value.y) && !float.IsNaN(value.z) &&
+                   !float.IsInfinity(value.x) && !float.IsInfinity(value.y) && !float.IsInfinity(value.z);
         }
 
         static void Ring(string name,Transform parent,Vector3 p,float outer,float inner,float height,RetroSurface surface)

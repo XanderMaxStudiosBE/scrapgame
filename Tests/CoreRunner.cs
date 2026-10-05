@@ -6,6 +6,42 @@ class CoreRunner
     {
         int failed = 0;
         int total = 0;
+        foreach(var name in CompactPacingScenarios.Names)
+        {
+            total++;
+            try{CompactPacingScenarios.Run(name);Console.WriteLine("PASS "+name);}
+            catch(Exception ex){failed++;Console.WriteLine("FAIL "+name+": "+ex.Message);}
+        }
+        foreach(var name in CompactIndustryGuidanceScenarios.Names)
+        {
+            total++;
+            try{CompactIndustryGuidanceScenarios.Run(name);Console.WriteLine("PASS "+name);}
+            catch(Exception ex){failed++;Console.WriteLine("FAIL "+name+": "+ex.Message);}
+        }
+        foreach(var name in CompactIndustryScenarios.Names)
+        {
+            total++;
+            try{CompactIndustryScenarios.Run(name);Console.WriteLine("PASS "+name);}
+            catch(Exception ex){failed++;Console.WriteLine("FAIL "+name+": "+ex.Message);}
+        }
+        foreach(var name in CompactIndustryIntegrationScenarios.Names)
+        {
+            total++;
+            try{CompactIndustryIntegrationScenarios.Run(name);Console.WriteLine("PASS "+name);}
+            catch(Exception ex){failed++;Console.WriteLine("FAIL "+name+": "+ex.Message);}
+        }
+        foreach(var name in ProgressCheckpointScenarios.Names)
+        {
+            total++;
+            try{ProgressCheckpointScenarios.Run(name);Console.WriteLine("PASS "+name);}
+            catch(Exception ex){failed++;Console.WriteLine("FAIL "+name+": "+ex.Message);}
+        }
+        foreach(var name in PreferenceWriteScenarios.Names)
+        {
+            total++;
+            try{PreferenceWriteScenarios.Run(name);Console.WriteLine("PASS "+name);}
+            catch(Exception ex){failed++;Console.WriteLine("FAIL "+name+": "+ex.Message);}
+        }
         foreach(var name in CompactCareerScenarios.Names)
         {
             total++;

@@ -1,0 +1,101 @@
+{
+  "scope": "Blender FBX round-trip, finite vertices/normals, grounded metre bounds, nondegenerate triangles, atlas UVs and single material; Unity import not run",
+  "assets": [
+    {
+      "name": "CompactSalvageShell",
+      "status": "passed",
+      "triangles": 1596,
+      "metre_dimensions": [
+        1.6977998614311218,
+        3.352500081062317,
+        1.289000060756539
+      ],
+      "bounds_unity": {
+        "min": [
+          -0.8488999605178833,
+          -2.6424263666058323e-08,
+          -1.71750009059906
+        ],
+        "max": [
+          0.8488999009132385,
+          1.2890000343322754,
+          1.6349999904632568
+        ]
+      },
+      "minimum_triangle_area": 8.660254652515706e-05,
+      "sha256": "d39d3c5a679a849448f837db4b6f7ac604e3b946106c2acec22f5dd7f06845b3"
+    },
+    {
+      "name": "CompactWasherLot",
+      "status": "passed",
+      "triangles": 1648,
+      "metre_dimensions": [
+        1.6200000643730164,
+        1.0529762506484985,
+        1.3950000303776378
+      ],
+      "bounds_unity": {
+        "min": [
+          -0.8100000023841858,
+          -4.945112408449859e-08,
+          -0.2959999442100525
+        ],
+        "max": [
+          0.8100000619888306,
+          1.3949999809265137,
+          0.756976306438446
+        ]
+      },
+      "minimum_triangle_area": 3.117613879701664e-05,
+      "sha256": "96f4570f860ec43e57ceb17788eeff55e25c0c47702b761928b90560f6a63f6d"
+    },
+    {
+      "name": "CompactCableReel",
+      "status": "passed",
+      "triangles": 1620,
+      "metre_dimensions": [
+        0.7350287437438965,
+        1.0017654299736023,
+        0.9600000086659861
+      ],
+      "bounds_unity": {
+        "min": [
+          -0.32999998331069946,
+          -3.012365823451546e-08,
+          -0.5317654013633728
+        ],
+        "max": [
+          0.405028760433197,
+          0.9599999785423279,
+          0.4700000286102295
+        ]
+      },
+      "minimum_triangle_area": 3.117683499027938e-05,
+      "sha256": "e2ca3bfe735ed49a7fe0bef4508196e9e925a62e98e292ace8756a8c2bd32201"
+    },
+    {
+      "name": "CompactRadiatorRack",
+      "status": "passed",
+      "triangles": 780,
+      "metre_dimensions": [
+        1.14000004529953,
+        0.5799999833106995,
+        0.9644999946467578
+      ],
+      "bounds_unity": {
+        "min": [
+          -0.5699999928474426,
+          0.0004999791271984577,
+          -0.28999999165534973
+        ],
+        "max": [
+          0.5700000524520874,
+          0.9649999737739563,
+          0.28999999165534973
+        ]
+      },
+      "minimum_triangle_area": 0.00010478893124259177,
+      "sha256": "017a18d25930e57714de1cb5bba00b4381436adc2aaf85b4096dc06b7fff2524"
+    }
+  ]
+}

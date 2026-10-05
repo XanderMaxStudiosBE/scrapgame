@@ -68,7 +68,7 @@ namespace Scrapshift.Tests
                 case "CompactConstructionUnlockAndCapacity":
                     Check(!c.Place(EquipmentKind.Conveyor,0,0,0),"conveyors require a port route");
                     Check(!c.Place(EquipmentKind.Tier2Scrapper,0,0,0),"level10 purchase remains locked");
-                    state.experience=rules.levelThresholds[9];Check(!c.Place(EquipmentKind.ExportStation,0,0,0),"planned export remains unavailable");
+                    state.experience=rules.levelThresholds[9];Check(!c.Place(EquipmentKind.ExportStation,0,0,0),"level-ten yard cannot buy level-twelve export");
                     int tier2=Place(c,EquipmentKind.Tier2Scrapper,0,7);
                     Check(c.Find(tier2).kind==EquipmentKind.Tier2Scrapper,"level10 permits realTier2 purchase");
                     rules.Equipment(EquipmentKind.Generator).unlockLevel=10;state.experience=0;

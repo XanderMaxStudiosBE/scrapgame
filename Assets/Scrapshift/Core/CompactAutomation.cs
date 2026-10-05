@@ -74,7 +74,8 @@ namespace Scrapshift.Compact
         bool Reject(string message){LastMessage=message;return false;}
         public static int PortCount(EquipmentKind kind,bool output)
         {
-            if(kind==EquipmentKind.Tier1Scrapper)return output?1:0;
+            if(kind==EquipmentKind.Tier1Scrapper || kind==EquipmentKind.PrimaryScrapper)return output?1:0;
+            if(kind==EquipmentKind.ExportStation)return output?0:1;
             if(kind==EquipmentKind.Storage || kind==EquipmentKind.Tier2Scrapper)return 1;
             if(kind==EquipmentKind.Splitter)return output?3:1;
             if(kind==EquipmentKind.Merger)return output?1:3;
@@ -183,6 +184,8 @@ namespace Scrapshift.Compact
         }
         static bool DestinationSupports(EquipmentState destination,CompactRules rules,PartKind kind)
         {
+            if(destination.kind==EquipmentKind.ExportStation)
+                return CompactIndustryModel.CanExportPart(rules,kind) && (destination.filterKind<0 || destination.filterKind==(int)kind);
             return destination.kind!=EquipmentKind.Tier2Scrapper ||
                 (rules.Recipe(kind)!=null && (destination.filterKind<0 || destination.filterKind==(int)kind));
         }
@@ -233,7 +236,12 @@ namespace Scrapshift.Compact
             var link=FindLink(linkId);State.money+=link.paidPrice/2;State.belts.Remove(link);LastMessage=reason;return true;
         }
         int ReservedUnits(EquipmentState equipment)
-        {int units=model.StoredUnits(equipment.id);if(equipment.job!=null)foreach(var y in equipment.job.yields)units+=y.quantity;return units;}
+        {
+            int units=model.StoredUnits(equipment.id);
+            if(equipment.job!=null)foreach(var y in equipment.job.yields)units+=y.quantity;
+            units+=CompactIndustryModel.ReservedUnits(equipment);
+            return units;
+        }
         bool Receive(ConveyorLink link)
         {
             if(link.items.Count==0 || link.items[0].progress<1)return false;

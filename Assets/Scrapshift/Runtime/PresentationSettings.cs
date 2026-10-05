@@ -56,15 +56,20 @@ namespace Scrapshift
         readonly float originalFov;
         readonly GameObject gradeObject;
         readonly VolumeProfile gradeProfile;
+        readonly DeferredPreferenceWrite pendingWrite = new DeferredPreferenceWrite();
+        readonly Func<bool> writePreferences;
         bool disposed;
         public PresentationPreferences Preferences { get; private set; }
         public string Notice { get; private set; }
-        public PresentationSettings(Camera camera, Transform parent)
+        public bool HasPendingWrite { get { return pendingWrite.Pending; } }
+        public PresentationSettings(Camera camera, Transform parent) : this(camera, parent, Path.Combine(Application.persistentDataPath, "presentation-v1.json")) { }
+        public PresentationSettings(Camera camera, Transform parent, string preferencesPath)
         {
             this.camera = camera; originalFov = camera.fieldOfView;
             lights = parent.GetComponentsInChildren<Light>(); originalShadows = new LightShadows[lights.Length];
             for (int i = 0; i < lights.Length; i++) originalShadows[i] = lights[i].shadows;
-            path = Path.Combine(Application.persistentDataPath, "presentation-v1.json");
+            path = preferencesPath;
+            writePreferences = WritePreferences;
             string notice; Preferences = PresentationStore.Read(path, out notice); Notice = notice;
             originalFrameLimit = Application.targetFrameRate; originalVSync = QualitySettings.vSyncCount;
             originalQualityPipeline = QualitySettings.renderPipeline;
@@ -101,13 +106,22 @@ namespace Scrapshift
             camera.GetUniversalAdditionalCameraData().renderPostProcessing = post;
             gradeObject.SetActive(post);
         }
-        public void Save()
+        bool WritePreferences()
         {
-            Apply();
-            try { PresentationStore.Write(path, Preferences); Notice = "Video/audio saved."; }
+            try { PresentationStore.Write(path, Preferences); Notice = "Video/audio saved."; return true; }
             catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is UnauthorizedAccessException || ex is NotSupportedException)
-            { Notice = "Applied, but could not save: " + ex.Message; }
+            { Notice = "Applied, but could not save: " + ex.Message; return false; }
         }
+        public void Save() { Apply(); pendingWrite.Immediate(writePreferences); }
+        public void Preview(float unscaledTime, bool applyGraphics)
+        {
+            // Audio is read directly by YardAudio. It need not reset URP, FOV or shadows.
+            Preferences.Validate(); pendingWrite.Queue(unscaledTime);
+            if (applyGraphics) Apply();
+            Notice = "Video/audio applied.";
+        }
+        public void UpdatePending(float unscaledTime) { pendingWrite.Tick(unscaledTime, writePreferences); }
+        public bool FlushPending() { return pendingWrite.Flush(writePreferences); }
         public void RestoreDefaults() { Preferences = new PresentationPreferences(); Save(); }
         static void DestroyOwned(UnityEngine.Object value)
         {
@@ -116,6 +130,7 @@ namespace Scrapshift
         public void Dispose()
         {
             if (disposed) return; disposed = true;
+            FlushPending();
             if (QualitySettings.renderPipeline == pipeline) QualitySettings.renderPipeline = originalQualityPipeline;
             Application.targetFrameRate = originalFrameLimit; QualitySettings.vSyncCount = originalVSync;
             if (camera != null) { camera.fieldOfView = originalFov; camera.GetUniversalAdditionalCameraData().renderPostProcessing = originalPost; }

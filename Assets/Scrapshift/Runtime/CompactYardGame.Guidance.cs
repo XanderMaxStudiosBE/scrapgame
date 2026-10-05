@@ -37,7 +37,7 @@ namespace Scrapshift.Compact
             if(sessionStarted&&!paused&&!IsBuilding&&Model.Career.Completed&&
                 !Model.Career.Stats.completionAcknowledged&&!completionPresented)
             {
-                completionPresented=true;Show(Page.Journal);Save();
+                completionPresented=true;Show(Page.Journal);changed=true;
             }
             if(changed)hudDirty=true;
             return changed;
@@ -67,6 +67,21 @@ namespace Scrapshift.Compact
             else if(target.kind==CompactTargetKind.Equipment)
             {
                 var equipment=Model.FindEquipment(target.id);var job=equipment==null?null:equipment.job;
+                if(equipment!=null&&equipment.kind==EquipmentKind.PrimaryScrapper&&equipment.industry!=null&&equipment.industry.primary!=null)
+                {
+                    var primary=equipment.industry.primary;
+                    hudProgress=Mathf.Clamp01(1-primary.remaining/primary.duration);
+                    hudProgressLabel=IsWorkingMachine(equipment)?"Dismantling / "+primary.remaining.ToString("0.0")+"s remaining":
+                        Industry.Status(equipment.id)+" / progress retained";
+                    return;
+                }
+                if(equipment!=null&&equipment.kind==EquipmentKind.ExportStation&&equipment.industry!=null&&equipment.industry.enabled)
+                {
+                    float duration=Model.Rules.Equipment(equipment.kind).processingSeconds;
+                    hudProgress=Mathf.Clamp01(1-equipment.industry.remaining/duration);
+                    hudProgressLabel=Industry.DispatchQuote(equipment.id).allowed?"Next dispatch / "+equipment.industry.remaining.ToString("0.0")+"s":Industry.Status(equipment.id);
+                    return;
+                }
                 if(job==null)return;
                 hudProgress=job.ready?1:equipment.kind==EquipmentKind.Workbench?
                     Mathf.Clamp01((float)job.strokes/job.requiredStrokes):Mathf.Clamp01(1-job.remaining/job.duration);

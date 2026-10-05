@@ -69,7 +69,7 @@ class CompactSaveRecoveryRunner
             Console.WriteLine("PASS saving recovered state retains good backup and archives the unreadable primary");
             // A header-valid future version must still fail core schema validation before recovery.
             var future=new ScrappingModel(rules).State;future.version=99;File.WriteAllText(path,UnityEngine.JsonUtility.ToJson(future,false));
-            Check(CompactSaveStore.Read(path,rules,out notice).version==3&&notice.Contains("backup"),"Future version accepted");
+            Check(CompactSaveStore.Read(path,rules,out notice).version==4&&notice.Contains("backup"),"Future version accepted");
             Console.WriteLine("PASS unsupported version is rejected and existing backup remains usable");
             File.WriteAllText(path,"{}");File.WriteAllText(path+".bak","{}");bool failed=false;
             try{CompactSaveStore.Read(path,rules,out notice);}catch(InvalidDataException){failed=true;}
@@ -83,10 +83,10 @@ class CompactSaveRecoveryRunner
             previous.State.version=2;previous.State.belts=null;previous.State.equipment[0].filterKind=0;
             string v2=UnityEngine.JsonUtility.ToJson(previous.State,false);File.WriteAllText(path,v2);
             var upgraded=CompactSaveStore.Read(path,rules,out notice);
-            Check(upgraded.version==3&&upgraded.belts.Count==0&&upgraded.equipment[0].filterKind==-1&&upgraded.equipment[0].job.strokes==1,"Version-two migration lost progress");
+            Check(upgraded.version==4&&upgraded.belts.Count==0&&upgraded.equipment[0].filterKind==-1&&upgraded.equipment[0].job.strokes==1,"Version-two migration lost progress");
             Check(File.ReadAllText(path)==v2&&notice.Contains("upgraded"),"Migration must not rewrite source on read");
             CompactSaveStore.Write(path,upgraded,rules);
-            Check(File.ReadAllText(path+".bak")==v2&&CompactSaveStore.Read(path,rules,out notice).version==3,"Migration backup did not retain original");
+            Check(File.ReadAllText(path+".bak")==v2&&CompactSaveStore.Read(path,rules,out notice).version==4,"Migration backup did not retain original");
             Console.WriteLine("PASS version-two migration retains source bytes, partial work and recoverable backup on the next save");
             var transport=new ScrappingModel(rules);transport.State.money=2000;transport.State.experience=rules.levelThresholds[9];
             var layout=new ConstructionModel(transport.State,rules);
@@ -97,6 +97,39 @@ class CompactSaveRecoveryRunner
             CompactSaveStore.Write(path,transport.State,rules);var resumed=CompactSaveStore.Read(path,rules,out notice);
             Check(resumed.belts[0].items[0].id==moving.id&&resumed.belts[0].items[0].xpEligible&&resumed.belts[0].items[0].progress==.4f,"Transport snapshot lost identity, progress or lineage");
             Console.WriteLine("PASS transport snapshot filesystem round trip retains moving identity, progress and XP lineage");
+            // Schema-three transport loads into four without changing identities or progress.
+            transport.State.version=3;int priorNext=transport.State.nextId,priorCash=transport.State.money;
+            string v3=UnityEngine.JsonUtility.ToJson(transport.State,false);File.WriteAllText(path,v3);
+            var migrated=CompactSaveStore.Read(path,rules,out notice);
+            Check(migrated.version==4&&migrated.nextId==priorNext&&migrated.money==priorCash&&
+                migrated.belts[0].items[0].id==moving.id&&migrated.belts[0].items[0].progress==.4f&&
+                migrated.belts[0].items[0].xpEligible&&File.ReadAllText(path)==v3,"Version-three transport migration changed saved evidence");
+            CompactSaveStore.Write(path,migrated,rules);
+            Check(File.ReadAllText(path+".bak")==v3,"Version-three source backup was not retained");
+            Console.WriteLine("PASS version-three migration preserves original bytes, transport identities and partial elapsed progress");
+            var industrial=new ScrappingModel(rules);industrial.State.money=2000;industrial.State.experience=rules.levelThresholds[11];industrial.HasPower=id=>true;
+            var industryLayout=new ConstructionModel(industrial.State,rules);
+            Check(industryLayout.Place(EquipmentKind.PrimaryScrapper,-14,7,0),industryLayout.LastMessage);int primary=industryLayout.LastPlacedId;
+            int wholeId=industrial.State.scrap[0].id;int originalCash=industrial.State.money;
+            Check(industrial.Industry.FeedScrap(primary,wholeId),industrial.Industry.LastMessage);
+            industrial.Industry.Tick(2.25f);var paid=industrial.FindEquipment(primary).industry.primary;
+            float paidRemaining=paid.remaining;int paidNext=industrial.State.nextId;
+            CompactSaveStore.Write(path,industrial.State,rules);var industrialState=CompactSaveStore.Read(path,rules,out notice);
+            var resumedIndustry=new ScrappingModel(rules,industrialState);resumedIndustry.HasPower=id=>true;
+            var resumedPaid=resumedIndustry.FindEquipment(primary).industry.primary;
+            Check(resumedPaid.id==wholeId&&resumedPaid.remaining==paidRemaining&&resumedPaid.duration==paid.duration&&
+                resumedPaid.yields.Length==paid.yields.Length&&resumedPaid.xpEligible&&industrialState.nextId==paidNext&&
+                industrialState.money==originalCash,"Paid whole-object snapshot lost its identity, elapsed time or retained outputs");
+            resumedIndustry.Industry.Tick(paidRemaining);
+            Check(resumedIndustry.FindEquipment(primary).industry.primary==null&&resumedIndustry.FindEquipment(primary).industry.objectsProcessed==1&&
+                resumedIndustry.StoredUnits(primary)==6&&resumedIndustry.State.money==originalCash,"Paid primary resume duplicated charge/output");
+            resumedIndustry.Industry.Tick(200);
+            Check(resumedIndustry.FindEquipment(primary).industry.objectsProcessed==1&&resumedIndustry.StoredUnits(primary)==6,"Disabled service bought historical deliveries after resume");
+            CompactSaveStore.Write(path,resumedIndustry.State,rules);string validIndustry=File.ReadAllText(path),validBackup=File.ReadAllText(path+".bak");
+            resumedIndustry.FindEquipment(primary).industry.remaining=float.NaN;failed=false;
+            try{CompactSaveStore.Write(path,resumedIndustry.State,rules);}catch(ArgumentException){failed=true;}
+            Check(failed&&File.ReadAllText(path)==validIndustry&&File.ReadAllText(path+".bak")==validBackup&&!File.Exists(path+".tmp"),"Invalid industrial save changed primary or backup");
+            Console.WriteLine("PASS paid primary filesystem resume retains all output once, no extra charge, and protects previous files on invalid state");
             Console.WriteLine("Scope: real CompactSaveStore and filesystem, narrow snapshot adapter; not Unity JSON.");
         }
         finally{Directory.Delete(folder,true);}

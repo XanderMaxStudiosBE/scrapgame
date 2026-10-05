@@ -44,8 +44,8 @@ namespace Scrapshift.Compact
         public bool CanPlace(EquipmentKind kind, float x, float z, float yaw, int ignoreId, out string reason)
         {
             var d = rules.Equipment(kind);
-            if (kind == EquipmentKind.Conveyor || kind == EquipmentKind.ExportStation)
-                return Refuse("Build conveyors between ports; export is a later stage.", out reason);
+            if (kind == EquipmentKind.Conveyor)
+                return Refuse("Build conveyors between equipment ports.", out reason);
             if (!Supported(d)) return Refuse("Equipment footprint is unavailable.", out reason);
             if (!Finite(x) || !Finite(z) || !Finite(yaw) || Math.Abs(yaw) > 360000)
                 return Refuse("Choose a finite yard position and rotation.", out reason);
@@ -117,6 +117,8 @@ namespace Scrapshift.Compact
         {
             var item = Find(id);
             if (item == null) return Refuse("That equipment no longer exists.", out reason);
+            if (item.industry != null && (item.industry.enabled || item.industry.primary != null))
+                return Refuse("Disable automatic intake or dispatch and finish the whole-object job before moving or dismantling it.", out reason);
             if (item.job != null || item.contents == null || item.contents.Count > 0)
                 return Refuse("Collect all output and empty the equipment before moving or dismantling it.", out reason);
             foreach (var link in state.powerLinks)

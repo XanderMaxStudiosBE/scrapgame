@@ -7,6 +7,8 @@ namespace Scrapshift.Compact
     {
         public static GameObject Build(EquipmentKind kind, Transform parent, Vector3 position, float yaw = 0, bool colliders = true, CompactRules rules = null)
         {
+            if(kind==EquipmentKind.PrimaryScrapper || kind==EquipmentKind.ExportStation)
+                return CompactIndustryVisuals.BuildEquipment(kind,parent,position,yaw,colliders,rules);
             if(kind==EquipmentKind.Storage || kind==EquipmentKind.Tier2Scrapper || kind==EquipmentKind.Splitter || kind==EquipmentKind.Merger)
                 return CompactAutomationVisuals.BuildEquipment(kind,parent,position,yaw,colliders,rules);
             var root = Root(kind.ToString(), parent, position, yaw);
