@@ -19,7 +19,7 @@ namespace Scrapshift.Tests
         {var s=new CompactStack{id=m.State.nextId++,kind=kind,quantity=quantity,xpEligible=eligible};m.State.items.Add(s);m.State.carriedId=s.id;return s;}
         public static void Run(string name)
         {
-            var rules=new CompactRules();var m=new ScrappingModel(rules);var storage=Add(m,EquipmentKind.Storage);var tier=Add(m,EquipmentKind.Tier2Scrapper,0,7);
+            var rules=new CompactRules();var m=new ScrappingModel(rules);var storage=Add(m,EquipmentKind.Storage);var tier=Add(m,EquipmentKind.Tier2Scrapper,0,7);m.HasPower=e=>true;
             switch(name)
             {
                 case "StorageDepositWithdrawIdentity":
@@ -46,11 +46,13 @@ namespace Scrapshift.Tests
                     Check(!m.SetFilter(storage.id,99) && storage.filterKind==(int)PartKind.Copper && m.StoredUnits(storage.id)==4,"invalid filter nonmutating");
                     Check(m.SetFilter(storage.id,-1) && m.StoredUnits(storage.id)==4,"filter cancellation retains contents");break;
                 case "StorageTier2SingleBatch":
-                    var many=Held(m,PartKind.Wire,3);int wireId=many.id;Check(m.Deposit(tier.id) && m.AutoBegin(tier.id),"reserve buffered batch");
+                    var many=Held(m,PartKind.Wire,3);int wireId=many.id;m.HasPower=null;Check(m.Deposit(tier.id),"buffer preserves owned input");
+                    Check(!m.AutoBegin(tier.id) && tier.job==null && tier.contents[0].id==wireId && tier.contents[0].quantity==3,"unpowered intake does not consume buffered input");
+                    m.HasPower=e=>true;Check(m.AutoBegin(tier.id),"powered input reserves one buffered batch");
                     Check(tier.job.inputQuantity==1 && tier.contents.Count==1 && tier.contents[0].id==wireId && tier.contents[0].quantity==2,"one input unit consumed, remainder identity retained");
                     Check(tier.job.duration==2 && tier.job.yields[0].quantity==3 && tier.job.yields[1].quantity==2 && m.State.experience==0,"faster recipe snapshot, no free outputs/XP");
                     Check(!m.AutoBegin(tier.id) && tier.contents[0].quantity==2,"in-flight job cannot consume twice");
-                    Check(!m.Tick(100) && tier.job.remaining==2,"automatic reservation does not imply free generator power");break;
+                    m.HasPower=null;Check(!m.Tick(100) && tier.job.remaining==2,"disconnected power preserves paid buffered batch");break;
                 case "StorageTier2InputRecipeFilter":
                     Check(m.SetFilter(tier.id,(int)PartKind.Motor),"choose supported recipe");var wrong=Held(m,PartKind.Wire,1);
                     Check(!m.Deposit(tier.id) && m.Carried.id==wrong.id && tier.contents.Count==0,"wrong recipe input remains carried");m.Drop(2,.25f,2);
@@ -65,7 +67,7 @@ namespace Scrapshift.Tests
                     m.HasPower=e=>true;m.Tick(2);m.CollectOutput(tier.id,0);Check(m.Carried.xpEligible && m.SaleQuote().experience==6,"eligibility follows consumed batch only");
                     Check(fresh.id!=old.id,"setup has distinct source IDs");break;
                 case "StorageTier2PauseOutputBackpressure":
-                    Held(m,PartKind.Motor,1);m.Deposit(tier.id);m.AutoBegin(tier.id);float remaining=tier.job.remaining;
+                    Held(m,PartKind.Motor,1);m.Deposit(tier.id);m.AutoBegin(tier.id);float remaining=tier.job.remaining;m.HasPower=null;
                     Check(!m.Tick(1) && tier.job.remaining==remaining,"unpowered retains progress");bool power=true;m.HasPower=e=>power;m.Tick(.5f);power=false;
                     Check(!m.Tick(30) && tier.job.remaining==remaining-.5f,"outage pauses partial job");power=true;rules.Equipment(EquipmentKind.Tier2Scrapper).outputCapacity=9;
                     Check(!m.Tick(30) && tier.job.remaining==remaining-.5f && m.ProcessingBlockReason(tier.id).Contains("Output blocked"),"blocked output pauses without loss");
@@ -81,9 +83,10 @@ namespace Scrapshift.Tests
                     Check(!m.AutoBegin(tier.id) && tier.job==null && tier.contents[0].id==originalId && tier.contents[0].quantity==1,"reserve every output slot before consuming input");
                     rules.maxStacks=2;Check(m.AutoBegin(tier.id) && m.OccupiedSlots==2,"exact output reservations fit");break;
                 case "StorageTier2OutputReservation":
-                    var bulk=Held(m,PartKind.Motor,39);m.Deposit(tier.id);Check(m.AutoBegin(tier.id),"batch reserves output capacity before processing");
-                    Check(tier.contents[0].id==bulk.id && m.StoredUnits(tier.id)==38 && m.OutputQuantity(tier.id)==10,"buffer remainder plus exact yields fill the combined capacity");
-                    var extra=Held(m,PartKind.Wire,1);Check(!m.Deposit(tier.id) && m.Carried.id==extra.id && extra.quantity==1 && m.StoredUnits(tier.id)==38,"incoming input cannot occupy reserved output capacity");break;
+                    var bulk=Held(m,PartKind.Motor,48);m.Deposit(tier.id);Check(m.AutoBegin(tier.id),"batch reserves its independent output bay before processing");
+                    Check(tier.contents[0].id==bulk.id && m.StoredUnits(tier.id)==47 && m.OutputQuantity(tier.id)==10,"full input queue can start a recipe while exact outputs remain reserved separately");
+                    Held(m,PartKind.Wire,1);Check(m.Deposit(tier.id) && m.StoredUnits(tier.id)==48 && m.OutputQuantity(tier.id)==10,"incoming input can fill the input bay without stealing output space");
+                    var extra=Held(m,PartKind.Wire,1);Check(!m.Deposit(tier.id) && m.Carried.id==extra.id && extra.quantity==1 && m.StoredUnits(tier.id)==48,"a full input bay still rejects atomically");break;
                 case "StorageTransitIdentityValidation":
                     var link=new ConveyorLink{id=m.State.nextId++,fromId=storage.id,toId=tier.id,paidPrice=24};
                     var flight=new ConveyorItem{id=m.State.nextId++,kind=PartKind.Wire,progress=.4f};link.items.Add(flight);m.State.belts.Add(link);
@@ -103,7 +106,9 @@ namespace Scrapshift.Tests
                 case "StorageLevel10NoFreeEquipment":
                     var freshYard=new ScrappingModel(rules);int owned=freshYard.State.equipment.Count;freshYard.State.experience=rules.levelThresholds[9];
                     foreach(var kind in new[]{EquipmentKind.Storage,EquipmentKind.Tier2Scrapper,EquipmentKind.Conveyor,EquipmentKind.Splitter,EquipmentKind.Merger})
-                        Check(rules.Equipment(kind).available && rules.Equipment(kind).unlockLevel==10 && rules.Equipment(kind).price>0,"purchased Stage C catalogue");
+                        Check(rules.Equipment(kind).available && rules.Equipment(kind).unlockLevel<=10 && rules.Equipment(kind).price>0,"earlier transport remains purchased gear");
+                    Check(rules.Equipment(EquipmentKind.Storage).unlockLevel==1 && rules.Equipment(EquipmentKind.Conveyor).unlockLevel==1 && rules.Equipment(EquipmentKind.Tier2Scrapper).unlockLevel==5 &&
+                        rules.Equipment(EquipmentKind.Splitter).unlockLevel==3 && rules.Equipment(EquipmentKind.Merger).unlockLevel==3,"usable basic line before advanced processing");
                     Check(freshYard.Level==10 && freshYard.State.equipment.Count==owned && rules.Equipment(EquipmentKind.ExportStation).available && rules.Equipment(EquipmentKind.ExportStation).unlockLevel==12,"levels do not spawn free gear/export");break;
                 case "StorageInvalidBeltTuning":
                     var bad=new CompactRules{beltSpeed=0};Invalid(()=>bad.Validate(),"zero speed");bad=new CompactRules{beltSpacing=float.NaN};Invalid(()=>bad.Validate(),"nonfinite spacing");

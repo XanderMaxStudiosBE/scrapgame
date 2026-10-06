@@ -141,6 +141,7 @@ namespace Scrapshift.Tests
                     Check(!m.Sell() && m.State.money==preSaleCash+10,"sale cannot repeat the level reward");
                     m.CollectOutput(bench,1);var smallQuote=m.SaleQuote();Check(smallQuote.baseTotal==2 && smallQuote.bonusTotal==0 && smallQuote.total==2,"small bonuses still use consistent floor rounding");break;
                 case "CompactLevelPriceBonusUnlock":
+                    m.Rules.Equipment(EquipmentKind.Conveyor).unlockLevel=10; // Explicit tuning remains supported.
                     m.State.experience=m.Rules.levelThresholds[8];m.AcquireWire();m.BeginProcessing(bench);FinishManual(m,bench);m.CollectOutput(bench,0);
                     m.Carried.quantity=75;m.State.experience=m.Rules.levelThresholds[9]-150;
                     var quote=m.SaleQuote();Check(quote.baseTotal==225 && quote.bonusPercent==40 && quote.bonusTotal==90 && quote.total==315,"separately explained level bonus");

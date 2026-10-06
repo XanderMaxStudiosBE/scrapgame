@@ -200,7 +200,7 @@ namespace Scrapshift.Compact
             Text("Bring recovered materials to the office counter. Sales earn money and experience. Neighbours also have small requests, with an extra bonus when you finish their order.");EndCard();
             Section("A LITTLE HELP WHEN YOU NEED IT");
             Text("Press ["+controls.Label(ControlAction.Journal)+"] for your next step. Put down items with ["+controls.Label(ControlAction.Drop)+"]. Free wiring at delivery keeps you earning when money is low. Escape opens Pause and Settings.");
-            Text("Later, use ["+controls.Label(ControlAction.BuildToggle)+"] to buy and place generators and powered scrappers. Level 10 opens conveyors, storage and Tier 2 equipment. There is no rush to build it all today.");
+            Text("Use ["+controls.Label(ControlAction.BuildToggle)+"] to buy and place equipment as you earn the money. Your first powered line uses a generator, a Tier 1 scrapper, storage and a conveyor. Storage and belts unlock at level "+FirstLineLevel()+"; your manual bench also has conveyor ports, but you still do its tool strokes.");
             if(Button("Adjust my controls & settings"))settings.Open();
         }
         void DrawHelp()
@@ -210,14 +210,16 @@ namespace Scrapshift.Compact
             Text("CAR → MOTOR / WIRING / BODY METAL\nREFRIGERATOR → COMPRESSOR / WIRING / CASING / PLASTIC\nInspect, finish its individual dismantling steps, then remove the components. Manual work keeps whole objects at receiving. A primary dismantler can instead load intact, uninspected scrap directly. Hands must be empty for manual work.");
             foreach(var recipe in Model.Rules.recipes)
                 Text(Model.Rules.Part(recipe.input).name+" → "+YieldText(recipe.yields)+" / "+recipe.strokes+" strokes per "+recipe.inputQuantity+" input");
-            Text("Each input is reserved once, then its exact outputs remain until collected. A machine with uncollected output cannot accept another load. Power cuts and overloaded networks preserve inputs and progress. Pause/Settings stop every processing clock.");
+            Text("Each processing batch reserves its inputs once. Finished outputs stay safe until collected or taken by an outgoing belt. Component machines have separate IN and OUT bays, each with the listed capacity, so a full input queue does not block the current batch. The next batch starts when the previous outputs clear. Power cuts and overloaded networks preserve inputs and progress. Pause/Settings stop every processing clock.");
             Text("POWER & BUILDING\nSelect a catalogue item, aim at nearby gravel and rotate its ghost. Green is valid; red explains the blockage. Toggle optional grid snap in the catalogue. Confirm with ["+controls.Label(ControlAction.Interact)+"]. Cancel is free. Keep the entrance and receiving area clear. Empty equipment and disconnect its cables and conveyors before moving or dismantling it. Keep at least one manual bench.");
             Text("Inspect powered equipment to connect or disconnect a cable to another nearby port. A generator supplies its connected network; if combined machine demand exceeds supply every consumer pauses. Generators have no fuel cost.");
             Text("PROGRESSION\nOnly completed sales of eligible recovered materials earn XP. Collection, moving, purchases and repeated button presses do not. Levels increase the editable material-sale bonus. Replacement cars and refrigerators are bought at delivery; renewable free wiring protects the basic earning loop.");
-            Text("CONVEYORS & STORAGE\nInspect storage to deposit/withdraw bundles and choose an output filter. Select an output port, then aim at an input port to snap a conveyor preview. ["+controls.Label(ControlAction.BuildRotate)+"] switches the corner; ["+controls.Label(ControlAction.Interact)+"] confirms. Splitters rotate between free outputs; mergers combine incoming lines. Full destinations hold items on the belt. Connect a generator to Tier 2; it reserves supported components from its buffer, processes them, then outputs recovered materials. Recipe selection filters its intake. No transport grants XP.");
+            Text("YOUR FIRST PRODUCTION LINE\nBuy a generator and Tier 1 scrapper, connect their power, then add storage and conveyors when you can afford them. Basic storage and belts unlock at level "+FirstLineLevel()+". Deposit components into the scrapper's IN buffer or feed it from storage. It reserves one buffered recipe batch, processes with power and sends finished materials through OUT. Tier 2 is a faster, larger upgrade at level "+Model.Rules.Equipment(EquipmentKind.Tier2Scrapper).unlockLevel+"; Tier 1 already works with belts.");
+            Text("CONVEYORS & STORAGE\nSelect a marked OUT, then aim at a different station's IN to snap a conveyor preview. ["+controls.Label(ControlAction.BuildRotate)+"] switches the corner; ["+controls.Label(ControlAction.Interact)+"] confirms. Inspect a station to manage its buffers and routes. Processing recipe filters select which components may enter; storage's output filter chooses which contents leave. Changing a filter retains existing stock. Splitters rotate between free outputs; mergers combine incoming lines. A full destination holds items on the belt and pauses the upstream line when its output fills. No transport grants XP.");
+            Text("The manual bench also accepts components through IN and sends recovered materials through OUT. It prepares the next buffered recipe, but you must finish its strokes with ["+controls.Label(ControlAction.ManualWork)+"] and empty hands. Generators provide cable power, primary dismantlers receive whole objects, and dispatch stations take materials: their ports follow those roles.");
             Section("WHOLE-OBJECT AUTOMATION");
             Text("At level "+Model.Rules.Equipment(EquipmentKind.PrimaryScrapper).unlockLevel+", buy and place a primary dismantler. Feed an intact owned car or refrigerator without paying again, or review its standing-delivery terms. Recurring purchases start off; each delivery needs money, power and room. The delivery clock advances only while the machine is ready. Turning purchases off lets an already paid object finish.");
-            Text("PRIMARY → STORAGE → POWERED TIER 2 → MATERIALS → DISPATCH. Connect a material belt to a powered dispatch station, review a shipment, or explicitly turn automatic export on. Dispatch starts off and uses ordinary material prices and sale XP. It never pays customer-request bonuses. Fridges also yield ready plastic; use a sorting branch to route that material directly to dispatch while components go through Tier 2.");
+            Text("PRIMARY → COMPONENT STORAGE → POWERED SCRAPPER → MATERIAL STORAGE / DISPATCH. Tier 1 and Tier 2 both accept component belts and output recovered materials. Connect a material belt to a powered dispatch station, review a shipment, or explicitly turn automatic export on. Dispatch starts off and uses ordinary material prices and sale XP. It never pays customer-request bonuses. Fridges also yield ready plastic; use a sorting branch to route that material directly to dispatch while components go through a scrapper.");
             Section("YOUR OWN PACE");
             Text("Your journal follows your first dismantling job through sales, powered work and a connected storage line. Neighbourhood requests pay for matching recovered materials, with an extra bonus on the last delivery. Partial deliveries count and there are no deadlines.");
             Text("There are no daily fees. Free wiring remains available if your till is empty. Pause and Settings stop all work, and your yard saves automatically as you go.");
@@ -233,18 +235,43 @@ namespace Scrapshift.Compact
         void DrawCatalogue()
         {
             Text("Select equipment, then choose its position. No money is spent until you confirm a valid preview. Empty hands required. Move owned equipment by inspecting its body in the yard.");
+            Text("FIRST POWERED LINE / Generator + Tier 1 scrapper. Add storage and connect OUT → IN with conveyors. Every purchased Tier 1 works with belts; compare later upgrades' cycle time and capacity below.");
             build.GridSnap=GUILayout.Toggle(build.GridSnap,"Snap previews to a 0.5 metre grid");GUILayout.Space(12);
-            foreach(var d in Model.Rules.equipment)
+            for(int group=0;group<2;group++)
             {
-                if(!d.available)continue;
-                string requirement=Model.Level<d.unlockLevel?"Requires level "+d.unlockLevel:Model.State.money<d.price?"Save €"+(d.price-Model.State.money)+" more":"Ready to place";
-                string size=d.kind==EquipmentKind.Conveyor?" per 2m section / select equipment ports": " / "+d.width.ToString("0.#")+" × "+d.depth.ToString("0.#")+"m";
-                BeginCard(d.name);
-                Text("€"+d.price+size+"\n"+requirement+(d.powerOutput>0?" / supplies "+d.powerOutput+" kW":"")+(d.powerDemand>0?" / draws "+d.powerDemand+" kW":""));
-                if(d.kind==EquipmentKind.PrimaryScrapper)Text("Whole cars or fridges → components / "+d.processingSeconds.ToString("0.#")+"s work. Recurring purchases start off; you review the terms before enabling them.");
-                else if(d.kind==EquipmentKind.ExportStation)Text("Materials only → ordinary sales / "+d.processingSeconds.ToString("0.#")+"s dispatch interval. Automatic dispatch starts off.");
-                if(Button("Choose "+d.name,d.available&&Model.Level>=d.unlockLevel&&Model.State.money>=d.price))BeginBuild(d.kind);
-                EndCard();
+                bool heading=false;
+                foreach(var d in Model.Rules.equipment)
+                {
+                    if(!d.available||(Model.Level>=d.unlockLevel)!=(group==0))continue;
+                    if(!heading){Section(group==0?"AVAILABLE TO BUILD":"LATER UPGRADES");heading=true;}
+                    string requirement=Model.Level<d.unlockLevel?"Unlocks at level "+d.unlockLevel:Model.State.money<d.price?"Save €"+(d.price-Model.State.money)+" more":"Ready to place";
+                    string size=d.kind==EquipmentKind.Conveyor?" per 2m section / choose OUT then IN": " / "+d.width.ToString("0.#")+" × "+d.depth.ToString("0.#")+"m";
+                    BeginCard(d.name);
+                    Text("€"+d.price+size+"\n"+requirement+(d.powerOutput>0?" / supplies "+d.powerOutput+" kW":"")+(d.powerDemand>0?" / draws "+d.powerDemand+" kW":""));
+                    Text(EquipmentRole(d));
+                    if(Button("Choose "+d.name,Model.Level>=d.unlockLevel&&Model.State.money>=d.price))BeginBuild(d.kind);
+                    EndCard();
+                }
+            }
+        }
+        int FirstLineLevel()
+        {return Math.Max(Model.Rules.Equipment(EquipmentKind.Storage).unlockLevel,Model.Rules.Equipment(EquipmentKind.Conveyor).unlockLevel);}
+        string EquipmentRole(EquipmentDefinition definition)
+        {
+            string capacity=" / "+definition.outputCapacity+" units "+(ScrappingModel.IsComponentProcessor(definition.kind)?"per IN and OUT bay":"total buffer capacity");
+            switch(definition.kind)
+            {
+                case EquipmentKind.Workbench:return "Components IN → manual tool strokes → materials OUT"+capacity+". Belts supply and collect; you do the work.";
+                case EquipmentKind.Generator:return "Cable power for connected machines. Its network must cover total demand; no material belts or fuel purchases.";
+                case EquipmentKind.Tier1Scrapper:return "Components IN → powered recovery → materials OUT"+capacity+" / base cycle "+definition.processingSeconds.ToString("0.#")+"s. Automatic buffered batches and both conveyor ports work immediately; recipe times vary.";
+                case EquipmentKind.Tier2Scrapper:return "Components IN → powered recovery → materials OUT"+capacity+" / base cycle "+definition.processingSeconds.ToString("0.#")+"s. Compare capacity, cycle time and power demand with your current line; recipe times vary.";
+                case EquipmentKind.Storage:return "Items IN → stock buffer → items OUT"+capacity+". An output filter selects which stored kind leaves.";
+                case EquipmentKind.Conveyor:return "Transfers single items automatically from a station's OUT to another station's IN. Price follows route length; blocked items wait safely.";
+                case EquipmentKind.Splitter:return "One IN → three OUT. Sends matching items to the next free route; an output filter selects the item kind.";
+                case EquipmentKind.Merger:return "Three IN → one OUT. Combines incoming lines; an output filter selects the item kind.";
+                case EquipmentKind.PrimaryScrapper:return "Whole cars or fridges → components OUT"+capacity+" / "+definition.processingSeconds.ToString("0.#")+"s work. Recurring purchases start off; review their terms before enabling them.";
+                case EquipmentKind.ExportStation:return "Materials IN → ordinary sales"+capacity+" / "+definition.processingSeconds.ToString("0.#")+"s dispatch interval. Automatic dispatch starts off.";
+                default:return "Inspect placed equipment to manage its contents and connections.";
             }
         }
         void DrawLargeScrap()
@@ -288,6 +315,7 @@ namespace Scrapshift.Compact
                 string progress=job.ready?"Ready to collect":equipment.kind==EquipmentKind.Workbench?
                     job.strokes+" / "+job.requiredStrokes+" work strokes":job.remaining.ToString("0.0")+"s processing left";
                 Progress(fraction,progress);
+                if(job.ready)Text("An outgoing OUT belt takes these materials automatically when you close the menu. You can also collect a bundle by hand below. A full destination holds the output safely.");
                 if(!job.ready)
                     Text(equipment.kind==EquipmentKind.Workbench?
                         "Return to the yard and use ["+controls.Label(ControlAction.ManualWork)+"] with empty hands to keep working.":
@@ -304,7 +332,8 @@ namespace Scrapshift.Compact
                 "Load an intact owned car or refrigerator below. Standing deliveries stay off until you approve recurring purchases.":
                 "Connect a material belt or deposit saleable material below. Automatic export stays off until you approve it.");
             else if(equipment.kind==EquipmentKind.Generator)Text("Ready to supply its connected network. Link enough generators to cover your machines' combined power demand.");
-            else if(equipment.kind==EquipmentKind.Tier2Scrapper)Text("Waiting for buffered input. Deposit a supported component or connect an incoming conveyor. A powered machine works through each load.");
+            else if(equipment.kind==EquipmentKind.Workbench)Text("Components arrive through IN or your carried bundle. The next buffered recipe prepares automatically; finish its strokes in the yard with ["+controls.Label(ControlAction.ManualWork)+"]. Finished materials leave through OUT or manual collection.");
+            else if(equipment.kind==EquipmentKind.Tier1Scrapper||equipment.kind==EquipmentKind.Tier2Scrapper)Text("Components arrive through IN or your carried bundle. With power, the machine reserves each buffered recipe batch automatically and sends its finished materials through OUT. Each separate IN and OUT bay has the listed capacity; a full input queue leaves the current batch working, while a blocked OUT waits safely before the next batch.");
             else if(equipment.kind==EquipmentKind.Storage||equipment.kind==EquipmentKind.Splitter||equipment.kind==EquipmentKind.Merger)Text("Deposit or withdraw bundles below. Connected conveyors take care of moving them between stations.");
             else Text("Ready for the next load. Carry a component here and use ["+controls.Label(ControlAction.Interact)+"] to place it inside.");
             EndCard();

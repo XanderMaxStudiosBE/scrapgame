@@ -19,9 +19,18 @@ namespace Scrapshift.Compact
             var ready=ReadyOutput(model,playerX,playerZ,use);if(ready!=null)return ready;
             var manual=NearestEquipment(model,playerX,playerZ,e=>e.kind==EquipmentKind.Workbench && e.job!=null && !e.job.ready);
             if(manual!=null)return At(manual,model,"Use "+work+" to finish "+RecipeName(model,manual.job)+" • "+manual.job.strokes+"/"+manual.job.requiredStrokes+" strokes.");
-            var blocked=NearestEquipment(model,playerX,playerZ,e=>e.job!=null && !e.job.ready && ScrappingModel.HasBuffer(e.kind) &&
-                model.StoredUnits(e.id)+model.OutputQuantity(e.id)>model.Rules.Equipment(e.kind).outputCapacity);
-            if(blocked!=null)return At(blocked,model,"Output blocked. Inspect "+use+" and withdraw stored materials to make room; processing progress is retained.");
+            var blocked=NearestEquipment(model,playerX,playerZ,e=>e.job!=null&&!e.job.ready&&
+                model.ProcessingBlockReason(e.id).StartsWith("Output blocked",StringComparison.Ordinal));
+            if(blocked!=null)return At(blocked,model,"OUT bay capacity was reduced below this reserved batch. Restore its capacity to resume; input and processing progress are retained. Inspect "+use+" to review the station.");
+            var queued=NearestEquipment(model,playerX,playerZ,e=>ScrappingModel.IsComponentProcessor(e.kind)&&e.job==null&&e.contents.Count>0);
+            if(queued!=null)
+            {
+                if(queued.kind!=EquipmentKind.Workbench&&!Powered(model,queued))return IndustryPower(model,queued,use,"Queued components are retained in IN");
+                bool canStart=model.CanAutoBegin(queued.id,out string reason);
+                return At(queued,model,canStart?
+                    "Queued IN components are ready. Close menus to prepare the next recipe automatically. "+(queued.kind==EquipmentKind.Workbench?"Finish its manual strokes with "+work+" and empty hands.":"Generator power does the work; finished materials leave through OUT or manual collection."):
+                    reason+" Inspect "+use+" to review the recipe filter or withdraw inputs for another station. Queued stock is retained.");
+            }
             var goal=model.Career.CurrentGoal;
             // Customer recovery and hand work stay ahead of optional industrial expansion.
             if(goal!=null && goal.key=="contracts")return CustomerRecovery(model,playerX,playerZ,services,use,work);
@@ -44,12 +53,17 @@ namespace Scrapshift.Compact
                 {
                     var machine=NearestEquipment(model,playerX,playerZ,e=>e.kind==EquipmentKind.Tier1Scrapper);
                     if(machine==null || !Powered(model,machine))return EstablishPower(model,playerX,playerZ,services,use,work);
-                    if(machine.job!=null)return Running(machine,model);
+                    if(machine.job!=null)return Running(machine,model,use);
                     var input=NearestItem(model,playerX,playerZ,i=>model.Rules.Recipe(i.kind)!=null && CanLoad(model,machine,i));
                     if(input!=null)return ItemStep(model,input,use,"Feed the powered Tier 1 scrapper next");
                     return Acquire(model,playerX,playerZ,services,use,work,null,"Recover a component for your powered scrapper");
                 }
-                if(goal.key=="level10")return Acquire(model,playerX,playerZ,services,use,work,null,"Sell recovered materials for XP • "+model.XPToNextLevel+" XP to level "+(model.Level+1));
+                if(goal.key=="level10")
+                {
+                    int lineLevel=Math.Max(model.Rules.Equipment(EquipmentKind.Storage).unlockLevel,model.Rules.Equipment(EquipmentKind.Conveyor).unlockLevel);
+                    if(model.Level>=lineLevel)return FirstBelt(model,playerX,playerZ,services,use,work);
+                    return Acquire(model,playerX,playerZ,services,use,work,null,"Sell recovered materials for your first production line at level "+lineLevel+" • "+model.XPToNextLevel+" XP to level "+(model.Level+1));
+                }
                 if(goal.key=="belts")return FirstBelt(model,playerX,playerZ,services,use,work);
             }
             if(goal==null)
@@ -165,8 +179,9 @@ namespace Scrapshift.Compact
                 return Message(sale.reason);
             var recipe=model.Rules.Recipe(held.kind);
             if(recipe==null)return Message("This item has no component recipe. Store it or put it down to continue working.");
-            var equipment=NearestEquipment(model,x,z,e=>CanLoad(model,e,held));
-            if(equipment!=null)return At(equipment,model,"At "+model.Rules.Equipment(equipment.kind).name+" "+use+", "+(equipment.kind==EquipmentKind.Tier2Scrapper?"deposit":"load")+" "+model.Rules.Part(held.kind).name+" ×"+held.quantity+" to recover materials.");
+            var equipment=NearestEquipment(model,x,z,e=>e.job==null&&CanLoad(model,e,held));
+            if(equipment==null)equipment=NearestEquipment(model,x,z,e=>CanLoad(model,e,held));
+            if(equipment!=null)return At(equipment,model,"At "+model.Rules.Equipment(equipment.kind).name+" "+use+", "+(!model.CanBeginProcessing(equipment.id,held,out string loadReason)?"queue in its IN buffer":"load")+" "+model.Rules.Part(held.kind).name+" ×"+held.quantity+" to recover materials. Finished materials leave through OUT or manual collection.");
             var occupied=NearestEquipment(model,x,z,e=>e.kind==EquipmentKind.Workbench && e.job!=null);
             if(occupied!=null)return At(occupied,model,"Put down your carried component, then "+(occupied.job.ready?"collect the workbench output "+use:"finish the workbench job "+work+" with empty hands")+" before loading another batch.");
             var machine=NearestEquipment(model,x,z,e=>(e.kind==EquipmentKind.Tier1Scrapper || e.kind==EquipmentKind.Tier2Scrapper) && !Powered(model,e));
@@ -179,6 +194,8 @@ namespace Scrapshift.Compact
             if(machine!=null)
             {
                 if(model.State.nextId==int.MaxValue)return Message("Recovered output is retained safely: the item identifier limit prevents collection.");
+                var route=OutputRoute(model,machine);
+                if(route!=null)return RouteOutput(model,machine,route,use);
                 return At(machine,model,"Collect recovered materials "+use+" from "+model.Rules.Equipment(machine.kind).name+", then take them to sales.");
             }
             var scrap=NearestScrap(model,x,z,s=>s.inspected && s.strokes>=s.requiredStrokes && Positive(s.remaining));
@@ -243,13 +260,50 @@ namespace Scrapshift.Compact
             if(!conveyor.available)return Acquire(model,x,z,services,use,work,null,"Conveyors are unavailable in your catalogue; keep recovering materials manually");
             if(model.Level<conveyor.unlockLevel)return Acquire(model,x,z,services,use,work,null,"Reach level "+conveyor.unlockLevel+" for conveyors");
             if(model.State.money<conveyor.price)return Acquire(model,x,z,services,use,work,null,"Earn €"+(conveyor.price-model.State.money)+" more for your first conveyor section");
-            var source=NearestEquipment(model,storage.x,storage.z,e=>e.id!=storage.id && AutomationModel.PortCount(e.kind,true)>0);
-            if(source==null)return BuyEquipment(model,EquipmentKind.Tier1Scrapper,x,z,services,use,work);
-            return At(source,model,"Inspect "+use+" and select a free output port; aim at the storage input to preview a conveyor. Its route must be clear and within "+model.Rules.beltMaxLength+"m; check the price before confirming.");
+            var source=NearestEquipment(model,storage.x,storage.z,e=>e.kind==EquipmentKind.Tier1Scrapper && Powered(model,e) && FreeOutput(model,e));
+            if(source==null)source=NearestEquipment(model,storage.x,storage.z,e=>e.id!=storage.id && FreeOutput(model,e));
+            if(source==null)return Message("Your output ports are already connected. Inspect "+use+" to review those routes; clear a loaded belt before changing it, or buy another processing station for an additional line.");
+            string operation=source.kind==EquipmentKind.Workbench?" Your bench still needs manual strokes "+work+"; its finished materials then travel automatically.":
+                source.kind==EquipmentKind.Tier1Scrapper||source.kind==EquipmentKind.Tier2Scrapper?" Feed components through the scrapper's IN buffer; generator power does the recovery.":
+                source.kind==EquipmentKind.PrimaryScrapper?" Its paid whole-object recovery sends components through OUT.":" Its stored stock leaves through OUT automatically.";
+            return At(source,model,"Inspect "+use+" and select a free OUT port; aim at storage IN to preview a conveyor. Its route must be clear and within "+model.Rules.beltMaxLength+"m; check the length-based price before confirming."+operation);
         }
-        static CompactGuideStep Running(EquipmentState e,ScrappingModel model)
+        static CompactGuideStep Running(EquipmentState e,ScrappingModel model,string use)
         {
-            return At(e,model,"Tier 1 is processing • "+e.job.remaining.ToString("0.0")+"s of powered work left. Collect its output when ready.");
+            if(!Powered(model,e))return IndustryPower(model,e,use,"Reserved input and processing progress are retained");
+            return At(e,model,model.Rules.Equipment(e.kind).name+" is processing • "+e.job.remaining.ToString("0.0")+"s of powered work left. "+(OutputRoute(model,e)!=null?"Finished materials feed OUT automatically when the downstream input has room.":"Collect its output when ready, or connect OUT to storage for automatic transfer."));
+        }
+        static bool FreeOutput(ScrappingModel model,EquipmentState equipment)
+        {
+            for(int port=0;port<AutomationModel.PortCount(equipment.kind,true);port++)
+            {
+                bool used=false;foreach(var route in model.State.belts)if(route.fromId==equipment.id&&route.fromPort==port){used=true;break;}
+                if(!used)return true;
+            }
+            return false;
+        }
+        static ConveyorLink OutputRoute(ScrappingModel model,EquipmentState equipment)
+        {foreach(var route in model.State.belts)if(route.fromId==equipment.id)return route;return null;}
+        static CompactGuideStep RouteOutput(ScrappingModel model,EquipmentState machine,ConveyorLink route,string use)
+        {
+            var destination=model.FindEquipment(route.toId);
+            if(destination==null)return At(machine,model,"Recovered output is retained. Inspect "+use+" to repair its outgoing route or collect the materials manually.");
+            PartKind kind=machine.job.input;
+            bool selected=false;
+            foreach(var output in machine.job.yields)
+            {
+                if(output.quantity<=0)continue;
+                if(!selected){kind=output.kind;selected=true;}
+                // Launch may skip an earlier yield that this input cannot accept.
+                // Preserve that first yield only when no supported output can launch.
+                if(ScrappingModel.SupportsBufferedInput(destination,model.Rules,output.kind)){kind=output.kind;break;}
+            }
+            float furthest=-1;foreach(var item in route.items)if(item.progress>furthest){kind=item.kind;furthest=item.progress;}
+            if(!ScrappingModel.SupportsBufferedInput(destination,model.Rules,kind))
+                return At(destination,model,"Receiving IN cannot accept "+model.Rules.Part(kind).name+" with this item or recipe filter. Route recovered materials to storage or a compatible dispatch input; inspect "+use+" to review the connection. Stock and output are retained.");
+            if(model.IntakeCapacityUnits(destination.id)>=model.Rules.Equipment(destination.kind).outputCapacity)
+                return At(destination,model,"Receiving IN is full. Inspect "+use+" and withdraw stored items or clear its OUT route; the belt and upstream output wait safely.");
+            return At(machine,model,"Recovered materials feed OUT automatically into "+model.Rules.Equipment(destination.kind).name+" IN. "+route.items.Count+" items on this belt; close menus to keep the line moving. Inspect "+use+" to manage queued inputs, routes or manual collection.");
         }
         static CompactGuideStep CapacityRecovery(ScrappingModel model,float x,float z,string use)
         {
@@ -259,30 +313,14 @@ namespace Scrapshift.Compact
         }
         static bool CanLoad(ScrappingModel model,EquipmentState e,CompactStack stack)
         {
-            if(e.kind!=EquipmentKind.Workbench && e.kind!=EquipmentKind.Tier1Scrapper && e.kind!=EquipmentKind.Tier2Scrapper)return false;
-            var recipe=model.Rules.Recipe(stack.kind);if(recipe==null || !ValidBatch(model,stack))return false;
-            if(e.kind!=EquipmentKind.Workbench && !Powered(model,e))return false;
-            var definition=model.Rules.Equipment(e.kind);
-            if(e.kind==EquipmentKind.Tier2Scrapper)
-            {
-                if(e.job!=null || (e.filterKind>=0 && e.filterKind!=(int)stack.kind) ||
-                    (long)model.StoredUnits(e.id)+stack.quantity>definition.outputCapacity)return false;
-                int output=0;foreach(var yield in recipe.yields)output+=yield.quantity;
-                if((long)model.StoredUnits(e.id)+stack.quantity-recipe.inputQuantity+output>definition.outputCapacity ||
-                    (long)model.State.nextId+output>int.MaxValue)return false;
-                int removed=0,left=recipe.inputQuantity;
-                foreach(var input in e.contents)
-                    if(input.kind==stack.kind && input.xpEligible==stack.xpEligible && left>0)
-                    {int taken=Math.Min(left,input.quantity);left-=taken;if(taken==input.quantity)removed++;}
-                if(left>0 && left==stack.quantity)removed++;
-                return CanReserve(model,recipe.yields.Length-removed);
-            }
-            if(e.job!=null)return false;
-            int batches=stack.quantity/recipe.inputQuantity;long units=model.StoredUnits(e.id);
-            foreach(var y in recipe.yields){long quantity=(long)y.quantity*batches;if(quantity>4096)return false;units+=quantity;}
-            double duration=(double)recipe.seconds*batches*definition.processingSeconds/model.Rules.baseMachineSeconds;
-            return units<=definition.outputCapacity && CanReserve(model,recipe.yields.Length-1) &&
-                (long)recipe.strokes*batches<=10000 && duration>0 && duration<=86400 && !double.IsNaN(duration) && !double.IsInfinity(duration);
+            if(!ScrappingModel.IsComponentProcessor(e.kind))return false;
+            if(e.kind!=EquipmentKind.Workbench&&!Powered(model,e))return false;
+            string reason;
+            if(model.CanBeginProcessing(e.id,stack,out reason))return true;
+            if(!model.CanDeposit(e.id,stack,out reason))return false;
+            // A busy station can queue supported input. Idle buffered intake must be
+            // able to reserve a complete recipe, rather than promise an impossible batch.
+            return e.job!=null || model.CanAutoBegin(e.id,stack,out reason);
         }
         static bool ValidBatch(ScrappingModel model,CompactStack stack)
         {var r=model.Rules.Recipe(stack.kind);return r!=null && stack.quantity>=r.inputQuantity && stack.quantity%r.inputQuantity==0;}

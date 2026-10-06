@@ -1,0 +1,75 @@
+{
+  "source": "Original Blender-authored fixtures; ArtSource/build_starter_stock.py",
+  "pack": "CompactStarterStock",
+  "units": "metres",
+  "atlas": "ScrapshiftPropAtlas.png",
+  "runtimeMaterial": "ScrapshiftMaterials/PropAtlas",
+  "assets": {
+    "CompactPartsShelf": {
+      "triangles": 1600,
+      "vertices": 928,
+      "dimensions_blender": [
+        2.3380000591278076,
+        0.9099999666213989,
+        1.9800000190734863
+      ],
+      "materials": 1,
+      "bounds_unity": {
+        "min": [
+          -1.125,
+          0.0,
+          -0.45499998331069946
+        ],
+        "max": [
+          1.2130000591278076,
+          1.9800000190734863,
+          0.45499998331069946
+        ]
+      }
+    },
+    "CompactMixedSkip": {
+      "triangles": 632,
+      "vertices": 384,
+      "dimensions_blender": [
+        2.6887998580932617,
+        1.6722352504730225,
+        1.2586925029754639
+      ],
+      "materials": 1,
+      "bounds_unity": {
+        "min": [
+          -1.3443999290466309,
+          7.450580596923828e-09,
+          -0.8199999928474426
+        ],
+        "max": [
+          1.3443999290466309,
+          1.2586925029754639,
+          0.8522352576255798
+        ]
+      }
+    },
+    "CompactWorkshopRack": {
+      "triangles": 1380,
+      "vertices": 808,
+      "dimensions_blender": [
+        2.179999828338623,
+        0.6850000023841858,
+        2.265000104904175
+      ],
+      "materials": 1,
+      "bounds_unity": {
+        "min": [
+          -1.090000033378601,
+          0.0,
+          -0.33500000834465027
+        ],
+        "max": [
+          1.0899999141693115,
+          2.265000104904175,
+          0.3499999940395355
+        ]
+      }
+    }
+  }
+}

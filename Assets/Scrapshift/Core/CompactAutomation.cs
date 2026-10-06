@@ -74,9 +74,10 @@ namespace Scrapshift.Compact
         bool Reject(string message){LastMessage=message;return false;}
         public static int PortCount(EquipmentKind kind,bool output)
         {
-            if(kind==EquipmentKind.Tier1Scrapper || kind==EquipmentKind.PrimaryScrapper)return output?1:0;
+            if(ScrappingModel.IsComponentProcessor(kind))return 1;
+            if(kind==EquipmentKind.PrimaryScrapper)return output?1:0;
             if(kind==EquipmentKind.ExportStation)return output?0:1;
-            if(kind==EquipmentKind.Storage || kind==EquipmentKind.Tier2Scrapper)return 1;
+            if(kind==EquipmentKind.Storage)return 1;
             if(kind==EquipmentKind.Splitter)return output?3:1;
             if(kind==EquipmentKind.Merger)return output?1:3;
             return 0;
@@ -85,7 +86,8 @@ namespace Scrapshift.Compact
         {
             if(index<0 || index>=PortCount(e.kind,output))throw new ArgumentException("Unsupported conveyor port.");
             float dx=0,dz=output?1:-1;
-            if(e.kind==EquipmentKind.Tier1Scrapper)dz=-1;
+            // Keep old Tier 1 output links on -Z; the newly added input is opposite.
+            if(e.kind==EquipmentKind.Tier1Scrapper)dz=output?-1:1;
             if((e.kind==EquipmentKind.Splitter && output) || (e.kind==EquipmentKind.Merger && !output))
             {
                 if(index==0){dx=-1;dz=0;}else if(index==2){dx=1;dz=0;}
@@ -184,10 +186,7 @@ namespace Scrapshift.Compact
         }
         static bool DestinationSupports(EquipmentState destination,CompactRules rules,PartKind kind)
         {
-            if(destination.kind==EquipmentKind.ExportStation)
-                return CompactIndustryModel.CanExportPart(rules,kind) && (destination.filterKind<0 || destination.filterKind==(int)kind);
-            return destination.kind!=EquipmentKind.Tier2Scrapper ||
-                (rules.Recipe(kind)!=null && (destination.filterKind<0 || destination.filterKind==(int)kind));
+            return ScrappingModel.SupportsBufferedInput(destination,rules,kind);
         }
         public bool CanConnect(int fromId,int fromPort,int toId,int toPort,bool xFirst,out string reason)
         {
@@ -202,7 +201,7 @@ namespace Scrapshift.Compact
                 foreach(var link in State.belts)if((link.fromId==fromId && link.fromPort==fromPort) || (link.toId==toId && link.toPort==toPort))
                     return Reject("This port already has a conveyor; use another junction port.",out reason);
             }
-            if(from.kind!=EquipmentKind.Tier2Scrapper && from.filterKind>=0 && !DestinationSupports(to,Rules,(PartKind)from.filterKind))return Reject("The selected source filter has no compatible destination recipe; choose storage or change filters.",out reason);
+            if(!ScrappingModel.IsComponentProcessor(from.kind) && from.filterKind>=0 && !DestinationSupports(to,Rules,(PartKind)from.filterKind))return Reject("The selected source filter has no compatible destination recipe; choose storage or change filters.",out reason);
             var candidate=new ConveyorLink{fromId=fromId,fromPort=fromPort,toId=toId,toPort=toPort,bendXFirst=xFirst};
             float length=Length(Path(candidate,State,Rules));
             if(!CompactRules.Finite(length) || length<=.05f || length>Rules.beltMaxLength)return Reject("Conveyor exceeds the "+Rules.beltMaxLength+"m route limit.",out reason);
@@ -235,18 +234,11 @@ namespace Scrapshift.Compact
             string reason;if(!CanRemove(linkId,out reason))return Reject(reason);
             var link=FindLink(linkId);State.money+=link.paidPrice/2;State.belts.Remove(link);LastMessage=reason;return true;
         }
-        int ReservedUnits(EquipmentState equipment)
-        {
-            int units=model.StoredUnits(equipment.id);
-            if(equipment.job!=null)foreach(var y in equipment.job.yields)units+=y.quantity;
-            units+=CompactIndustryModel.ReservedUnits(equipment);
-            return units;
-        }
         bool Receive(ConveyorLink link)
         {
             if(link.items.Count==0 || link.items[0].progress<1)return false;
             var destination=construction.Find(link.toId);var item=link.items[0];
-            if(destination==null || !DestinationSupports(destination,Rules,item.kind) || ReservedUnits(destination)>=Rules.Equipment(destination.kind).outputCapacity)return false;
+            if(destination==null || !DestinationSupports(destination,Rules,item.kind) || model.IntakeCapacityUnits(destination.id)>=Rules.Equipment(destination.kind).outputCapacity)return false;
             destination.contents.Add(new CompactStack{id=item.id,kind=item.kind,quantity=1,x=destination.x,z=destination.z,xpEligible=item.xpEligible});
             link.items.RemoveAt(0);return true;
         }
@@ -256,7 +248,7 @@ namespace Scrapshift.Compact
                 (link.items.Count>0 && link.items[link.items.Count-1].progress*length<Rules.beltSpacing-.00001f))return false;
             var destination=construction.Find(link.toId);if(destination==null)return false;
             CompactStack stack=null;PartAmount output=null;
-            if(source.kind==EquipmentKind.Tier1Scrapper || source.kind==EquipmentKind.Tier2Scrapper)
+            if(ScrappingModel.IsComponentProcessor(source.kind))
             {
                 if(source.job==null || !source.job.ready)return false;
                 // Machine recipe filters select inputs, never suppress the resulting materials.
@@ -320,7 +312,7 @@ namespace Scrapshift.Compact
                     if(link!=null && Launch(source,link,routeLengths[link.id])){changed=true;if(source.kind==EquipmentKind.Splitter)source.routeCursor=(port+1)%ports;}
                 }
             }
-            foreach(var equipmentState in orderedEquipment)if(equipmentState.kind==EquipmentKind.Tier2Scrapper && model.AutoBegin(equipmentState.id))changed=true;
+            if(model.PrepareBufferedJobs())changed=true;
             return changed;
         }
         public static void Validate(CompactYardState state,CompactRules rules)

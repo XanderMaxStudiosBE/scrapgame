@@ -7,7 +7,7 @@ namespace Scrapshift.Compact
     // Read-only yard-local envelopes. Dressing never becomes inventory or a construction restriction.
     public static class CompactDressingOccupancy
     {
-        public static void Collect(CompactYardState state,CompactRules rules,Vector3 player,List<Bounds> result)
+        public static void Collect(CompactYardState state,CompactRules rules,Vector3 player,List<Bounds> result,bool protectPlayer=true)
         {
             if(state==null || rules==null || result==null)throw new ArgumentNullException("state/rules/result");
             result.Clear();
@@ -34,7 +34,9 @@ namespace Scrapshift.Compact
                     Math.Abs(path[i].x-path[i-1].x)+AutomationModel.CorridorWidth,
                     Math.Abs(path[i].z-path[i-1].z)+AutomationModel.CorridorWidth);
             }
-            Add(result,player.x,player.z,.9f,.9f);
+            // Restored spawns need conservative startup clearance. Normal walking must not
+            // remove stock each time a processing transaction synchronizes the yard views.
+            if(protectPlayer)Add(result,player.x,player.z,.9f,.9f);
         }
         static void Add(List<Bounds> result,float x,float z,float width,float depth)
         {result.Add(new Bounds(new Vector3(x,1.5f,z),new Vector3(width,3,depth)));}

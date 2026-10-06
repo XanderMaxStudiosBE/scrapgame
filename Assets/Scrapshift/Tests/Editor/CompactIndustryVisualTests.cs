@@ -37,7 +37,7 @@ namespace Scrapshift.Tests
                 }
                 Assert.Greater(triangles,500);Assert.LessOrEqual(triangles,budget);
                 foreach(var renderer in model.GetComponentsInChildren<Renderer>())Assert.AreSame(material,renderer.sharedMaterial);
-                Assert.AreEqual(1,root.GetComponentsInChildren<Collider>().Length);
+                Assert.AreEqual(1+AutomationModel.PortCount(kind,false)+AutomationModel.PortCount(kind,true),root.GetComponentsInChildren<Collider>().Length);
                 var collider=root.GetComponent<BoxCollider>();Assert.AreEqual(definition.width,collider.size.x);Assert.AreEqual(definition.depth,collider.size.z);
                 Assert.IsEmpty(root.GetComponentsInChildren<Rigidbody>());Assert.IsEmpty(root.GetComponentsInChildren<Light>());
                 Assert.IsNull(typeof(CompactIndustryVisuals).GetMethod("Update",BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance));

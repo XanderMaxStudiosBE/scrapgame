@@ -67,10 +67,10 @@ namespace Scrapshift.Tests
                     c.Find(bench).starter=true;Check(c.Remove(bench) && c.LastRefund==0,"startercannotmanufacture cash");break;
                 case "CompactConstructionUnlockAndCapacity":
                     Check(!c.Place(EquipmentKind.Conveyor,0,0,0),"conveyors require a port route");
-                    Check(!c.Place(EquipmentKind.Tier2Scrapper,0,0,0),"level10 purchase remains locked");
-                    state.experience=rules.levelThresholds[9];Check(!c.Place(EquipmentKind.ExportStation,0,0,0),"level-ten yard cannot buy level-twelve export");
+                    Check(!c.Place(EquipmentKind.Tier2Scrapper,0,0,0),"faster processor remains locked before level five");
+                    state.experience=rules.levelThresholds[4];Check(!c.Place(EquipmentKind.ExportStation,0,0,0),"level-five yard cannot buy level-twelve export");
                     int tier2=Place(c,EquipmentKind.Tier2Scrapper,0,7);
-                    Check(c.Find(tier2).kind==EquipmentKind.Tier2Scrapper,"level10 permits realTier2 purchase");
+                    Check(c.Find(tier2).kind==EquipmentKind.Tier2Scrapper,"earned level permits realTier2 purchase");
                     rules.Equipment(EquipmentKind.Generator).unlockLevel=10;state.experience=0;
                     Check(!c.Place(EquipmentKind.Generator,0,0,0),"editable unlock enforced");
                     state.experience=rules.levelThresholds[9];Place(c,EquipmentKind.Generator,0,0);

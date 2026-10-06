@@ -165,29 +165,44 @@ namespace Scrapshift.Compact
             State.money-=recipe.purchasePrice;State.scrap.Add(new LargeScrapJob{id=State.nextId++,kind=kind,x=x,z=z});
             LastNotice=recipe.name+" delivered for €"+recipe.purchasePrice+". Inspect it at the receiving bay.";return true;
         }
-        public bool BeginProcessing(int equipmentId)
+        public bool CanBeginProcessing(int equipmentId,out string reason)
+        {return CanBeginProcessing(equipmentId,Carried,out reason);}
+        public bool CanBeginProcessing(int equipmentId,CompactStack held,out string reason)
         {
-            var equipment=FindEquipment(equipmentId);var held=Carried;
+            reason="Compatible carried batch";var equipment=FindEquipment(equipmentId);
             if(equipment==null || (equipment.kind!=EquipmentKind.Workbench && equipment.kind!=EquipmentKind.Tier1Scrapper))
-                return Fail("This equipment cannot process portable components.");
-            if(equipment.job!=null)return Fail("Finish and collect the existing output before loading another item.");
-            if(held==null)return Fail("Carry a supported component to the input area.");
+                {reason="This equipment cannot process portable components.";return false;}
+            if(equipment.job!=null){reason="Finish and collect the existing output before loading another item.";return false;}
+            if(held==null){reason="Carry a supported component to the input area.";return false;}
+            if(FindItem(held.id)!=held){reason="Choose a component owned in this yard.";return false;}
             var recipe=Rules.Recipe(held.kind);
             if(recipe==null || held.quantity<recipe.inputQuantity || held.quantity%recipe.inputQuantity!=0)
-                return Fail("No compatible whole-batch recipe for this carried item.");
+                {reason="No compatible whole-batch recipe for this carried item.";return false;}
+            if(equipment.filterKind>=0 && equipment.filterKind!=(int)held.kind)
+                {reason="The carried component does not match this machine's input recipe filter.";return false;}
             int batches=held.quantity/recipe.inputQuantity;long outputUnits=0;
             foreach(var y in recipe.yields)
             {
-                long q=(long)y.quantity*batches;if(q>4096)return Fail("This batch is too large; its input is unchanged.");outputUnits+=q;
+                long q=(long)y.quantity*batches;if(q>4096){reason="This batch is too large; its input is unchanged.";return false;}outputUnits+=q;
             }
             var definition=Rules.Equipment(equipment.kind);
-            long storedUnits=0;foreach(var item in equipment.contents)storedUnits+=item.quantity;
-            if(outputUnits+storedUnits>definition.outputCapacity)return Fail("Output capacity is too small for this batch; input stays in your hands.");
-            if(!CanReserve(recipe.yields.Length-1))return Fail("No room to reserve every output; collect and sell existing materials.");
+            if(outputUnits>definition.outputCapacity){reason="Output capacity is too small for this batch; input stays in your hands.";return false;}
+            if(!CanReserve(recipe.yields.Length-1)){reason="No room to reserve every output; collect and sell existing materials.";return false;}
+            if(!CanAllocate || (long)State.nextId+outputUnits>int.MaxValue)
+                {reason="No safe output identities remain; your carried input is unchanged.";return false;}
             long strokes=(long)recipe.strokes*batches;
             double duration=(double)recipe.seconds*batches*definition.processingSeconds/Rules.baseMachineSeconds;
             if(strokes>10000 || double.IsNaN(duration) || double.IsInfinity(duration) || duration<=0 || duration>86400)
-                return Fail("This batch exceeds processing limits; input is unchanged.");
+                {reason="This batch exceeds processing limits; input is unchanged.";return false;}
+            return true;
+        }
+        public bool BeginProcessing(int equipmentId)
+        {
+            string reason;if(!CanBeginProcessing(equipmentId,out reason))return Fail(reason);
+            var equipment=FindEquipment(equipmentId);var held=Carried;var recipe=Rules.Recipe(held.kind);
+            var definition=Rules.Equipment(equipment.kind);int batches=held.quantity/recipe.inputQuantity;
+            long strokes=(long)recipe.strokes*batches;
+            double duration=(double)recipe.seconds*batches*definition.processingSeconds/Rules.baseMachineSeconds;
             bool powered=equipment.kind==EquipmentKind.Tier1Scrapper;
             bool supplied=powered && HasPower!=null && HasPower(equipmentId);
             var job=new ProcessingJob{recipeId=recipe.id,input=held.kind,inputQuantity=held.quantity,requiredStrokes=powered?0:(int)strokes,
@@ -196,24 +211,57 @@ namespace Scrapshift.Compact
             LastNotice=powered?"Loaded "+recipe.name+". "+(supplied?"Processing with generator power.":"Connect sufficient generator power to begin."):
                 "Loaded "+recipe.name+". Complete "+job.requiredStrokes+" manual tool strokes.";return true;
         }
+        public static bool IsComponentProcessor(EquipmentKind kind)
+        {return kind==EquipmentKind.Workbench || kind==EquipmentKind.Tier1Scrapper || kind==EquipmentKind.Tier2Scrapper;}
         public static bool HasBuffer(EquipmentKind kind)
-        {return kind==EquipmentKind.Storage || kind==EquipmentKind.Tier2Scrapper || kind==EquipmentKind.Splitter || kind==EquipmentKind.Merger ||
+        {return IsComponentProcessor(kind) || kind==EquipmentKind.Storage || kind==EquipmentKind.Splitter || kind==EquipmentKind.Merger ||
             kind==EquipmentKind.PrimaryScrapper || kind==EquipmentKind.ExportStation;}
+        /// <summary>Input recipe filters apply before either a carried or belt item enters a machine.
+        /// Storage and junction filters still select outgoing stock; they do not discard received items.</summary>
+        public static bool SupportsBufferedInput(EquipmentState equipment,CompactRules rules,PartKind kind)
+        {
+            if(equipment==null || rules==null || !HasBuffer(equipment.kind) || equipment.kind==EquipmentKind.PrimaryScrapper)return false;
+            if(IsComponentProcessor(equipment.kind))
+                return rules.Recipe(kind)!=null && (equipment.filterKind<0 || equipment.filterKind==(int)kind);
+            if(equipment.kind==EquipmentKind.ExportStation)
+                return CompactIndustryModel.CanExportPart(rules,kind) && (equipment.filterKind<0 || equipment.filterKind==(int)kind);
+            return true;
+        }
         public int StoredUnits(int equipmentId)
-        {var e=FindEquipment(equipmentId);int count=0;if(e!=null)foreach(var item in e.contents)count+=item.quantity;return count;}
+        {return StoredUnits(FindEquipment(equipmentId));}
+        static int StoredUnits(EquipmentState equipment)
+        {int count=0;if(equipment!=null)foreach(var item in equipment.contents)count+=item.quantity;return count;}
+        public int QueueUnits(int equipmentId){return StoredUnits(equipmentId);}
+        public int ReservedOutputUnits(int equipmentId)
+        {return ReservedOutputUnits(FindEquipment(equipmentId));}
+        static int ReservedOutputUnits(EquipmentState equipment)
+        {return equipment==null?0:(equipment.job==null?0:OutputUnits(equipment.job.yields))+CompactIndustryModel.ReservedUnits(equipment);}
+        /// <summary>Processors have independent input and output bays. Other buffers retain their
+        /// shared stock/reservation limit, including primary whole-object reservations.</summary>
+        public int IntakeCapacityUnits(int equipmentId)
+        {var e=FindEquipment(equipmentId);return e==null?0:StoredUnits(e)+(IsComponentProcessor(e.kind)?0:ReservedOutputUnits(e));}
+        public bool CanDeposit(int equipmentId,out string reason)
+        {return CanDeposit(equipmentId,Carried,out reason);}
+        public bool CanDeposit(int equipmentId,CompactStack held,out string reason)
+        {
+            reason="Compatible input with reserved capacity";var e=FindEquipment(equipmentId);
+            if(e==null || !HasBuffer(e.kind)){reason="Choose a component input, storage or a conveyor junction.";return false;}
+            if(held==null){reason="Carry a component or material to deposit it.";return false;}
+            if(FindItem(held.id)!=held){reason="Choose a component or material owned in this yard.";return false;}
+            if(e.kind==EquipmentKind.PrimaryScrapper){reason="Primary intake takes intact whole scrap; portable items cannot enter its output buffer.";return false;}
+            if(e.kind==EquipmentKind.ExportStation && !SupportsBufferedInput(e,Rules,held.kind))
+                {reason="Export input requires saleable materials matching its filter. Components must be processed first.";return false;}
+            if(IsComponentProcessor(e.kind) && !SupportsBufferedInput(e,Rules,held.kind))
+                {reason="The machine input needs a supported component matching its recipe filter.";return false;}
+            if((long)IntakeCapacityUnits(equipmentId)+held.quantity>Rules.Equipment(e.kind).outputCapacity)
+                {reason=IsComponentProcessor(e.kind)?"Input queue is full. Your carried item is unchanged.":
+                    "Buffer is full; reserved outputs also occupy capacity. Your carried item is unchanged.";return false;}
+            return true;
+        }
         public bool Deposit(int equipmentId)
         {
+            string reason;if(!CanDeposit(equipmentId,out reason))return Fail(reason);
             var e=FindEquipment(equipmentId);var held=Carried;
-            if(e==null || !HasBuffer(e.kind))return Fail("Choose storage, a Tier 2 input buffer or a conveyor junction.");
-            if(held==null)return Fail("Carry a component or material to deposit it.");
-            if(e.kind==EquipmentKind.PrimaryScrapper)return Fail("Primary intake takes intact whole scrap; portable items cannot enter its output buffer.");
-            if(e.kind==EquipmentKind.ExportStation && (!CompactIndustryModel.CanExportPart(Rules,held.kind) || (e.filterKind>=0 && (int)held.kind!=e.filterKind)))
-                return Fail("Export input requires saleable materials matching its filter. Components must be processed first.");
-            if(e.kind==EquipmentKind.Tier2Scrapper && (Rules.Recipe(held.kind)==null || (e.filterKind>=0 && (int)held.kind!=e.filterKind)))
-                return Fail("The Tier 2 input needs a supported component matching its recipe filter.");
-            int reserved=(e.job==null?0:OutputUnits(e.job.yields))+CompactIndustryModel.ReservedUnits(e);
-            if((long)StoredUnits(equipmentId)+reserved+held.quantity>Rules.Equipment(e.kind).outputCapacity)
-                return Fail("Buffer is full; reserved machine outputs also occupy capacity. Your carried item is unchanged.");
             State.items.Remove(held);e.contents.Add(held);held.x=e.x;held.z=e.z;held.y=.25f;State.carriedId=0;
             LastNotice="Deposited "+Rules.Part(held.kind).name+" ×"+held.quantity+". Transfers award no sale experience.";return true;
         }
@@ -253,8 +301,8 @@ namespace Scrapshift.Compact
             var e=FindEquipment(equipmentId);
             if(e==null || !HasBuffer(e.kind))return Fail("This equipment has no material or recipe filter.");
             if(kind< -1 || (kind>=0 && !Enum.IsDefined(typeof(PartKind),kind)))return Fail("Choose a supported item filter or All.");
-            if(e.kind==EquipmentKind.Tier2Scrapper && kind>=0 && Rules.Recipe((PartKind)kind)==null)
-                return Fail("Choose a supported component recipe for Tier 2.");
+            if(IsComponentProcessor(e.kind) && kind>=0 && Rules.Recipe((PartKind)kind)==null)
+                return Fail("Choose a supported component recipe for this machine.");
             if(e.kind==EquipmentKind.ExportStation && kind>=0 && !CompactIndustryModel.CanExportPart(Rules,(PartKind)kind))
                 return Fail("Choose a saleable material filter for export, or All materials.");
             if(e.filterKind==kind)return Fail("This filter is already selected.");
@@ -264,37 +312,89 @@ namespace Scrapshift.Compact
         public bool AutoBegin(int equipmentId)
         {
             var e=FindEquipment(equipmentId);
-            if(e==null || e.kind!=EquipmentKind.Tier2Scrapper)return Fail("Automatic intake requires a Tier 2 scrapper.");
-            if(e.job!=null)return Fail("Finish and clear the reserved Tier 2 output before the next batch.");
-            if(!CanAllocate)return Fail("No safe output identities remain; buffered input is preserved.");
-            foreach(var source in e.contents)
+            string reason;
+            if(!StartBufferedRecipe(e,out reason))return Fail(reason);
+            LastNotice=reason;return true;
+        }
+        bool BufferedRecipe(EquipmentState e,CompactStack offered,out ComponentRecipe recipe,out CompactStack source,out float duration,out string reason)
+        {
+            recipe=null;source=null;duration=0;reason="Waiting for a full compatible input batch with one recovery history.";
+            if(e==null || !IsComponentProcessor(e.kind)){reason="Buffered preparation requires a component processor.";return false;}
+            if(e.job!=null){reason="Finish and clear the reserved output before the next batch.";return false;}
+            bool manual=e.kind==EquipmentKind.Workbench;
+            if(!manual && (HasPower==null || !HasPower(e.id)))
+            {reason="Connect sufficient generator power; buffered input is preserved.";return false;}
+            if(!CanAllocate){reason="No safe output identities remain; buffered input is preserved.";return false;}
+            for(int candidateIndex=0;candidateIndex<e.contents.Count+(offered==null?0:1);candidateIndex++)
             {
-                if(e.filterKind>=0 && (int)source.kind!=e.filterKind)continue;
-                var recipe=Rules.Recipe(source.kind);if(recipe==null)continue;
-                int available=0;foreach(var input in e.contents)if(input.kind==source.kind && input.xpEligible==source.xpEligible)available+=input.quantity;
-                if(available<recipe.inputQuantity)continue;
-                int removedSlots=0,left=recipe.inputQuantity;
+                var candidate=candidateIndex<e.contents.Count?e.contents[candidateIndex]:offered;
+                if(e.filterKind>=0 && (int)candidate.kind!=e.filterKind)continue;
+                var candidateRecipe=Rules.Recipe(candidate.kind);if(candidateRecipe==null)continue;
+                int available=0;foreach(var input in e.contents)if(input.kind==candidate.kind && input.xpEligible==candidate.xpEligible)available+=input.quantity;
+                if(offered!=null && offered.kind==candidate.kind && offered.xpEligible==candidate.xpEligible)available+=offered.quantity;
+                if(available<candidateRecipe.inputQuantity)continue;
+                int removedSlots=0,left=candidateRecipe.inputQuantity;
                 foreach(var input in e.contents)
-                    if(input.kind==source.kind && input.xpEligible==source.xpEligible && left>0)
+                    if(input.kind==candidate.kind && input.xpEligible==candidate.xpEligible && left>0)
                     {int consumed=Math.Min(left,input.quantity);left-=consumed;if(consumed==input.quantity)removedSlots++;}
-                int outputUnits=OutputUnits(recipe.yields),afterUnits=StoredUnits(equipmentId)-recipe.inputQuantity+outputUnits;
-                if(afterUnits>Rules.Equipment(e.kind).outputCapacity || !CanReserve(recipe.yields.Length-removedSlots) ||
-                    (long)State.nextId+outputUnits>int.MaxValue)continue;
-                double duration=(double)recipe.seconds*Rules.Equipment(e.kind).processingSeconds/Rules.baseMachineSeconds;
-                if(double.IsNaN(duration) || double.IsInfinity(duration) || duration<=0 || duration>86400)continue;
-                // Build the complete durable result before consuming one source-qualified recipe batch.
-                var job=new ProcessingJob{recipeId=recipe.id,input=source.kind,inputQuantity=recipe.inputQuantity,duration=(float)duration,
-                    remaining=(float)duration,xpEligible=source.xpEligible,yields=CloneYields(recipe.yields)};
-                var inputKind=source.kind;bool eligible=source.xpEligible;left=recipe.inputQuantity;
-                for(int i=0;i<e.contents.Count && left>0;)
-                {
-                    var input=e.contents[i];if(input.kind!=inputKind || input.xpEligible!=eligible){i++;continue;}
-                    int consumed=Math.Min(left,input.quantity);input.quantity-=consumed;left-=consumed;
-                    if(input.quantity==0)e.contents.RemoveAt(i);else i++;
-                }
-                e.job=job;LastNotice="Tier 2 reserved one "+recipe.name+" batch. Generator power advances processing.";return true;
+                if(offered!=null && offered.kind==candidate.kind && offered.xpEligible==candidate.xpEligible && left>0)
+                {int consumed=Math.Min(left,offered.quantity);if(consumed==offered.quantity)removedSlots++;}
+                int outputUnits=OutputUnits(candidateRecipe.yields);
+                if(outputUnits>Rules.Equipment(e.kind).outputCapacity)
+                {reason="Output blocked: this complete recipe batch exceeds the output bay capacity.";continue;}
+                if(!CanReserve(candidateRecipe.yields.Length-removedSlots))
+                {reason="Keep enough inventory space to reserve every batch output.";continue;}
+                if((long)State.nextId+outputUnits>int.MaxValue)
+                {reason="No safe output identities remain; buffered input is preserved.";continue;}
+                double candidateDuration=(double)candidateRecipe.seconds*Rules.Equipment(e.kind).processingSeconds/Rules.baseMachineSeconds;
+                if(double.IsNaN(candidateDuration) || double.IsInfinity(candidateDuration) || candidateDuration<=0 || candidateDuration>86400 ||
+                    (manual && (candidateRecipe.strokes<1 || candidateRecipe.strokes>10000)))
+                {reason="Correct the recipe timing or manual work limits; buffered input is preserved.";continue;}
+                recipe=candidateRecipe;source=candidate;duration=(float)candidateDuration;return true;
             }
-            return Fail("Waiting for a compatible full input batch and enough reserved output capacity.");
+            return false;
+        }
+        public bool CanAutoBegin(int equipmentId,out string reason)
+        {
+            ComponentRecipe recipe;CompactStack source;float duration;
+            return BufferedRecipe(FindEquipment(equipmentId),null,out recipe,out source,out duration,out reason);
+        }
+        /// <summary>Read-only future-batch preview for an owned loose/carried stack. It shares actual
+        /// deposit and reservation guards without moving the source or changing recovery history.</summary>
+        public bool CanAutoBegin(int equipmentId,CompactStack offered,out string reason)
+        {
+            if(!CanDeposit(equipmentId,offered,out reason))return false;
+            ComponentRecipe recipe;CompactStack source;float duration;
+            return BufferedRecipe(FindEquipment(equipmentId),offered,out recipe,out source,out duration,out reason);
+        }
+        bool StartBufferedRecipe(EquipmentState e,out string reason)
+        {
+            ComponentRecipe recipe;CompactStack source;float duration;
+            if(!BufferedRecipe(e,null,out recipe,out source,out duration,out reason))return false;
+            bool manual=e.kind==EquipmentKind.Workbench;
+            // Build the complete durable result before consuming one source-qualified recipe batch.
+            var job=new ProcessingJob{recipeId=recipe.id,input=source.kind,inputQuantity=recipe.inputQuantity,duration=duration,
+                remaining=manual?0:duration,requiredStrokes=manual?recipe.strokes:0,
+                xpEligible=source.xpEligible,yields=CloneYields(recipe.yields)};
+            var inputKind=source.kind;bool eligible=source.xpEligible;int left=recipe.inputQuantity;
+            for(int i=0;i<e.contents.Count && left>0;)
+            {
+                var input=e.contents[i];if(input.kind!=inputKind || input.xpEligible!=eligible){i++;continue;}
+                int consumed=Math.Min(left,input.quantity);input.quantity-=consumed;left-=consumed;
+                if(input.quantity==0)e.contents.RemoveAt(i);else i++;
+            }
+            e.job=job;reason=Rules.Equipment(e.kind).name+" reserved one "+recipe.name+" batch. "+
+                (manual?"Complete "+job.requiredStrokes+" manual tool strokes.":"Generator power advances processing.");return true;
+        }
+        /// <summary>Prepare after elapsed work/transport, so newly delivered input starts at full duration.
+        /// This never works a manual bench and does not replace the player's latest action notice.</summary>
+        public bool PrepareBufferedJobs()
+        {
+            bool changed=false;string reason;
+            foreach(var equipment in State.equipment)
+                if(IsComponentProcessor(equipment.kind) && equipment.job==null && equipment.contents.Count>0 &&
+                    StartBufferedRecipe(equipment,out reason))changed=true;
+            return changed;
         }
         public bool Work(int equipmentId)
         {
@@ -310,10 +410,14 @@ namespace Scrapshift.Compact
         public string ProcessingBlockReason(int equipmentId)
         {
             var e=FindEquipment(equipmentId);if(e==null)return "Equipment unavailable";
-            if(e.job==null)return "Awaiting input";
+            if(e.job==null)
+            {
+                string reason;if(IsComponentProcessor(e.kind) && e.contents.Count>0)
+                    return CanAutoBegin(equipmentId,out reason)?"Input batch ready to prepare":reason;
+                return "Awaiting input";
+            }
             if(e.job.ready)return "Collect recovered output";
-            long stored=0;foreach(var item in e.contents)stored+=item.quantity;
-            if(stored+OutputUnits(e.job.yields)>Rules.Equipment(e.kind).outputCapacity)return "Output blocked: make space; processing progress is preserved";
+            if(OutputUnits(e.job.yields)>Rules.Equipment(e.kind).outputCapacity)return "Output blocked: make space; processing progress is preserved";
             if((e.kind==EquipmentKind.Tier1Scrapper || e.kind==EquipmentKind.Tier2Scrapper) && (HasPower==null || !HasPower(equipmentId)))return "Insufficient or disconnected power; processing progress is preserved";
             return e.kind==EquipmentKind.Workbench?"Manual work required":"Processing";
         }
@@ -325,11 +429,10 @@ namespace Scrapshift.Compact
             foreach(var e in State.equipment)
             {
                 if((e.kind!=EquipmentKind.Tier1Scrapper && e.kind!=EquipmentKind.Tier2Scrapper) || e.job==null || e.job.ready || HasPower==null || !HasPower(e.id))continue;
-                long stored=0;foreach(var item in e.contents)stored+=item.quantity;
-                if(stored+OutputUnits(e.job.yields)>Rules.Equipment(e.kind).outputCapacity)continue;
+                if(OutputUnits(e.job.yields)>Rules.Equipment(e.kind).outputCapacity)continue;
                 e.job.remaining=Math.Max(0,e.job.remaining-delta);if(e.job.remaining==0){e.job.ready=true;Career.RecordProcessing(e.kind);}changed=true;
             }
-            return changed;
+            return PrepareBufferedJobs() || changed;
         }
         public bool CollectOutput(int equipmentId,int outputIndex)
         {
@@ -458,10 +561,12 @@ namespace Scrapshift.Compact
                     if(e.kind==EquipmentKind.ExportStation && !rules.Part(item.kind).isMaterial)throw new ArgumentException("Export buffers contain materials only.");
                 }
                 occupied+=CompactIndustryModel.ValidateEquipment(e,s.version,s.nextId,ids);
-                if(stored>4096 || stored+(e.job==null?0:OutputUnits(e.job.yields))+CompactIndustryModel.ReservedUnits(e)>4096)throw new ArgumentException("Stored contents and reserved output exceed the durable safety limit.");
+                int reserved=(e.job==null?0:OutputUnits(e.job.yields))+CompactIndustryModel.ReservedUnits(e);
+                if(stored>4096 || (IsComponentProcessor(e.kind)?reserved>4096:stored+reserved>4096))
+                    throw new ArgumentException("Stored contents or reserved output exceed their durable safety limit.");
                 if(e.job==null)continue;
                 var j=e.job;CompactRules.ValidateYields(j.yields,true);
-                if((e.kind!=EquipmentKind.Workbench && e.kind!=EquipmentKind.Tier1Scrapper && e.kind!=EquipmentKind.Tier2Scrapper) || j.recipeId<1 || !Enum.IsDefined(typeof(PartKind),j.input) ||
+                if(!IsComponentProcessor(e.kind) || j.recipeId<1 || !Enum.IsDefined(typeof(PartKind),j.input) ||
                     j.inputQuantity<1 || j.inputQuantity>4096 || j.requiredStrokes<0 || j.requiredStrokes>10000 || j.strokes<0 || j.strokes>j.requiredStrokes ||
                     !CompactRules.Finite(j.duration) || j.duration<=0 || j.duration>86400 || !CompactRules.Finite(j.remaining) || j.remaining<0 || j.remaining>j.duration ||
                     PositiveSlots(j.yields)==0 || OutputUnits(j.yields)>4096)

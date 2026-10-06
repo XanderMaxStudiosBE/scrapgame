@@ -9,10 +9,11 @@ namespace Scrapshift.Tests
     public static class CompactGuidanceScenarios
     {
         public static readonly string[] Names={"CompactGuideFreshInspection","CompactGuideNearestMovedBench","CompactGuidePoweredAndBusyInputs",
-            "CompactGuideTier2FilterAndCapacity","CompactGuideActiveManualAndReady","CompactGuideBlockedOutput","CompactGuideFullHandsBeforeOutput",
+            "CompactGuideTier2FilterAndCapacity","CompactGuideActiveManualAndReady","CompactGuideBlockedOutput","CompactGuideSeparateInputOutputBays","CompactGuideFullHandsBeforeOutput",
             "CompactGuideEligibleCustomerDelivery","CompactGuideImportedCashOnly","CompactGuideLockedRequestSale","CompactGuidePlasticAndSteelSources",
             "CompactGuideAffordableDelivery","CompactGuideZeroCashRenewable","CompactGuidePowerShoppingAndConnection","CompactGuidePowerRangeAndOverload",
-            "CompactGuideUnavailableAndLimits","CompactGuideFirstConveyor","CompactGuideReadOnly"};
+            "CompactGuideUnavailableAndLimits","CompactGuideFirstConveyor","CompactGuideEarlyPoweredLine","CompactGuideCustomLineGate",
+            "CompactGuideQueuedInputs","CompactGuideBufferedPreparation","CompactGuideAutomaticOutput","CompactGuideFilteredLaterOutput","CompactGuideOutputRouteBlocks","CompactGuideReadOnly"};
         static void Check(bool value,string reason){if(!value)throw new Exception(reason);}
         static bool Has(CompactGuideStep step,string value){return step.action.IndexOf(value,StringComparison.OrdinalIgnoreCase)>=0;}
         static CompactGuideServices Services()
@@ -80,7 +81,7 @@ namespace Scrapshift.Tests
                     At(Guide(model),5,5,"Nearest busy/unpowered equipment is skipped");
                     model.Rules.Equipment(EquipmentKind.Tier1Scrapper).outputCapacity=1;
                     var guide=Guide(model);At(guide,bench.x,bench.z,"Oversized outputs are not promised");
-                    Check(Has(guide,"Put down") && Has(guide,"[Right mouse]"),"Busy work needs empty hands and actual work label");
+                    Check(Has(guide,"queue") && Has(guide,"[Return]"),"Busy manual bench can queue compatible input without promising an impossible powered batch");
                     Check(unpowered.job==null,"Guidance does not load the unpowered machine");break;
                 }
                 case "CompactGuideTier2FilterAndCapacity":
@@ -104,17 +105,42 @@ namespace Scrapshift.Tests
                 {
                     var model=Empty();var machine=AddEquipment(model,EquipmentKind.Tier2Scrapper,7,7);model.HasPower=id=>true;
                     machine.contents.Add(new CompactStack{id=model.State.nextId++,kind=PartKind.Wire,quantity=1});Check(model.AutoBegin(machine.id),model.LastNotice);
-                    machine.contents.Add(new CompactStack{id=model.State.nextId++,kind=PartKind.Copper,quantity=48});
-                    var guide=Guide(model);At(guide,7,7,"Blocked Tier 2 output directs to its buffer");
-                    Check(Has(guide,"withdraw") && Has(guide,"retained"),"Explain meaningful capacity recovery without discarding progress");
+                    model.Rules.Equipment(machine.kind).outputCapacity=4;
+                    var guide=Guide(model);At(guide,7,7,"A reduced OUT bay retains an already reserved five-unit Tier 2 output");
+                    Check(Has(guide,"capacity was reduced")&&Has(guide,"Restore its capacity")&&Has(guide,"retained")&&!Has(guide,"withdraw"),"Withdrawing queued inputs cannot fix an independently undersized reserved output bay");
                     model.State.nextId=int.MaxValue;machine.job.ready=true;guide=Guide(model);
                     Check(!guide.hasDestination && Has(guide,"identifier limit"),"Identity exhaustion does not promise collectible output");break;
+                }
+                case "CompactGuideSeparateInputOutputBays":
+                {
+                    var model=Empty();Goal(model,"powered");var machine=AddEquipment(model,EquipmentKind.Tier1Scrapper,6,3);model.HasPower=id=>id==machine.id;
+                    AddItem(model,PartKind.Wire,1,0,0,true);Check(model.BeginProcessing(machine.id),model.LastNotice);
+                    machine.contents.Add(new CompactStack{id=model.State.nextId++,kind=PartKind.Wire,quantity=24,xpEligible=true});
+                    var guide=Guide(model);At(guide,6,3,"A full IN bay does not turn an independently valid running OUT batch into blocked guidance");
+                    Check(Has(guide,"is processing")&&!Has(guide,"blocked")&&model.QueueUnits(machine.id)==24&&model.ReservedOutputUnits(machine.id)==5,"Running description honors separate intake and reserved-output capacities");
+                    string before=Snapshot(model.State),notice=model.LastNotice;
+                    for(int i=0;i<50;i++)Guide(model);
+                    Check(before==Snapshot(model.State)&&notice==model.LastNotice,"Repeated full-IN guidance retains the running batch, queue, money and identifiers");
+                    float remaining=machine.job.remaining;Check(model.Tick(.5f)&&machine.job.remaining==remaining-.5f,"Actual processing agrees with guidance and advances through a full independent IN bay");
+
+                    model=Empty();var bench=model.State.equipment[0];model.Rules.Recipe(PartKind.Motor).yields=new[]{new PartAmount(PartKind.Wire,1)};
+                    AddItem(model,PartKind.Motor,1,0,0,true);Check(model.BeginProcessing(bench.id),model.LastNotice);Finish(model,bench);
+                    machine=AddEquipment(model,EquipmentKind.Tier1Scrapper,bench.x,bench.z-6);model.HasPower=id=>id==machine.id;
+                    AddItem(model,PartKind.Wire,1,0,0,true);Check(model.BeginProcessing(machine.id),model.LastNotice);
+                    machine.contents.Add(new CompactStack{id=model.State.nextId++,kind=PartKind.Wire,quantity=23,xpEligible=true});
+                    var route=new ConveyorLink{id=model.State.nextId++,fromId=bench.id,fromPort=0,toId=machine.id,toPort=0};model.State.belts.Add(route);
+                    guide=Guide(model);Check(Has(guide,"feed OUT automatically")&&!Has(guide,"IN is full"),"An incoming component can use the last IN slot while a five-unit OUT batch is reserved");
+                    before=Snapshot(model.State);notice=model.LastNotice;for(int i=0;i<50;i++)Guide(model);
+                    Check(before==Snapshot(model.State)&&notice==model.LastNotice,"Separate destination-bay guidance never changes transport or stock");
+                    var automation=new AutomationModel(model,new ConstructionModel(model.State,model.Rules));
+                    Check(automation.Tick(.1f)&&route.items.Count==1,"Real transport launches the compatible custom component output");
+                    Check(automation.Tick(10)&&route.items.Count==0&&model.QueueUnits(machine.id)==24&&model.ReservedOutputUnits(machine.id)==5,"Real intake receives into its free slot while preserving the separate paid output reservation");break;
                 }
                 case "CompactGuideFullHandsBeforeOutput":
                 {
                     var model=Empty();var bench=model.State.equipment[0];LoadWire(model,bench);Finish(model,bench);
                     AddItem(model,PartKind.Wire,1,0,0,true);var guide=Guide(model);
-                    Check(Has(guide,"Put down") && Has(guide,"collect"),"Carried component must be put down before ready output is collected");
+                    Check(Has(guide,"queue") && Has(guide,"manual collection"),"Carried component may be queued while ready output stays available for collection");
                     Check(model.Carried.kind==PartKind.Wire && bench.job.yields[0].quantity==3,"Ready and carried inputs are preserved");break;
                 }
                 case "CompactGuideEligibleCustomerDelivery":
@@ -184,7 +210,91 @@ namespace Scrapshift.Tests
                     var model=Empty();model.State.experience=model.Rules.levelThresholds[9];Goal(model,"belts");model.State.money=100;
                     var guide=Guide(model);Check(Has(guide,"Ported storage") && Has(guide,"€70"),"First route needs actual purchased storage");
                     AddEquipment(model,EquipmentKind.Storage,5,6);AddEquipment(model,EquipmentKind.Tier1Scrapper,5,2);guide=Guide(model);
-                    At(guide,5,2,"Guide to a compatible owned conveyor output");Check(Has(guide,"output port") && Has(guide,"preview") && Has(guide,"price"),"A preview accounts for length-priced route rather than promising flat cost");break;
+                    At(guide,5,2,"Guide to a compatible owned conveyor output");Check(Has(guide,"OUT port") && Has(guide,"preview") && Has(guide,"price"),"A preview accounts for length-priced route rather than promising flat cost");break;
+                }
+                case "CompactGuideEarlyPoweredLine":
+                {
+                    var model=Empty();Goal(model,"belts");model.State.money=200;
+                    var storage=AddEquipment(model,EquipmentKind.Storage,-4,-2);
+                    var machine=AddEquipment(model,EquipmentKind.Tier1Scrapper,2,3);model.HasPower=id=>id==machine.id;
+                    var guide=Guide(model);At(guide,machine.x,machine.z,"First powered line uses a powered Tier 1 output ahead of the closer manual bench");
+                    Check(model.Level==1 && Has(guide,"OUT port") && Has(guide,"storage IN") && !Has(guide,"level 10"),"Earned money buys a usable early line without a late belt gate");
+                    model.State.belts.Add(new ConveyorLink{id=model.State.nextId++,fromId=machine.id,fromPort=0,toId=storage.id,toPort=0});
+                    guide=Guide(model);At(guide,model.State.equipment[0].x,model.State.equipment[0].z,"Already connected powered output falls back to a free bench port");
+                    Check(Has(guide,"manual strokes") && Has(guide,"[Right mouse]"),"Bench ports do not promise automatic manual labor");break;
+                }
+                case "CompactGuideCustomLineGate":
+                {
+                    var model=Empty();Goal(model,"level10");model.State.money=200;
+                    model.Rules.Equipment(EquipmentKind.Storage).unlockLevel=4;model.Rules.Equipment(EquipmentKind.Conveyor).unlockLevel=3;
+                    var guide=Guide(model);Check(Has(guide,"production line at level 4") && Has(guide,"free wiring") && !Has(guide,"buy/place"),"Custom later line gates stay authoritative in the historical journal slot");
+                    model.State.experience=model.Rules.levelThresholds[3];guide=Guide(model);
+                    Check(Has(guide,"Ported storage") && Has(guide,"€70"),"Actual configured gate, rather than literal level ten, makes a purchased line available");break;
+                }
+                case "CompactGuideQueuedInputs":
+                {
+                    var model=Empty();var bench=model.State.equipment[0];LoadWire(model,bench);
+                    var machine=AddEquipment(model,EquipmentKind.Tier1Scrapper,1,2);model.HasPower=id=>id==machine.id;
+                    AddItem(model,PartKind.Wire,1,0,0,true);Check(model.BeginProcessing(machine.id),model.LastNotice);
+                    AddItem(model,PartKind.Motor,1,0,0,true);var guide=Guide(model);
+                    At(guide,1,2,"Busy powered machine can receive another component into its real IN buffer");
+                    Check(Has(guide,"queue in its IN buffer") && Has(guide,"[Return]"),"Queued guidance uses immediate supported interaction and actual rebound binding");
+                    machine.filterKind=(int)PartKind.Wire;guide=Guide(model);At(guide,bench.x,bench.z,"Recipe filtering prevents a misleading motor intake prompt");
+                    Check(machine.contents.Count==0 && model.Carried.kind==PartKind.Motor,"Guidance never queues or filters stock itself");break;
+                }
+                case "CompactGuideBufferedPreparation":
+                {
+                    var model=Empty();var bench=model.State.equipment[0];
+                    bench.contents.Add(new CompactStack{id=model.State.nextId++,kind=PartKind.Wire,quantity=1,xpEligible=true});
+                    var guide=Guide(model);At(guide,bench.x,bench.z,"Buffered manual recipe is explained before another acquisition");
+                    Check(Has(guide,"prepare the next recipe") && Has(guide,"[Right mouse]") && bench.job==null,"Read-only prompt prepares nothing and preserves manual work");
+                    bench.contents.Clear();var machine=AddEquipment(model,EquipmentKind.Tier1Scrapper,6,3);
+                    machine.contents.Add(new CompactStack{id=model.State.nextId++,kind=PartKind.Motor,quantity=1,xpEligible=true});
+                    guide=Guide(model);At(guide,6,3,"Unpowered queued machine points to its actual location");
+                    Check(Has(guide,"Queued components are retained") && Has(guide,"Power network"),"Restore power before new purchases or replacement inputs");
+                    model.HasPower=id=>id==machine.id;model.Rules.Equipment(machine.kind).outputCapacity=4;
+                    guide=Guide(model);Check(Has(guide,"Output blocked") && Has(guide,"Queued stock is retained"),"Impossible queued output directs to safe capacity recovery");break;
+                }
+                case "CompactGuideAutomaticOutput":
+                {
+                    var model=Empty();var bench=model.State.equipment[0];LoadWire(model,bench);Finish(model,bench);
+                    var storage=AddEquipment(model,EquipmentKind.Storage,3,4);
+                    model.State.belts.Add(new ConveyorLink{id=model.State.nextId++,fromId=bench.id,fromPort=0,toId=storage.id,toPort=0});
+                    var guide=Guide(model);At(guide,bench.x,bench.z,"Finished connected batch describes its real automatic output route");
+                    Check(Has(guide,"feed OUT automatically") && Has(guide,"IN") && Has(guide,"[Return]"),"Connected output is not presented as requiring manual carrying");
+                    string before=Snapshot(model.State),notice=model.LastNotice;
+                    for(int i=0;i<50;i++)Guide(model);
+                    Check(before==Snapshot(model.State)&&notice==model.LastNotice,"Automatic flow guidance neither transfers stock nor changes source notice");break;
+                }
+                case "CompactGuideOutputRouteBlocks":
+                {
+                    var model=Empty();var bench=model.State.equipment[0];LoadWire(model,bench);Finish(model,bench);
+                    var receiver=AddEquipment(model,EquipmentKind.Tier1Scrapper,3,4);
+                    var route=new ConveyorLink{id=model.State.nextId++,fromId=bench.id,fromPort=0,toId=receiver.id,toPort=0};model.State.belts.Add(route);
+                    var guide=Guide(model);At(guide,3,4,"Material-to-component route explains the destination's actual incompatible intake");
+                    Check(Has(guide,"cannot accept Copper") && Has(guide,"storage") && Has(guide,"retained"),"Material output cannot be sent to another component processor as though it were a supported recipe");
+                    receiver.kind=EquipmentKind.Storage;receiver.contents.Add(new CompactStack{id=model.State.nextId++,kind=PartKind.Steel,quantity=model.Rules.Equipment(EquipmentKind.Storage).outputCapacity});
+                    guide=Guide(model);Check(Has(guide,"Receiving IN is full") && Has(guide,"wait safely") && Has(guide,"withdraw"),"Downstream fullness gives actionable backpressure guidance without loss");
+                    receiver.contents.Clear();receiver.kind=EquipmentKind.ExportStation;receiver.filterKind=(int)PartKind.Steel;
+                    guide=Guide(model);Check(Has(guide,"cannot accept Copper") && Has(guide,"item or recipe filter"),"Material export filter conflicts are visible and preserve outputs");
+                    receiver.filterKind=(int)PartKind.Copper;route.items.Add(new ConveyorItem{id=model.State.nextId++,kind=PartKind.Insulation,progress=.9f});
+                    guide=Guide(model);Check(Has(guide,"cannot accept Insulation"),"A blocked leading transit item is identified ahead of newly ready compatible output");break;
+                }
+                case "CompactGuideFilteredLaterOutput":
+                {
+                    var model=Empty();var bench=model.State.equipment[0];
+                    AddItem(model,PartKind.Motor,1,0,0,true);Check(model.BeginProcessing(bench.id),model.LastNotice);Finish(model,bench);
+                    var receiver=AddEquipment(model,EquipmentKind.ExportStation,bench.x,bench.z-6);receiver.yaw=180;receiver.filterKind=(int)PartKind.Steel;
+                    var route=new ConveyorLink{id=model.State.nextId++,fromId=bench.id,fromPort=0,toId=receiver.id,toPort=0};model.State.belts.Add(route);
+                    Check(bench.job.yields[0].kind==PartKind.Copper&&bench.job.yields[0].quantity==4&&bench.job.yields[1].kind==PartKind.Steel,"Motor output orders copper before steel for a real filtered selection case");
+                    var guide=Guide(model);At(guide,bench.x,bench.z,"A filtered receiver can accept a later material output from the same ready job");
+                    Check(Has(guide,"feed OUT automatically")&&!Has(guide,"cannot accept"),"Copper remaining ahead of steel does not falsely block the usable steel route");
+                    string before=Snapshot(model.State),notice=model.LastNotice;
+                    for(int i=0;i<50;i++)Guide(model);
+                    Check(before==Snapshot(model.State)&&notice==model.LastNotice,"Filtered output guidance never launches a transit item or consumes either yield");
+                    var automation=new AutomationModel(model,new ConstructionModel(model.State,model.Rules));
+                    Check(automation.Tick(.1f)&&route.items.Count==1&&route.items[0].kind==PartKind.Steel,"Actual transport agrees with guidance and launches supported steel past copper");
+                    Check(bench.job.yields[0].quantity==4&&bench.job.yields[1].quantity==5,"One launched steel unit leaves all incompatible copper and the remaining steel reserved");break;
                 }
                 case "CompactGuideReadOnly":
                 {

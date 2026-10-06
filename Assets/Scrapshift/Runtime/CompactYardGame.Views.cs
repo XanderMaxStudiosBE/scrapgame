@@ -144,6 +144,7 @@ namespace Scrapshift.Compact
                     !view.equipmentStamp.Matches(equipment,Model.Rules.Equipment(equipment.kind),power!=null&&power.powered,power!=null&&power.overloaded))
                 {SyncViews();return;}
             }
+            RefreshDressingPlayerClearance();
         }
         static void AttachTarget(GameObject root,CompactTargetKind kind,int id)
         {var t=root.AddComponent<CompactInteractionTarget>();t.kind=kind;t.id=id;}
@@ -308,8 +309,15 @@ namespace Scrapshift.Compact
                 case CompactTargetKind.Equipment:
                     var gear=Model.FindEquipment(target.id);if(gear==null)return "";
                     if(gear.kind==EquipmentKind.PrimaryScrapper)return interact+"Whole-object intake / "+Industry.Status(gear.id);
+                    if(gear.kind==EquipmentKind.Generator)return interact+"Generator / power connections";
                     if(gear.kind==EquipmentKind.ExportStation&&Model.State.carriedId==0)return interact+"Material dispatch / "+Industry.Status(gear.id);
-                    if(Model.State.carriedId!=0)return interact+(gear.kind==EquipmentKind.Storage||gear.kind==EquipmentKind.Tier2Scrapper||gear.kind==EquipmentKind.Splitter||gear.kind==EquipmentKind.Merger||gear.kind==EquipmentKind.ExportStation?"Deposit into ":"Load ")+Model.Rules.Equipment(gear.kind).name;
+                    if(Model.State.carriedId!=0)
+                    {
+                        if(aimedPort!=null&&aimedPort.output)return "OUT mouth / take your bundle to the amber IN mouth";
+                        if(Model.CanBeginProcessing(gear.id,out _)&&gear.contents.Count==0)return interact+"Load IN / "+Model.Rules.Equipment(gear.kind).name;
+                        if(Model.CanDeposit(gear.id,out string inputReason))return interact+"Queue IN / "+Model.Rules.Equipment(gear.kind).name;
+                        return inputReason;
+                    }
                     if(gear.job==null)return interact+Model.Rules.Equipment(gear.kind).name+" / manage";
                     if(gear.job.ready)return interact+"Collect output / manage";
                     if(gear.kind==EquipmentKind.Workbench)return work+"Process component / "+gear.job.strokes+" of "+gear.job.requiredStrokes;

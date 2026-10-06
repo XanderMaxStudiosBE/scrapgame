@@ -56,7 +56,7 @@ namespace Scrapshift.Compact
                     YardSignText.Plate(root.transform,"WEIGH & DISPATCH",new Vector3(0,1.17f,-definition.depth*.5f-.045f),Mathf.Min(1.55f,definition.width*.72f),.23f);
                 var view=root.AddComponent<CompactIndustryVisuals>();view.Prepare(kind,rules);
             }
-            CompactAutomationVisuals.BuildPorts(kind,root.transform,rules);
+            CompactAutomationVisuals.BuildPorts(kind,root.transform,rules,colliders);
             return root;
         }
 

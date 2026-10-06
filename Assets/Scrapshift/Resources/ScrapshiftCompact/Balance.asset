@@ -27,7 +27,9 @@ MonoBehaviour:
     beltMaxLength: 12
     beltCapacity: 8
     maxBelts: 64
-    levelThresholds: 000000001e00000050000000a000000018010000b80100008a020000a20300000a050000d606000010090000c20b0000
+    progressionRulesVersion: 1
+    routingRulesVersion: 1
+    levelThresholds: 00000000140000002d000000500000007d000000b9000000090100006d010000ea010000800200003403000010040000
     saleBonusPercents: 000000000c0000001000000014000000180000001c0000002000000024000000280000002d0000003200000037000000
     parts:
     - kind: 0
@@ -231,7 +233,7 @@ MonoBehaviour:
     - kind: 3
       name: "Ported storage"
       price: 70
-      unlockLevel: 10
+      unlockLevel: 1
       available: 1
       width: 3
       depth: 2.5
@@ -242,7 +244,7 @@ MonoBehaviour:
     - kind: 4
       name: "Tier 2 scrapper"
       price: 160
-      unlockLevel: 10
+      unlockLevel: 5
       available: 1
       width: 3.2
       depth: 2.5
@@ -253,7 +255,7 @@ MonoBehaviour:
     - kind: 5
       name: "Conveyor"
       price: 12
-      unlockLevel: 10
+      unlockLevel: 1
       available: 1
       width: 1
       depth: 2
@@ -264,7 +266,7 @@ MonoBehaviour:
     - kind: 6
       name: "Splitter"
       price: 30
-      unlockLevel: 10
+      unlockLevel: 3
       available: 1
       width: 1.5
       depth: 1.5
@@ -275,7 +277,7 @@ MonoBehaviour:
     - kind: 7
       name: "Merger"
       price: 30
-      unlockLevel: 10
+      unlockLevel: 3
       available: 1
       width: 1.5
       depth: 1.5

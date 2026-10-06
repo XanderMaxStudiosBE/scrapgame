@@ -87,7 +87,7 @@ namespace Scrapshift.Compact
         public bool RefreshProgress()
         {
             int before=Stats.completedGoals;
-            if(model.Level>=10)Mark(LevelTen);
+            if(model.Level>=RoutingUnlockLevel)Mark(LevelTen);
             if(model.State.belts!=null && model.State.belts.Count>0)Mark(Belts);
             foreach(var equipment in model.State.equipment)
                 if(equipment.kind==EquipmentKind.Tier1Scrapper && model.HasPower!=null && model.HasPower(equipment.id))
@@ -95,6 +95,8 @@ namespace Scrapshift.Compact
             if(CurrentContract==null && Stats.contractsCompleted>=model.Rules.contracts.Length)Mark(Contracts);
             return before!=Stats.completedGoals;
         }
+        public int RoutingUnlockLevel
+        {get{return Math.Max(model.Rules.Equipment(EquipmentKind.Storage).unlockLevel,model.Rules.Equipment(EquipmentKind.Conveyor).unlockLevel);}}
         public CompactCareerGoal[] Goals
         {
             get{return new[]{
@@ -104,7 +106,8 @@ namespace Scrapshift.Compact
                 Goal("sell","Make your first recovery sale","Sell recovered materials at the office sales counter.",Sell),
                 Goal("power","Put the generator to work","Place a generator and connect sufficient power to a Tier 1 scrapper.",Power),
                 Goal("powered","Let the machine help","Finish one powered Tier 1 component batch.",Powered),
-                Goal("level10","Build your reputation","Reach level 10 through valid recovered-material sales.",LevelTen),
+                // Retain the historical key/bit so existing journals keep their earned progress.
+                Goal("level10","Ready for a production line",RoutingUnlockLevel<=1?"Basic storage and belts are available from the start. Purchase your own equipment.":"Reach level "+RoutingUnlockLevel+" to purchase storage and belts.",LevelTen),
                 Goal("belts","Lay out your first route","Connect compatible equipment ports with a conveyor.",Belts),
                 Goal("contracts","Supply the neighbourhood","Finish the customer request book. No deadlines or fees.",Contracts)
             };}

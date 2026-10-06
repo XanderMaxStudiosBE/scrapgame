@@ -38,34 +38,41 @@ namespace Scrapshift.Compact
             bool hit=Physics.Raycast(ray,out RaycastHit result,12,~(1<<2),QueryTriggerInteraction.Ignore);
             var owner=hit?result.collider.GetComponentInParent<CompactInteractionTarget>():null;
             var gear=owner!=null&&owner.kind==CompactTargetKind.Equipment?Model.FindEquipment(owner.id):null;
-            int port=gear==null?-1:NearestPort(gear,beltStage==1,result.point);
+            var mouth=hit?result.collider.GetComponentInParent<CompactConveyorPortTarget>():null;
+            bool selectingOutput=beltStage==1;
+            int port=gear==null?-1:mouth!=null?
+                (mouth.output==selectingOutput&&mouth.index>=0&&mouth.index<AutomationModel.PortCount(gear.kind,selectingOutput)?mouth.index:-1):
+                NearestPort(gear,selectingOutput,result.point);
             previewClear=false;
-            buildReason=beltStage==1?"Aim at a machine or storage output port.":"Aim at a different machine or storage input port.";
+            buildReason=beltStage==1?"Aim at a green OUT mouth to start.":"Aim at an amber IN mouth on another machine.";
+            if(mouth!=null&&mouth.output!=selectingOutput)buildReason=selectingOutput?"That is an IN mouth. Start at a green OUT mouth.":"That is an OUT mouth. Finish at an amber IN mouth.";
             if(beltStage==1)
             {
-                DestroyBeltPreview();
-                if(port<0)return;
+                if(port<0){DestroyBeltPreview();return;}
+                var socket=AutomationModel.Port(gear,Model.Rules,true,port);
+                PreviewBelt(new[]{new Vector3(socket.x,.72f,socket.z),new Vector3(socket.x,.99f,socket.z)},true);
                 buildReason=Model.Rules.Equipment(gear.kind).name+" #"+gear.id+" / output "+(port+1)+" / select start";
                 if(controls.Pressed(ControlAction.Interact))
                 {beltFrom=gear.id;beltFromPort=port;beltStage=2;controls.SuppressUntilRelease();hudDirty=true;}
                 return;
             }
-            if(port<0){if(beltPreview!=null)beltPreview.gameObject.SetActive(false);return;}
+            if(port<0)
+            {
+                var source=Model.FindEquipment(beltFrom);
+                if(source==null){CancelBuild();return;}
+                var socket=AutomationModel.Port(source,Model.Rules,true,beltFromPort);
+                var end=hit?result.point:ray.GetPoint(6);
+                PreviewBelt(new[]{new Vector3(socket.x,.75f,socket.z),new Vector3(end.x,.75f,end.z)},false);
+                return;
+            }
             var link=new ConveyorLink{fromId=beltFrom,fromPort=beltFromPort,toId=gear.id,toPort=port,bendXFirst=beltXFirst};
             previewClear=Automation.CanConnect(beltFrom,beltFromPort,gear.id,port,beltXFirst,out string reason);
             var path=AutomationModel.Path(link,Model.State,Model.Rules);
             if(previewClear&&!BeltAvoidsWorld(path,beltFrom,gear.id)){previewClear=false;reason="Conveyor path is blocked by fixed scenery or loose scrap.";}
             int cost=(int)Math.Ceiling(AutomationModel.Length(path)/2)*Model.Rules.Equipment(EquipmentKind.Conveyor).price;
-            buildReason=reason+" / €"+cost+" / "+AutomationModel.Length(path).ToString("0.0")+"m";
-            if(beltPreview==null)
-            {
-                beltPreview=new GameObject("Conveyor port preview").AddComponent<LineRenderer>();beltPreview.transform.SetParent(transform,false);
-                beltPreview.useWorldSpace=false;beltPreview.widthMultiplier=.14f;beltPreview.shadowCastingMode=ShadowCastingMode.Off;beltPreview.receiveShadows=false;
-            }
-            beltPreview.gameObject.SetActive(true);
-            beltPreview.sharedMaterial=YardGeometry.PaletteMaterial(previewClear?new Color(.2f,.7f,.65f):YardGeometry.Rust);
+            buildReason=previewClear?"OUT → IN / €"+cost+" / "+AutomationModel.Length(path).ToString("0.0")+"m":reason;
             var points=new Vector3[path.Length];for(int i=0;i<points.Length;i++)points[i]=new Vector3(path[i].x,.75f,path[i].z);
-            beltPreview.positionCount=points.Length;beltPreview.SetPositions(points);
+            PreviewBelt(points,previewClear);
             if(controls.Pressed(ControlAction.Interact))
             {
                 if(!previewClear){Tell(buildReason);return;}
@@ -73,16 +80,20 @@ namespace Scrapshift.Compact
                 {beltStage=0;DestroyBeltPreview();controls.SuppressUntilRelease();hudDirty=true;}
             }
         }
+        void PreviewBelt(Vector3[] points,bool valid)
+        {
+            if(beltPreview==null)
+            {
+                beltPreview=new GameObject("Conveyor port preview").AddComponent<LineRenderer>();beltPreview.transform.SetParent(transform,false);
+                beltPreview.useWorldSpace=false;beltPreview.widthMultiplier=.14f;beltPreview.shadowCastingMode=ShadowCastingMode.Off;beltPreview.receiveShadows=false;
+            }
+            beltPreview.gameObject.SetActive(true);
+            beltPreview.sharedMaterial=YardGeometry.PaletteMaterial(valid?new Color(.2f,.7f,.65f):YardGeometry.Rust);
+            beltPreview.positionCount=points.Length;beltPreview.SetPositions(points);
+        }
         int NearestPort(EquipmentState gear,bool output,Vector3 aim)
         {
-            int best=-1;float distance=float.MaxValue;
-            for(int i=0;i<AutomationModel.PortCount(gear.kind,output);i++)
-            {
-                var p=AutomationModel.Port(gear,Model.Rules,output,i);
-                float d=(new Vector3(p.x,.7f,p.z)-aim).sqrMagnitude;
-                if(d<distance){distance=d;best=i;}
-            }
-            return best;
+            return CompactPortSelection.Find(gear,Model.Rules,output,aim.x,aim.y,aim.z);
         }
         bool BeltAvoidsWorld(CompactPortPoint[] path,int from,int to)
         {
@@ -112,9 +123,15 @@ namespace Scrapshift.Compact
         {
             int inputs=AutomationModel.PortCount(gear.kind,false),outputs=AutomationModel.PortCount(gear.kind,true);
             if(inputs==0&&outputs==0)return;
-            if(gear.kind!=EquipmentKind.Tier1Scrapper)
+            if(ScrappingModel.HasBuffer(gear.kind))
             {
-                Text("BUFFER / "+Model.StoredUnits(gear.id)+" / "+Model.Rules.Equipment(gear.kind).outputCapacity+" units. Transfers grant no XP.");
+                int capacity=Model.Rules.Equipment(gear.kind).outputCapacity;
+                if(ScrappingModel.IsComponentProcessor(gear.kind))
+                {
+                    Text("IN QUEUE / "+Model.StoredUnits(gear.id)+" / "+capacity+" units  •  OUT / "+Model.OutputQuantity(gear.id)+" / "+capacity+" units "+(gear.job==null?"(empty)":gear.job.ready?"(ready)":"(reserved)"));
+                    Text(gear.kind==EquipmentKind.Workbench?"Belts deliver components and collect finished materials. Use your manual tools to complete each batch.":"Powered batches take components from IN. Finished materials leave OUT automatically when a belt can accept them.");
+                }
+                else Text("BUFFER / "+Model.StoredUnits(gear.id)+" / "+capacity+" units. Transfers grant no XP.");
                 if(gear.kind!=EquipmentKind.PrimaryScrapper&&Button("Deposit carried bundle",Model.Carried!=null))Act(()=>Model.Deposit(gear.id));
                 // Present matching units as a single carry bundle, keeping recovered-sale eligibility separate.
                 var groups=new HashSet<int>();
@@ -125,11 +142,11 @@ namespace Scrapshift.Compact
                     int id=stack.id;
                     if(Button("Withdraw "+Model.Rules.Part(stack.kind).name+" ×"+quantity+(stack.xpEligible?" / sale XP":" / no sale XP"),Model.Carried==null))Act(()=>Model.WithdrawBatch(gear.id,id));
                 }
-                Text((gear.kind==EquipmentKind.Tier2Scrapper?"PROCESS RECIPE":gear.kind==EquipmentKind.ExportStation?"DISPATCH FILTER":"OUTPUT FILTER")+" / "+(gear.filterKind<0?"All supported items":Model.Rules.Part((PartKind)gear.filterKind).name));
+                Text((ScrappingModel.IsComponentProcessor(gear.kind)?"INPUT RECIPE":gear.kind==EquipmentKind.ExportStation?"DISPATCH FILTER":"OUTPUT FILTER")+" / "+(gear.filterKind<0?"All supported items":Model.Rules.Part((PartKind)gear.filterKind).name));
                 if(Button("Allow all supported items"))Act(()=>Model.SetFilter(gear.id,-1));
                 foreach(var part in Model.Rules.parts)
                 {
-                    if(gear.kind==EquipmentKind.Tier2Scrapper&&Model.Rules.Recipe(part.kind)==null)continue;
+                    if(ScrappingModel.IsComponentProcessor(gear.kind)&&Model.Rules.Recipe(part.kind)==null)continue;
                     if(gear.kind==EquipmentKind.ExportStation&&!CompactIndustryModel.CanExportPart(Model.Rules,part.kind))continue;
                     int kind=(int)part.kind;
                     if(Button("Only "+part.name,gear.filterKind!=kind))Act(()=>Model.SetFilter(gear.id,kind));

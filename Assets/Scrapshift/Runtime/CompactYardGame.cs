@@ -34,6 +34,7 @@ namespace Scrapshift.Compact
         CompactBuildMode build;
         readonly YardInterfaceTheme theme=new YardInterfaceTheme();
         CompactInteractionTarget target;
+        CompactConveyorPortTarget aimedPort;
         string message="",saveNotice="",hudTitle="",hudHint="",hudHeld="",hudObjective="",hudDirection="",buildReason="";
         string hudProgressLabel="",saveStatus="Not saved yet";
         float hudProgress=-1,lastSaveAt=-1,nextCareer;
@@ -74,6 +75,7 @@ namespace Scrapshift.Compact
         {
             var s=Model.State;
             player.Restore(new YardState{playerX=s.playerX,playerY=s.playerY,playerZ=s.playerZ,yaw=s.yaw,pitch=s.pitch});
+            RequireDressingSpawnClearance();
         }
         void Pause(bool value)
         {
@@ -162,9 +164,13 @@ namespace Scrapshift.Compact
         void UpdateTarget()
         {
             CompactInteractionTarget next=null;
+            CompactConveyorPortTarget nextPort=null;
             if(Physics.Raycast(player.view.ViewportPointToRay(new Vector3(.5f,.5f)),out RaycastHit hit,3.2f,~(1<<2),QueryTriggerInteraction.Ignore))
+            {
                 next=hit.collider.GetComponentInParent<CompactInteractionTarget>();
-            if(next!=target){target=next;hudDirty=true;}
+                nextPort=hit.collider.GetComponentInParent<CompactConveyorPortTarget>();
+            }
+            if(next!=target||nextPort!=aimedPort){target=next;aimedPort=nextPort;hudDirty=true;}
         }
         void Interact()
         {
@@ -182,11 +188,14 @@ namespace Scrapshift.Compact
                     Show(Page.LargeScrap,id);break;
                 case CompactTargetKind.Equipment:
                     var inspected=Model.FindEquipment(id);
-                    if(inspected!=null&&inspected.kind==EquipmentKind.PrimaryScrapper){Show(Page.Equipment,id);break;}
+                    if(inspected!=null&&(inspected.kind==EquipmentKind.PrimaryScrapper||inspected.kind==EquipmentKind.Generator)){Show(Page.Equipment,id);break;}
                     if(Model.State.carriedId!=0)
                     {
+                        if(aimedPort!=null&&aimedPort.output){Tell("That is the OUT mouth. Take components to the amber IN mouth.");break;}
                         var equipment=Model.FindEquipment(id);
-                        bool buffer=equipment!=null&&(equipment.kind==EquipmentKind.Storage||equipment.kind==EquipmentKind.Tier2Scrapper||equipment.kind==EquipmentKind.Splitter||equipment.kind==EquipmentKind.Merger||equipment.kind==EquipmentKind.ExportStation);
+                        bool direct=equipment!=null&&(equipment.kind==EquipmentKind.Workbench||equipment.kind==EquipmentKind.Tier1Scrapper)&&equipment.job==null&&equipment.contents.Count==0;
+                        if(direct&&!Model.CanBeginProcessing(id,out _)&&Model.CanDeposit(id,out _))direct=false;
+                        bool buffer=equipment!=null&&ScrappingModel.HasBuffer(equipment.kind)&&!direct;
                         Act(()=>buffer?Model.Deposit(id):Model.BeginProcessing(id));
                     }
                     else Show(Page.Equipment,id);

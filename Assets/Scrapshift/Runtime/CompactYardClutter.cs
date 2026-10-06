@@ -22,6 +22,11 @@ namespace Scrapshift.Compact
             }
         }
 
+        // Source ceilings include optional private piston geometry and missing-model fallbacks.
+        // These are mesh budgets, not measured frame-rate claims.
+        public const int MaximumStockTriangles=82000,MaximumStockRenderers=460;
+        public const int StockPatchCount=53,SolidStockVolumes=37;
+
         public static Patch[] Describe()
         {
             var patches=new List<Patch>();
@@ -33,7 +38,7 @@ namespace Scrapshift.Compact
                 patches.Add(new Patch("West sorted salvage "+i,"West salvage",new Vector3(-27,0,-5+i*15),new Vector3(3.4f,2,3.4f),i+1,i+4));
                 patches.Add(new Patch("East sorted salvage "+i,"East salvage",new Vector3(27,0,-5+i*15),new Vector3(3.4f,2,3.4f),i+2,i+8));
             }
-            // Optional stock leaves the central 34 x 24m walking view open, and hides near any saved construction.
+            // Keep perimeter rows, then bring stock toward the first working routes.
             int[] northKinds={7,0,1,9,3};
             for(int i=0;i<5;i++)
                 patches.Add(new Patch("North working stock "+i,"North working stock",new Vector3(-15+i*7.5f,0,15.8f),new Vector3(4.6f,2.6f,3.2f),northKinds[i],i,0,1.3f));
@@ -45,10 +50,39 @@ namespace Scrapshift.Compact
             }
             patches.Add(new Patch("Office repair spares","Service pocket offcuts",new Vector3(-22.15f,0,-14),new Vector3(1,1.1f,2.4f),5,0));
             patches.Add(new Patch("Receiving offcut drums","Service pocket offcuts",new Vector3(22.2f,0,-8.5f),new Vector3(1,1.1f,2.4f),5,1));
+            // Small replaceable modules frame the office and bench at player height. None are
+            // gameplay equipment; each releases its own footprint when a saved build overlaps it.
+            Add(patches,"Office forecourt parts shelf","Office working pockets",-11.1f,-13,2.8f,2.2f,1.15f,10,0,180);
+            Add(patches,"Office maintenance tool rack","Office working pockets",-11.1f,-10.15f,2.5f,2.5f,1,12,0,180);
+            Add(patches,"Office tyre stock","Office working pockets",-11.2f,-7.4f,3.5f,1.2f,2.3f,0,12);
+            Add(patches,"Office side appliance stock","Office working pockets",-21.9f,-5.8f,2.4f,2.2f,3.2f,9,12,90);
+            Add(patches,"Office mixed metal skip","Office working pockets",-14,-4.8f,3,1.7f,1.9f,11,0,180);
+            Add(patches,"Bench component shelf","Manual working pockets",-8.5f,-3.8f,2.8f,2.2f,1.15f,10,1,180);
+            Add(patches,"Bench tool wall","Manual working pockets",-5,-6.4f,2.5f,2.5f,1,12,1,180);
+            Add(patches,"Bench spare tyres","Manual working pockets",-9.2f,-6.4f,3.5f,1.2f,2.3f,0,13);
+            Add(patches,"West stripped shell lot","West working pockets",-14.1f,1.5f,4.4f,2,3,8,13,0,1.2f);
+            Add(patches,"West cooling parts","West working pockets",-12.5f,5,1.6f,1.4f,1,13,0,180);
+            Add(patches,"West recovered cable reel","West working pockets",-16,5.3f,2.1f,1.3f,1.6f,14,0);
+            Add(patches,"West oil and cable stock","West working pockets",-17,8,2.8f,1.6f,2.2f,3,14);
+            Add(patches,"North stock shelf west","North working pockets",-13,11.6f,2.8f,2.2f,1.15f,10,2,180);
+            Add(patches,"North metal skip west","North working pockets",-6.5f,12,3,1.7f,1.9f,11,1,180);
+            Add(patches,"North stock shelf east","North working pockets",3,11.7f,2.8f,2.2f,1.15f,10,3,180);
+            Add(patches,"North metal skip east","North working pockets",10.5f,12.1f,3,1.7f,1.9f,11,2,180);
+            Add(patches,"East stripped shell lot","East working pockets",15,3.6f,4.4f,2,3,8,14,0,1.2f);
+            Add(patches,"East appliance sorting lot","East working pockets",14.6f,8.7f,4,2.2f,2.6f,9,14,180);
+            Add(patches,"East mixed metal skip","East working pockets",16,-1.2f,3,1.7f,1.9f,11,3,180);
+            Add(patches,"East cooling parts","East working pockets",17.5f,7,1.6f,1.4f,1,13,1,180);
+            Add(patches,"Receiving component shelf","Receiving working pockets",11.4f,-7.1f,2.8f,2.2f,1.15f,10,4,180);
+            Add(patches,"Receiving metal skip","Receiving working pockets",10.8f,-11,3,1.7f,1.9f,11,4,180);
+            Add(patches,"Receiving tyre stock","Receiving working pockets",16,-16.1f,3.5f,1.2f,2.3f,0,15);
+            Add(patches,"Receiving spare cable reel","Receiving working pockets",11.9f,-15,2.1f,1.3f,1.6f,14,1);
             for(int i=0;i<8;i++)
                 patches.Add(new Patch("Scattered ground offcuts "+i,"Flat ground offcuts",new Vector3(-15+(i%4)*10,0,-4+(i/4)*12),new Vector3(1.1f,.04f,.7f),6,i));
             return patches.ToArray();
         }
+
+        static void Add(List<Patch> patches,string name,string sector,float x,float z,float width,float height,float depth,int kind,int variation,float yaw=0,float scale=1)
+        {patches.Add(new Patch(name,sector,new Vector3(x,0,z),new Vector3(width,height,depth),kind,variation,yaw,scale));}
 
         public static bool IsBlocked(Patch patch,IReadOnlyList<Bounds> occupied)
         {
@@ -92,7 +126,13 @@ namespace Scrapshift.Compact
                 }
                 visibility.patches.Add(patch);visibility.clusters.Add(cluster);
                 foreach(var renderer in cluster.GetComponentsInChildren<MeshRenderer>())
-                {renderer.shadowCastingMode=ShadowCastingMode.Off;renderer.receiveShadows=renderer.name!="Stock contact grounding";}
+                {
+                    // New combined foreground fixtures cast one solid sun shadow each; tiny
+                    // separate offcuts/tyres and the bounded contact ellipse stay cheap.
+                    bool fixture=renderer.name=="CompactPartsShelf" || renderer.name=="CompactMixedSkip" || renderer.name=="CompactWorkshopRack";
+                    renderer.shadowCastingMode=fixture?ShadowCastingMode.On:ShadowCastingMode.Off;
+                    renderer.receiveShadows=renderer.name!="Stock contact grounding";
+                }
             }
             if(combine)
                 foreach(var sector in sectors.Values)
@@ -106,15 +146,33 @@ namespace Scrapshift.Compact
         }
 
         public static void RefreshVisibility(GameObject root,IReadOnlyList<Bounds> occupied)
+        {RefreshVisibility(root,occupied,null,.45f);}
+
+        public static bool RefreshVisibility(GameObject root,IReadOnlyList<Bounds> occupied,Vector3? player,float playerRadius)
         {
-            if(root==null)return;
-            var visibility=root.GetComponent<CompactClutterVisibility>();if(visibility==null)return;
+            if(root==null)return false;
+            var visibility=root.GetComponent<CompactClutterVisibility>();if(visibility==null)return false;
+            bool waitingForPlayer=false;
             for(int i=0;i<visibility.clusters.Count;i++)
             {
                 var cluster=visibility.clusters[i];if(cluster==null)continue;
                 bool visible=!IsBlocked(visibility.patches[i],occupied);
+                // Already visible stock remains present when approached. Only a currently
+                // hidden module can be held back by the actual capsule, so removing saved
+                // equipment/items cannot enable its collision through a standing player.
+                if(visible && !cluster.activeSelf && player.HasValue && TouchesPlayer(visibility.patches[i],player.Value,playerRadius))
+                {visible=false;waitingForPlayer=true;}
                 if(cluster.activeSelf!=visible)cluster.SetActive(visible);
             }
+            return waitingForPlayer;
+        }
+
+        static bool TouchesPlayer(Patch patch,Vector3 player,float radius)
+        {
+            var area=patch.footprint;
+            float dx=Mathf.Max(area.min.x-player.x,Mathf.Max(0,player.x-area.max.x));
+            float dz=Mathf.Max(area.min.z-player.z,Mathf.Max(0,player.z-area.max.z));
+            return dx*dx+dz*dz<=radius*radius;
         }
 
         static void BuildPatch(Transform parent,int kind,int variation)
@@ -213,11 +271,31 @@ namespace Scrapshift.Compact
                         break;
                     }
                     Model("PalletBundle",parent,new Vector3(-.53f,0,.23f),new Vector3(1.72f,.18f,1.25f),0);
-                    if(!Model("CompactCableReel",parent,new Vector3(.87f,0,.34f),new Vector3(.81f,.98f,.95f),-14))
+                    if(variation<12 && !Model("CompactCableReel",parent,new Vector3(.87f,0,.34f),new Vector3(.81f,.98f,.95f),-14))
                         Model("CompactInsulationCoil",parent,new Vector3(.87f,0,.34f),new Vector3(.78f,.36f,.78f),-14);
-                    if(!Model("CompactRadiatorRack",parent,new Vector3(.22f,0,-.77f),new Vector3(.83f,.75f,.38f),-12))
+                    if(variation<12 && !Model("CompactRadiatorRack",parent,new Vector3(.22f,0,-.77f),new Vector3(.83f,.75f,.38f),-12))
                         Model("CompactMotor",parent,new Vector3(.22f,0,-.77f),new Vector3(.55f,.48f,.40f),-12);
                     Ring("Loose appliance door gasket",parent,new Vector3(-.90f,.033f,-.71f),.24f,.195f,.038f,RetroSurface.WireInsulation);
+                    break;
+                case 10: // A populated open shelf, rather than another empty brown crate.
+                    if(!Model("CompactPartsShelf",parent,Vector3.zero,new Vector3(2.5f,2.05f,.98f),0))
+                        FallbackShelf(parent,false);
+                    break;
+                case 11: // Unsorted metal has a readable rim, open top, bent sheets and a wheel hub.
+                    if(!Model("CompactMixedSkip",parent,Vector3.zero,new Vector3(2.70f,1.50f,1.68f),0))
+                        FallbackSkip(parent);
+                    break;
+                case 12: // Freestanding tool wall/parts drawers with no gameplay interaction.
+                    if(!Model("CompactWorkshopRack",parent,Vector3.zero,new Vector3(2.22f,2.32f,.78f),0))
+                        FallbackShelf(parent,true);
+                    break;
+                case 13:
+                    if(!Model("CompactRadiatorRack",parent,Vector3.zero,new Vector3(1.15f,1.10f,.65f),0))
+                        Model("CompactMotor",parent,Vector3.zero,new Vector3(.75f,.65f,.60f),0);
+                    break;
+                case 14:
+                    if(!Model("CompactCableReel",parent,Vector3.zero,new Vector3(1.18f,1.15f,1.20f),variation==0?-12:16))
+                        Model("CompactInsulationCoil",parent,Vector3.zero,new Vector3(1.18f,.50f,1.18f),0);
                     break;
                 case 6:
                     var tab=Box("Discarded sheet-metal tab",parent,new Vector3(-.22f,.01f,0),new Vector3(.52f,.016f,.25f),RetroSurface.RustPaint);
@@ -227,6 +305,42 @@ namespace Scrapshift.Compact
                     Ring("Discarded rubber seal",parent,new Vector3(.20f,.015f,-.11f),.14f,.105f,.020f,RetroSurface.WireInsulation);
                     break;
             }
+        }
+
+        static void FallbackShelf(Transform parent,bool tools)
+        {
+            foreach(float x in new[]{-.96f,.96f})foreach(float z in new[]{-.30f,.30f})
+                Box("Parts shelf upright",parent,new Vector3(x,1.00f,z),new Vector3(.055f,2.00f,.055f),RetroSurface.DarkMetal);
+            foreach(float y in new[]{.15f,.90f,1.66f})
+                Box("Worn parts shelf",parent,new Vector3(0,y,0),new Vector3(2.10f,.065f,.72f),RetroSurface.WeatheredWood);
+            if(tools)
+            {
+                Box("Tool wall backing",parent,new Vector3(0,1.45f,.23f),new Vector3(2.00f,1.03f,.035f),RetroSurface.WeatheredWood);
+                for(int i=0;i<5;i++)
+                {
+                    float x=-.70f+i*.35f;
+                    Box("Hanging tool shaft",parent,new Vector3(x,1.48f,.18f),new Vector3(.028f,.42f,.035f),RetroSurface.DarkMetal);
+                    Box("Hanging tool head",parent,new Vector3(x,1.68f,.18f),new Vector3(.15f,.055f,.06f),RetroSurface.DarkMetal);
+                }
+            }
+            else
+                for(int i=0;i<3;i++)Box("Recovered parts case",parent,new Vector3(-.62f+i*.61f,1.84f,.02f),new Vector3(.48f,.29f,.44f),RetroSurface.RustPaint);
+            Model("CompactMotor",parent,new Vector3(-.48f,.94f,0),new Vector3(.45f,.51f,.40f),15);
+            Model("CompactCompressor",parent,new Vector3(.48f,.18f,0),new Vector3(.52f,.61f,.49f),0);
+        }
+
+        static void FallbackSkip(Transform parent)
+        {
+            Box("Mixed skip floor",parent,new Vector3(0,.12f,0),new Vector3(2.50f,.18f,1.50f),RetroSurface.DarkMetal);
+            foreach(float x in new[]{-1.24f,1.24f})Box("Mixed skip side",parent,new Vector3(x,.60f,0),new Vector3(.07f,1,1.58f),RetroSurface.RustPaint);
+            Box("Mixed skip rear",parent,new Vector3(0,.60f,.76f),new Vector3(2.48f,1,.07f),RetroSurface.RustPaint);
+            Box("Mixed skip low front",parent,new Vector3(0,.36f,-.76f),new Vector3(2.48f,.58f,.07f),RetroSurface.CorrugatedMetal);
+            for(int i=0;i<4;i++)
+            {
+                var panel=Box("Unsorted sheet",parent,new Vector3(-.76f+i*.5f,.57f+i*.07f,0),new Vector3(.52f,.035f,1.16f),i%2==0?RetroSurface.CorrugatedMetal:RetroSurface.RustPaint);
+                panel.transform.localRotation=Quaternion.Euler(0,0,12+i*8);
+            }
+            Ring("Discarded skip wheel rim",parent,new Vector3(-.45f,.99f,.20f),.25f,.16f,.12f,RetroSurface.DarkMetal);
         }
 
         // A bounded soft ellipse follows each pooled stock root; geometry/occupancy hide together.

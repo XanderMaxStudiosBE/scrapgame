@@ -1,0 +1,77 @@
+{
+  "scope": "Blender FBX round-trip, finite vertices/normals, grounded metre bounds, nondegenerate triangles, atlas UVs and single material; Unity import not run",
+  "assets": [
+    {
+      "name": "CompactPartsShelf",
+      "status": "passed",
+      "triangles": 1600,
+      "metre_dimensions": [
+        2.3380000591278076,
+        0.9099999666213989,
+        1.9799999342157406
+      ],
+      "bounds_unity": {
+        "min": [
+          -1.125,
+          -3.4351543831689924e-08,
+          -0.45499998331069946
+        ],
+        "max": [
+          1.2130000591278076,
+          1.9799998998641968,
+          0.45499998331069946
+        ]
+      },
+      "minimum_triangle_area": 8.660237602230979e-05,
+      "sha256": "618d5369c96f361d04ce2c4f7917214327f46379cfe51c619cc8627557b9db2c"
+    },
+    {
+      "name": "CompactMixedSkip",
+      "status": "passed",
+      "triangles": 632,
+      "metre_dimensions": [
+        2.6887996196746826,
+        1.6722352504730225,
+        1.2586925502608572
+      ],
+      "bounds_unity": {
+        "min": [
+          -1.3443998098373413,
+          -4.728539337861548e-08,
+          -0.8199999332427979
+        ],
+        "max": [
+          1.3443998098373413,
+          1.2586925029754639,
+          0.8522353172302246
+        ]
+      },
+      "minimum_triangle_area": 0.0001881653403498983,
+      "sha256": "28b255ad7c5bd0e4a4a59e48275597b0a663e7fc581c5aaf3f0aeda01535596d"
+    },
+    {
+      "name": "CompactWorkshopRack",
+      "status": "passed",
+      "triangles": 1380,
+      "metre_dimensions": [
+        2.1799999475479126,
+        0.6850001215934753,
+        2.26500013019597
+      ],
+      "bounds_unity": {
+        "min": [
+          -1.090000033378601,
+          -2.5291795324733357e-08,
+          -0.3349999785423279
+        ],
+        "max": [
+          1.0899999141693115,
+          2.265000104904175,
+          0.35000014305114746
+        ]
+      },
+      "minimum_triangle_area": 3.1176163724921005e-05,
+      "sha256": "409d1ef4720209c72d8bfd23364985bcf32a38cd5b30b179a150f89497d45039"
+    }
+  ]
+}

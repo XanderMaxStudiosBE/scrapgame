@@ -9,10 +9,10 @@ namespace Scrapshift.Tests
     public sealed class CompactClutterTests
     {
         [Test]
-        public void DeterministicStockKeepsCentralFloorOpenAndFitsInsidePerimeter()
+        public void DeterministicStockFramesWorkingRoutesAndRetainsTheMainBuildFloor()
         {
             var first=CompactYardClutter.Describe();var second=CompactYardClutter.Describe();
-            Assert.AreEqual(29,first.Length);var names=new HashSet<string>();var sectors=new HashSet<string>();
+            Assert.AreEqual(CompactYardClutter.StockPatchCount,first.Length);var names=new HashSet<string>();var sectors=new HashSet<string>();
             for(int i=0;i<first.Length;i++)
             {
                 var p=first[i];Assert.IsTrue(names.Add(p.name));sectors.Add(p.sector);
@@ -27,9 +27,16 @@ namespace Scrapshift.Tests
                     Assert.GreaterOrEqual(p.footprint.size.y,2);
                 }
                 else if(p.sector=="Flat ground offcuts")Assert.LessOrEqual(p.footprint.max.y,.04f);
+                else if(p.sector.EndsWith("working pockets"))
+                {
+                    Assert.GreaterOrEqual(p.footprint.min.x,-24);Assert.LessOrEqual(p.footprint.max.x,24);
+                    Assert.GreaterOrEqual(p.footprint.min.z,-18);Assert.LessOrEqual(p.footprint.max.z,18);
+                    Assert.IsTrue(p.footprint.max.x<=-3 || p.footprint.min.x>=8 || p.footprint.max.z<=-8 || p.footprint.min.z>=10,
+                        p.name+" must frame, rather than fill, the main machine-building floor");
+                }
                 else Assert.AreEqual("Service pocket offcuts",p.sector);
             }
-            Assert.AreEqual(8,sectors.Count);
+            Assert.AreEqual(14,sectors.Count);
         }
 
         [Test]
@@ -56,11 +63,11 @@ namespace Scrapshift.Tests
                 Assert.IsEmpty(clutter.GetComponentsInChildren<Rigidbody>(true));
                 Assert.IsEmpty(clutter.GetComponentsInChildren<Light>(true));
                 Assert.IsEmpty(clutter.GetComponentsInChildren<CompactInteractionTarget>(true));
-                Assert.LessOrEqual(clutter.GetComponentsInChildren<MeshRenderer>(true).Length,228,
-                    "Recognizable stock must stay below the previous 203-renderer budget plus 25");
+                Assert.LessOrEqual(clutter.GetComponentsInChildren<MeshRenderer>(true).Length,CompactYardClutter.MaximumStockRenderers,
+                    "Ceiling includes missing authored source fallbacks; tracked art uses fewer renderer objects");
                 int triangles=0;
                 foreach(var filter in clutter.GetComponentsInChildren<MeshFilter>(true))triangles+=filter.sharedMesh.triangles.Length/3;
-                Assert.LessOrEqual(triangles,45012,"Keep stock below the previous 33012 triangles plus 12000, including one optional local piston");
+                Assert.LessOrEqual(triangles,CompactYardClutter.MaximumStockTriangles,"Expanded working pockets include a bounded optional local piston");
                 foreach(var patch in CompactYardClutter.Describe())
                 {
                     var cluster=Find(clutter.transform,patch.name);Assert.NotNull(cluster,patch.name);
@@ -122,6 +129,9 @@ namespace Scrapshift.Tests
         [TestCase("CompactWasherLot",1648)]
         [TestCase("CompactCableReel",1620)]
         [TestCase("CompactRadiatorRack",780)]
+        [TestCase("CompactPartsShelf",1600)]
+        [TestCase("CompactMixedSkip",632)]
+        [TestCase("CompactWorkshopRack",1380)]
         public void NewRecognizableSalvageUsesReadableOriginalImportedMeshesWithoutOwnedSourceGeometry(string resource,int expectedTriangles)
         {
             var yard=new GameObject("Original salvage import test");
@@ -153,14 +163,14 @@ namespace Scrapshift.Tests
             try
             {
                 var root=CompactYardClutter.Build(yard.transform,new Bounds[0],false,true);
-                Assert.AreEqual(1,Count(root,"CompactSalvageShell"));
-                Assert.AreEqual(2,Count(root,"CompactWasherLot"));
-                Assert.AreEqual(5,Count(root,"CompactCableReel"));
-                Assert.AreEqual(5,Count(root,"CompactRadiatorRack"));
+                Assert.AreEqual(3,Count(root,"CompactSalvageShell"));
+                Assert.AreEqual(4,Count(root,"CompactWasherLot"));
+                Assert.AreEqual(8,Count(root,"CompactCableReel"));
+                Assert.AreEqual(9,Count(root,"CompactRadiatorRack"));
                 Assert.AreEqual(8,Count(root,"Discarded rubber seal"));
-                Assert.AreEqual(29,CompactYardClutter.Describe().Length);
+                Assert.AreEqual(CompactYardClutter.StockPatchCount,CompactYardClutter.Describe().Length);
                 foreach(var patch in CompactYardClutter.Describe())Assert.NotNull(Find(root.transform,patch.name));
-                Assert.AreEqual(13,root.GetComponentsInChildren<BoxCollider>(true).Length);
+                Assert.AreEqual(CompactYardClutter.SolidStockVolumes,root.GetComponentsInChildren<BoxCollider>(true).Length);
                 var shell=Find(root.transform,"CompactSalvageShell");
                 Assert.AreEqual("West working stock 0",shell.parent.name);
                 var occupied=new[]{new Bounds(new Vector3(-20.8f,1,-1),new Vector3(2,2,2))};
@@ -169,6 +179,67 @@ namespace Scrapshift.Tests
                 CompactYardClutter.RefreshVisibility(root,new Bounds[0]);
                 Assert.AreSame(shell,Find(root.transform,"CompactSalvageShell"));
                 Assert.IsTrue(shell.gameObject.activeInHierarchy);
+            }
+            finally{Object.DestroyImmediate(yard);}
+        }
+
+        [Test]
+        public void FreshYardShowsEveryNewWorkingPocketAndLeavesServiceAndBuildApproachesClear()
+        {
+            var rules=new CompactRules();var model=new ScrappingModel(rules);
+            var occupied=new List<Bounds>();
+            CompactDressingOccupancy.Collect(model.State,rules,new Vector3(0,1.1f,-13),occupied);
+            int visiblePockets=0;
+            foreach(var patch in CompactYardClutter.Describe())
+            {
+                if(!patch.sector.EndsWith("working pockets"))continue;
+                Assert.IsFalse(CompactYardClutter.IsBlocked(patch,occupied),patch.name+" is hidden by the fresh yard");
+                visiblePockets++;
+                var entrance=new Bounds(new Vector3(0,1,-13),new Vector3(6,2,10));
+                var approach=new Bounds(new Vector3(-17,1,-8.8f),new Vector3(6,2,1.8f));
+                Assert.IsFalse(CompactYardClutter.IsBlocked(patch,new[]{entrance,approach}),patch.name+" blocks a fixed-service approach");
+            }
+            Assert.AreEqual(24,visiblePockets);
+            Assert.AreEqual(1,model.State.equipment.Count,"Cosmetic props must not grant gameplay machines");
+            Assert.AreEqual(rules.startingMoney,model.State.money);Assert.AreEqual(0,model.State.experience);
+        }
+
+        [Test]
+        public void NewWorkingPocketOccupancyRemovesOneModuleWithoutClearingItsNeighbourhood()
+        {
+            var yard=new GameObject("Modular working pocket test");
+            try
+            {
+                var root=CompactYardClutter.Build(yard.transform,new Bounds[0],false,true);
+                var occupied=new[]{new Bounds(new Vector3(-11.1f,1,-13),new Vector3(.2f,2,.2f))};
+                CompactYardClutter.RefreshVisibility(root,occupied);
+                Assert.IsFalse(Find(root.transform,"Office forecourt parts shelf").gameObject.activeSelf);
+                Assert.IsTrue(Find(root.transform,"Office maintenance tool rack").gameObject.activeSelf);
+                Assert.IsTrue(Find(root.transform,"Office tyre stock").gameObject.activeSelf);
+                Assert.IsTrue(Find(root.transform,"Bench component shelf").gameObject.activeSelf);
+                var shelf=Find(root.transform,"Office forecourt parts shelf");
+                CompactYardClutter.RefreshVisibility(root,new Bounds[0]);
+                Assert.AreSame(shelf,Find(root.transform,"Office forecourt parts shelf"));Assert.IsTrue(shelf.gameObject.activeSelf);
+            }
+            finally{Object.DestroyImmediate(yard);}
+        }
+
+        [Test]
+        public void OnlyTheTwelveCombinedForegroundFixturesAddSunShadowCasters()
+        {
+            var yard=new GameObject("Stock shadow budget test");
+            try
+            {
+                var root=CompactYardClutter.Build(yard.transform,new Bounds[0],false);int casters=0;
+                foreach(var renderer in root.GetComponentsInChildren<MeshRenderer>())
+                    if(renderer.shadowCastingMode!=UnityEngine.Rendering.ShadowCastingMode.Off)
+                    {
+                        casters++;Assert.IsTrue(renderer.name=="CompactPartsShelf" || renderer.name=="CompactMixedSkip" || renderer.name=="CompactWorkshopRack");
+                    }
+                Assert.AreEqual(12,casters);
+                Assert.AreEqual(5,Count(root,"CompactPartsShelf"));Assert.AreEqual(5,Count(root,"CompactMixedSkip"));
+                Assert.AreEqual(2,Count(root,"CompactWorkshopRack"));
+                Assert.IsEmpty(root.GetComponentsInChildren<Light>());Assert.IsEmpty(root.GetComponentsInChildren<Rigidbody>());
             }
             finally{Object.DestroyImmediate(yard);}
         }
@@ -231,19 +302,19 @@ namespace Scrapshift.Tests
                     Assert.AreSame(Resources.Load<Material>("ScrapshiftLighting/ContactShade"),filter.GetComponent<MeshRenderer>().sharedMaterial);
                     Assert.IsEmpty(filter.GetComponents<Collider>());
                 }
-                Assert.AreEqual(21,count);
+                Assert.AreEqual(45,count);
             }
             finally{Object.DestroyImmediate(yard);}
         }
 
         [Test]
-        public void SolidStockUsesThirteenReplaceableIgnoreRaycastVolumesWithMatchingEnvelopes()
+        public void SolidStockUsesBoundedReplaceableIgnoreRaycastVolumesWithMatchingEnvelopes()
         {
             var yard=new GameObject("Solid stock envelope test");
             try
             {
                 var root=CompactYardClutter.Build(yard.transform,new Bounds[0],false,true);
-                var colliders=root.GetComponentsInChildren<BoxCollider>(true);Assert.AreEqual(13,colliders.Length);
+                var colliders=root.GetComponentsInChildren<BoxCollider>(true);Assert.AreEqual(CompactYardClutter.SolidStockVolumes,colliders.Length);
                 Assert.IsEmpty(root.GetComponentsInChildren<Rigidbody>(true));Assert.IsEmpty(root.GetComponentsInChildren<CompactInteractionTarget>(true));
                 Physics.SyncTransforms();
                 foreach(var patch in CompactYardClutter.Describe())
@@ -289,7 +360,14 @@ namespace Scrapshift.Tests
         }
         static int Count(GameObject root,string name)
         {
-            int count=0;foreach(var child in root.GetComponentsInChildren<Transform>(true))if(child.name==name)count++;
+            int count=0;
+            foreach(var child in root.GetComponentsInChildren<Transform>(true))
+            {
+                if(child.name!=name)continue;
+                bool nested=false;for(var ancestor=child.parent;ancestor!=null;ancestor=ancestor.parent)
+                    if(ancestor.name==name){nested=true;break;}
+                if(!nested)count++;
+            }
             return count;
         }
     }

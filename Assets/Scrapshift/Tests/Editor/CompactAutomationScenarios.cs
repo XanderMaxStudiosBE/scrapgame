@@ -43,7 +43,7 @@ namespace Scrapshift.Tests
             switch(name)
             {
                 case "ConveyorPortsAndCorners":
-                    Check(AutomationModel.PortCount(EquipmentKind.Tier1Scrapper,false)==0 && AutomationModel.PortCount(EquipmentKind.Splitter,true)==3 &&
+                    Check(AutomationModel.PortCount(EquipmentKind.Tier1Scrapper,false)==1 && AutomationModel.PortCount(EquipmentKind.Splitter,true)==3 &&
                         AutomationModel.PortCount(EquipmentKind.Merger,false)==3,"equipment port topology");
                     int start=Place(c,EquipmentKind.Storage,-8,3),end=Place(c,EquipmentKind.Storage,-2,9);
                     var belt=new ConveyorLink{fromId=start,toId=end};var path=AutomationModel.Path(belt,s,m.Rules);
@@ -72,7 +72,7 @@ namespace Scrapshift.Tests
                     Check(m.SetFilter(src,(int)PartKind.Wire),"wirefilter");var link=Link(a,s,src,0,dst,0);
                     Check(!a.CanConnect(src,0,dst,0,false,out reason),"individual port occupied");
                     int second=Place(c,EquipmentKind.Storage,6,0);Check(!a.CanConnect(second,0,dst,0,true,out reason),"destination input already occupied");
-                    s.experience=0;Check(!a.CanConnect(second,0,src,0,true,out reason),"level gate");
+                    m.Rules.Equipment(EquipmentKind.Conveyor).unlockLevel=2;s.experience=0;Check(!a.CanConnect(second,0,src,0,true,out reason),"explicit edited level gate remains authoritative");
                     Check(link.items.Count==0,"no preview items invented");break;
                 case "ConveyorMoveAndRefundGuards":
                     int first=Place(c,EquipmentKind.Storage,-8,0),last=Place(c,EquipmentKind.Storage,-8,6);var owned=Link(a,s,first,0,last,0);

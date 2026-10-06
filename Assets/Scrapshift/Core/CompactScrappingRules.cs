@@ -46,6 +46,8 @@ namespace Scrapshift.Compact
         public int[] levelThresholds={0,20,45,80,125,185,265,365,490,640,820,1040};
         // Zero means this additive field was absent in an earlier balance asset.
         public int progressionRulesVersion;
+        // Additive version: older default level-ten transport gates migrate once.
+        public int routingRulesVersion;
         // Integer-euro quotes need 12% for a common €9 copper bundle to gain its first €1.
         public int[] saleBonusPercents={0,12,16,20,24,28,32,36,40,45,50,55};
         public int careerRulesVersion=1;
@@ -84,11 +86,11 @@ namespace Scrapshift.Compact
             new EquipmentDefinition{kind=EquipmentKind.Workbench,name="Manual workbench",price=24,available=true,width=2.6f,depth=1.4f,outputCapacity=24},
             new EquipmentDefinition{kind=EquipmentKind.Generator,name="Generator",price=45,available=true,width=1.75f,depth=1.25f,powerOutput=6},
             new EquipmentDefinition{kind=EquipmentKind.Tier1Scrapper,name="Tier 1 scrapper",price=60,available=true,width=2.4f,depth=2.3f,powerDemand=3,processingSeconds=4,outputCapacity=24},
-            new EquipmentDefinition{kind=EquipmentKind.Storage,name="Ported storage",price=70,unlockLevel=10,available=true,width=3,depth=2.5f,outputCapacity=120},
-            new EquipmentDefinition{kind=EquipmentKind.Tier2Scrapper,name="Tier 2 scrapper",price=160,unlockLevel=10,available=true,width=3.2f,depth=2.5f,powerDemand=5,processingSeconds=2,outputCapacity=48},
-            new EquipmentDefinition{kind=EquipmentKind.Conveyor,name="Conveyor",price=12,unlockLevel=10,available=true,width=1,depth=2},
-            new EquipmentDefinition{kind=EquipmentKind.Splitter,name="Splitter",price=30,unlockLevel=10,available=true,width=1.5f,depth=1.5f},
-            new EquipmentDefinition{kind=EquipmentKind.Merger,name="Merger",price=30,unlockLevel=10,available=true,width=1.5f,depth=1.5f},
+            new EquipmentDefinition{kind=EquipmentKind.Storage,name="Ported storage",price=70,available=true,width=3,depth=2.5f,outputCapacity=120},
+            new EquipmentDefinition{kind=EquipmentKind.Tier2Scrapper,name="Tier 2 scrapper",price=160,unlockLevel=5,available=true,width=3.2f,depth=2.5f,powerDemand=5,processingSeconds=2,outputCapacity=48},
+            new EquipmentDefinition{kind=EquipmentKind.Conveyor,name="Conveyor",price=12,available=true,width=1,depth=2},
+            new EquipmentDefinition{kind=EquipmentKind.Splitter,name="Splitter",price=30,unlockLevel=3,available=true,width=1.5f,depth=1.5f},
+            new EquipmentDefinition{kind=EquipmentKind.Merger,name="Merger",price=30,unlockLevel=3,available=true,width=1.5f,depth=1.5f},
             new EquipmentDefinition{kind=EquipmentKind.ExportStation,name="Material dispatch station",price=200,unlockLevel=12,available=true,width=3,depth=2.5f,powerDemand=2,processingSeconds=5,outputCapacity=48},
             new EquipmentDefinition{kind=EquipmentKind.PrimaryScrapper,name="Primary dismantler",price=350,unlockLevel=12,available=true,width=6,depth=7,powerDemand=6,processingSeconds=24,outputCapacity=48}
         };
@@ -131,7 +133,26 @@ namespace Scrapshift.Compact
                 if(name!=null && e.name==name+" — later stage")
                 {e.name=name;e.available=true;changed=true;}
             }
-            return changed;
+            return FillMissingRoutingDefaults()|changed;
+        }
+        public bool FillMissingRoutingDefaults()
+        {
+            if(routingRulesVersion!=0)return false;
+            if(equipment!=null)foreach(var entry in equipment)
+            {
+                if(entry==null || entry.unlockLevel!=10)continue;
+                int level=0;string original=null;
+                switch(entry.kind)
+                {
+                    case EquipmentKind.Storage:original="Ported storage";level=1;break;
+                    case EquipmentKind.Conveyor:original="Conveyor";level=1;break;
+                    case EquipmentKind.Splitter:original="Splitter";level=3;break;
+                    case EquipmentKind.Merger:original="Merger";level=3;break;
+                    case EquipmentKind.Tier2Scrapper:original="Tier 2 scrapper";level=5;break;
+                }
+                if(original!=null && entry.name==original)entry.unlockLevel=level;
+            }
+            routingRulesVersion=1;return true;
         }
         public bool FillMissingCareerDefaults()
         {
@@ -195,7 +216,9 @@ namespace Scrapshift.Compact
             FillMissingCareerDefaults();
             FillMissingIndustryDefaults();
             FillMissingProgressionDefaults();
+            FillMissingRoutingDefaults();
             if(progressionRulesVersion!=1)throw new ArgumentException("Unsupported progression rules version.");
+            if(routingRulesVersion!=1)throw new ArgumentException("Unsupported transport rules version.");
             if(industryRulesVersion!=1||!Finite(deliveryIntervalSeconds)||deliveryIntervalSeconds<1||deliveryIntervalSeconds>3600)
                 throw new ArgumentException("Invalid scheduled-delivery settings.");
             if(startingMoney<0 || startingMoney>1000000 || startingCars<0 || startingCars>4 || startingRefrigerators<0 || startingRefrigerators>4 || startingCars+startingRefrigerators>4 ||

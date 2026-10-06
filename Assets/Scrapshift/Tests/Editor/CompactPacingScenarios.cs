@@ -8,7 +8,7 @@ namespace Scrapshift.Tests
     {
         public static readonly int[] PreviousCurve={0,30,80,160,280,440,650,930,1290,1750,2320,3010};
         public static readonly int[] PacedCurve={0,20,45,80,125,185,265,365,490,640,820,1040};
-        public static readonly string[] Names={"PacingFreshRulesAndUnchangedGates","PacingLegacyDefaultMigratesOnce",
+        public static readonly string[] Names={"PacingFreshRulesAndEarlierTransport","PacingLegacyDefaultMigratesOnce",
             "PacingEveryCustomThresholdRetained","PacingExplicitPreviousCurveRetained","PacingInvalidTuningStillRejected",
             "PacingEarnedSaveDoesNotReceiveAwards","PacingFreshTransactionsThroughIndustrialOwnership",
             "PacingCarsAndFridgesCanFundEveryStage","PacingOrdinarySalesNeedNoCustomerBonuses"};
@@ -28,11 +28,11 @@ namespace Scrapshift.Tests
         {
             switch(name)
             {
-                case "PacingFreshRulesAndUnchangedGates":
+                case "PacingFreshRulesAndEarlierTransport":
                     var fresh=new CompactRules();fresh.Validate();Same(PacedCurve,fresh.levelThresholds,"fresh paced curve");
                     Check(fresh.progressionRulesVersion==1 && fresh.startingMoney==8,"no starting cash grant");
                     Check(fresh.LevelForExperience(639)==9 && fresh.LevelForExperience(640)==10 && fresh.LevelForExperience(1039)==11 && fresh.LevelForExperience(1040)==12,"threshold boundaries");
-                    Check(fresh.Equipment(EquipmentKind.Tier2Scrapper).unlockLevel==10 && fresh.Equipment(EquipmentKind.PrimaryScrapper).unlockLevel==12 && fresh.Equipment(EquipmentKind.ExportStation).unlockLevel==12,"equipment level gates retained");
+                    Check(fresh.Equipment(EquipmentKind.Tier2Scrapper).unlockLevel==5 && fresh.Equipment(EquipmentKind.PrimaryScrapper).unlockLevel==12 && fresh.Equipment(EquipmentKind.ExportStation).unlockLevel==12,"faster processing upgrades at five; industrial equipment still earned at twelve");
                     Check(fresh.Part(PartKind.Copper).saleXp==2 && fresh.Part(PartKind.Steel).saleXp==1 && fresh.Part(PartKind.Plastic).saleXp==1,"material sale XP unchanged");break;
                 case "PacingLegacyDefaultMigratesOnce":
                     var legacy=PreviousRules();legacy.progressionRulesVersion=0;int[] former=legacy.levelThresholds;

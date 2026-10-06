@@ -142,8 +142,31 @@ namespace Scrapshift.Tests
             game.player.transform.position=new Vector3(9,1.1f,4);Call("StepSound");Assert.AreEqual(new Vector3(10,1,4),motor.transform.position);
             Model.State.equipment.Reverse();Call("StepSound");Assert.AreEqual(new Vector3(10,1,4),motor.transform.position);
             game.player.transform.position=new Vector3(0,1.1f,4);Call("StepSound");Assert.AreEqual(new Vector3(-10,1,4),motor.transform.position);
-            game.player.transform.position=new Vector3(9,1.1f,4);right.contents.Add(new CompactStack{id=Model.State.nextId++,kind=PartKind.Copper,quantity=20});
+            game.player.transform.position=new Vector3(9,1.1f,4);right.contents.Add(new CompactStack{id=Model.State.nextId++,kind=PartKind.Wire,quantity=24});
+            Call("StepSound");Assert.AreEqual(new Vector3(10,1,4),motor.transform.position,"A full IN bay does not block an already reserved OUT batch");
+            right.job.yields[0].quantity=25; // Paid snapshot output can exceed a subsequently reduced capacity.
             Call("StepSound");Assert.AreEqual(new Vector3(-10,1,4),motor.transform.position);
+        }
+        [Test] public void ActualOutputMouthRejectsCarriedIntakeWhileBusyInputQueuesIt()
+        {
+            var machine=PoweredMachine();Assert.IsTrue(Model.AcquireWire());Assert.IsTrue(Model.BeginProcessing(machine.id));
+            var carried=new CompactStack{id=Model.State.nextId++,kind=PartKind.Motor,quantity=1,xpEligible=true};Model.State.items.Add(carried);Model.State.carriedId=carried.id;
+            var owner=new GameObject("Test targeted mouth");owner.transform.SetParent(root.transform,false);
+            var target=owner.AddComponent<CompactInteractionTarget>();target.kind=CompactTargetKind.Equipment;target.id=machine.id;
+            var mouth=owner.AddComponent<CompactConveyorPortTarget>();mouth.output=true;Set("target",target);Set("aimedPort",mouth);
+            var paidJob=machine.job;int xp=Model.State.experience;Call("Interact");
+            Assert.AreSame(carried,Model.Carried);Assert.AreSame(paidJob,machine.job);Assert.IsEmpty(machine.contents);
+            mouth.output=false;Call("Interact");Assert.IsNull(Model.Carried);Assert.AreSame(paidJob,machine.job);
+            Assert.AreSame(carried,machine.contents[0]);Assert.AreEqual(xp,Model.State.experience);
+        }
+        [Test] public void LargeCarriedBatchQueuesInsteadOfFailingAnOversizedDirectRecipe()
+        {
+            var bench=Model.State.equipment[0];Assert.IsTrue(Model.AcquireWire());Model.Carried.quantity=10;
+            Assert.IsFalse(Model.CanBeginProcessing(bench.id,out _));Assert.IsTrue(Model.CanDeposit(bench.id,out _));
+            var owner=new GameObject("Test bench target");owner.transform.SetParent(root.transform,false);
+            var target=owner.AddComponent<CompactInteractionTarget>();target.kind=CompactTargetKind.Equipment;target.id=bench.id;Set("target",target);
+            Call("Interact");Assert.IsNull(Model.Carried);Assert.IsNull(bench.job);Assert.AreEqual(10,Model.StoredUnits(bench.id));
+            Model.Tick(.1f);Assert.IsNotNull(bench.job);Assert.AreEqual(1,bench.job.inputQuantity);Assert.AreEqual(0,bench.job.strokes);
         }
     }
 }

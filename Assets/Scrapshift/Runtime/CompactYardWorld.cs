@@ -70,6 +70,7 @@ namespace Scrapshift.Compact
             var handles=new CompactWorldHandles();
             handles.Shop=Counter(office,"Equipment and scrap shop",ShopAnchor,"YARD SHOP",false);
             handles.Sales=Counter(office,"Recovered-material buyer",SalesAnchor,"MATERIAL SALES",true);
+            OfficeUtilityDetails(office);
             Batch(office,combine);
 
             var delivery=Sector(parent,"Compact receiving bay");
@@ -122,6 +123,34 @@ namespace Scrapshift.Compact
             }
             Label(root.transform,label,new Vector3(0,.78f,.275f),180,1.48f,.25f);
             return root;
+        }
+
+        static void OfficeUtilityDetails(Transform parent)
+        {
+            // Shallow fixtures stay against the existing protected office body, leaving both
+            // counters and their approach lane clear. Stock itself remains independently pooled.
+            YardGeometry.SurfaceBox("Old office fuse cabinet",parent,new Vector3(-20.48f,1.62f,-10.90f),new Vector3(.48f,.67f,.15f),RetroSurface.DarkMetal,false);
+            YardGeometry.SurfaceBox("Fuse cabinet weathered door",parent,new Vector3(-20.48f,1.62f,-10.80f),new Vector3(.40f,.58f,.04f),RetroSurface.CorrugatedMetal,false);
+            YardGeometry.SurfaceBox("Fuse cabinet pull",parent,new Vector3(-20.32f,1.57f,-10.755f),new Vector3(.025f,.12f,.035f),RetroSurface.DarkMetal,false);
+            YardGeometry.SurfaceBox("Cabinet faded inspection tag",parent,new Vector3(-20.52f,1.76f,-10.769f),new Vector3(.18f,.075f,.012f),RetroSurface.WeatheredWood,false);
+            YardGeometry.SurfaceBox("Weathered wall conduit",parent,new Vector3(-20.50f,2.40f,-10.94f),new Vector3(.042f,.92f,.042f),RetroSurface.DarkMetal,false);
+            foreach(float y in new[]{2.06f,2.61f})
+                YardGeometry.SurfaceBox("Conduit fixing strap",parent,new Vector3(-20.50f,y,-10.90f),new Vector3(.075f,.035f,.026f),RetroSurface.CorrugatedMetal,false);
+            YardGeometry.SurfaceBox("Office work notices backing",parent,new Vector3(-17.02f,1.68f,-10.91f),new Vector3(.94f,.72f,.055f),RetroSurface.DarkMetal,false);
+            foreach(float x in new[]{-17.32f,-16.73f})
+            {
+                YardGeometry.SurfaceBox("Pinned yard work card",parent,new Vector3(x,1.72f,-10.871f),new Vector3(.26f,.38f,.012f),RetroSurface.WeatheredWood,false);
+                YardGeometry.SurfaceBox("Work card pin",parent,new Vector3(x,1.89f,-10.860f),new Vector3(.028f,.028f,.012f),RetroSurface.CorrugatedMetal,false);
+                foreach(float y in new[]{1.62f,1.71f,1.80f})
+                    YardGeometry.SurfaceBox("Faded work card line",parent,new Vector3(x,y,-10.861f),new Vector3(.16f,.010f,.006f),RetroSurface.DarkMetal,false);
+            }
+            YardGeometry.SurfaceBox("Office side weathered sheet repair",parent,new Vector3(-12.965f,.87f,-13.65f),new Vector3(.035f,1.3f,1.7f),RetroSurface.CorrugatedMetal,false);
+            foreach(float z in new[]{-14.38f,-13.65f,-12.92f})
+                YardGeometry.SurfaceBox("Sheet repair vertical stiffener",parent,new Vector3(-12.929f,.87f,z),new Vector3(.037f,1.28f,.040f),RetroSurface.DarkMetal,false);
+            // A counter tray helps the shop read as a used workplace at player height.
+            YardGeometry.SurfaceBox("Shop spare fastener tray",parent,new Vector3(-19.58f,1.005f,-10.40f),new Vector3(.28f,.04f,.21f),RetroSurface.DarkMetal,false);
+            for(int i=0;i<3;i++)
+                YardGeometry.SurfaceBox("Counter reclaimed fastener",parent,new Vector3(-19.66f+i*.065f,1.043f,-10.40f),new Vector3(.033f,.035f,.065f),RetroSurface.CorrugatedMetal,false);
         }
         static GameObject Target(Transform parent,string name,Vector3 p,Vector3 size)
         {

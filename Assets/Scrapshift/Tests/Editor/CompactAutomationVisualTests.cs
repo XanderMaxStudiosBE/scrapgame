@@ -21,7 +21,7 @@ namespace Scrapshift.Tests
                 var equipment=CompactEquipmentVisuals.Build(kind,root.transform,new Vector3(3,0,4),90,true,rules);
                 var collider=equipment.GetComponent<BoxCollider>();Assert.NotNull(collider);
                 Assert.AreEqual(definition.width,collider.size.x);Assert.AreEqual(definition.depth,collider.size.z);
-                Assert.AreEqual(1,equipment.GetComponentsInChildren<Collider>().Length);
+                Assert.AreEqual(1+AutomationModel.PortCount(kind,false)+AutomationModel.PortCount(kind,true),equipment.GetComponentsInChildren<Collider>().Length);
                 Assert.IsEmpty(equipment.GetComponentsInChildren<Rigidbody>());Assert.IsEmpty(equipment.GetComponentsInChildren<Light>());
                 var model=equipment.transform.Find(modelName);Assert.NotNull(model,"Original FBX must be imported");
                 var shared=YardMaterialBindings.Load("ScrapshiftMaterials/PropAtlas",root.transform);
@@ -46,6 +46,7 @@ namespace Scrapshift.Tests
         [TestCase(EquipmentKind.Storage,0)] [TestCase(EquipmentKind.Storage,90)]
         [TestCase(EquipmentKind.Tier2Scrapper,180)] [TestCase(EquipmentKind.Splitter,90)]
         [TestCase(EquipmentKind.Merger,270)] [TestCase(EquipmentKind.Tier1Scrapper,0)]
+        [TestCase(EquipmentKind.Tier1Scrapper,180)] [TestCase(EquipmentKind.Workbench,90)]
         public void PhysicalPortMarkersFollowAuthoritativeRotatedCoordinates(EquipmentKind kind,float yaw)
         {
             var root=new GameObject("Automation port test");
@@ -66,6 +67,69 @@ namespace Scrapshift.Tests
                 }
             }
             finally{UnityEngine.Object.DestroyImmediate(root);}
+        }
+
+        [TestCase(EquipmentKind.Workbench)] [TestCase(EquipmentKind.Tier1Scrapper)]
+        [TestCase(EquipmentKind.Tier2Scrapper)] [TestCase(EquipmentKind.Storage)]
+        [TestCase(EquipmentKind.Splitter)] [TestCase(EquipmentKind.Merger)]
+        public void OwnedMouthsExposeExactRaycastRolesWithoutAddingPreviewPhysics(EquipmentKind kind)
+        {
+            var owner=new GameObject("Port selection fixture");
+            try
+            {
+                var rules=new CompactRules();var root=CompactEquipmentVisuals.Build(kind,owner.transform,Vector3.zero,0,true,rules);
+                int ports=AutomationModel.PortCount(kind,false)+AutomationModel.PortCount(kind,true);
+                Assert.AreEqual(ports,root.GetComponentsInChildren<CompactConveyorPortTarget>().Length);
+                Assert.IsEmpty(root.GetComponentsInChildren<Rigidbody>());Assert.IsEmpty(root.GetComponentsInChildren<Light>());
+                for(int category=0;category<2;category++)
+                {
+                    bool output=category==1;
+                    for(int i=0;i<AutomationModel.PortCount(kind,output);i++)
+                    {
+                        var marker=root.transform.Find((output ? "Output port " : "Input port ")+i);
+                        var target=marker.GetComponent<CompactConveyorPortTarget>();Assert.NotNull(target);
+                        Assert.AreEqual(output,target.output);Assert.AreEqual(i,target.index);
+                        var collider=marker.GetComponent<BoxCollider>();Assert.NotNull(collider);
+                        Assert.IsFalse(collider.isTrigger);Assert.AreEqual(0,marker.gameObject.layer);
+                        Assert.AreEqual(new Vector3(.85f,.80f,.40f),collider.size);
+                        Assert.AreEqual(new Vector3(0,.15f,-.15f),collider.center);
+                        Assert.AreEqual(0,marker.GetComponentsInChildren<MeshRenderer>().Length,"Port visuals remain batched under the machine");
+                    }
+                }
+                foreach(string name in new[]{"Worn port-collar rails","Port transport collars","Painted port directions"})
+                {
+                    var visual=root.transform.Find(name);Assert.NotNull(visual);
+                    var mesh=visual.GetComponent<MeshFilter>().sharedMesh;
+                    Assert.AreSame(mesh,visual.GetComponent<ProceduralMeshOwner>().mesh);
+                    Assert.Less(mesh.vertexCount,3000,"Static port geometry must remain bounded");
+                }
+                var preview=CompactEquipmentVisuals.Build(kind,owner.transform,Vector3.zero,0,false,rules);
+                Assert.IsEmpty(preview.GetComponentsInChildren<Collider>());
+                Assert.IsEmpty(preview.GetComponentsInChildren<CompactConveyorPortTarget>());
+            }
+            finally{UnityEngine.Object.DestroyImmediate(owner);}
+        }
+
+        [Test]
+        public void ReceivingAndFinishedTraysUseDistinctRetainedAtlasTiles()
+        {
+            var owner=new GameObject("Port paint fixture");
+            try
+            {
+                var rules=new CompactRules();var root=CompactEquipmentVisuals.Build(EquipmentKind.Tier2Scrapper,owner.transform,Vector3.zero,0,false,rules);
+                var geometry=root.transform.Find("Painted port directions");Assert.NotNull(geometry);
+                var mesh=geometry.GetComponent<MeshFilter>().sharedMesh;bool amber=false,sage=false,ivory=false;
+                foreach(var coordinate in mesh.uv)
+                {
+                    if(coordinate.x>.01f && coordinate.x<.24f && coordinate.y>.76f && coordinate.y<.99f)amber=true;
+                    if(coordinate.x>.76f && coordinate.x<.99f && coordinate.y>.51f && coordinate.y<.74f)sage=true;
+                    if(coordinate.x>.51f && coordinate.x<.74f && coordinate.y>.76f && coordinate.y<.99f)ivory=true;
+                }
+                Assert.IsTrue(amber,"Input mouths use worn amber paint");Assert.IsTrue(sage,"Output mouths use sage paint");
+                Assert.IsTrue(ivory,"Directional arrows and raised IN/OUT stencil strokes use ivory paint");
+                Assert.AreSame(YardMaterialBindings.Load("ScrapshiftMaterials/PropAtlas",owner.transform),geometry.GetComponent<MeshRenderer>().sharedMaterial);
+            }
+            finally{UnityEngine.Object.DestroyImmediate(owner);}
         }
 
         static void Route(out CompactYardState state,out CompactRules rules,out ConveyorLink link)
