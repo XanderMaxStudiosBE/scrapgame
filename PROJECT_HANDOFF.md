@@ -1,5 +1,9 @@
 # Scrapshift project handoff
 
+## Visual reference pack and port clarification (2026-10-08)
+
+Three generated environment concepts and a Cloud continuation brief are in Design/VisualTargets-2026-10-08/README.md; the shareable archive is Design/Scrapshift-VisualTargets-2026-10-08.zip. They depict the entrance, manual dismantling workshop and an illustrative purchased automation line. These are not Unity screenshots or prototype evidence. Use their compact scale, worn surfaces and readable composition, not their exact machine positions or decorative belt arrows. The creator reaffirmed Satisfactory-like physical machine IN/OUT and player-built belts. The pack records the authoritative OUT-to-IN flow, independent bays, processing, power, backpressure and saved-port compatibility from the latest implementation. No gameplay code or progression changed in this visual-reference task; Unity rendering/interaction acceptance remains unverified.
+
 ## Current milestone: stocked starter routes and early machine IN/OUT (2026-10-06)
 
 The creator rejected the visible sparse yard and level10 transport gates and requested real machine/conveyor input/output behavior. This pass changes the existing compact implementation, with separated Core IO, stock/art, port geometry, UI/guidance, final visibility and read-only review ownership. Main integrates shared rules, runtime, compatibility and publication. Read Design/COMPACT_EARLY_LINE_VERIFICATION.md and COMPACT_STARTER_STOCK_VERIFICATION.md first. Unity is unavailable; no current Unity image, FPS result, native test run or finished desktop build is claimed.
