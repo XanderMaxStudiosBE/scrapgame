@@ -57,6 +57,7 @@ namespace Scrapshift.Compact
                 var view=root.AddComponent<CompactIndustryVisuals>();view.Prepare(kind,rules);
             }
             CompactAutomationVisuals.BuildPorts(kind,root.transform,rules,colliders);
+            CompactAutomationVisuals.BuildMachineDetails(kind,root.transform,rules);
             return root;
         }
 

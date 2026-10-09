@@ -6,6 +6,18 @@ class CoreRunner
     {
         int failed = 0;
         int total = 0;
+        foreach(var name in CompactFlowStatusScenarios.Names)
+        {
+            total++;
+            try{CompactFlowStatusScenarios.Run(name);Console.WriteLine("PASS "+name);}
+            catch(Exception ex){failed++;Console.WriteLine("FAIL "+name+": "+ex.Message);}
+        }
+        foreach(var name in CompactReferenceConveyorScenarios.Names)
+        {
+            total++;
+            try{CompactReferenceConveyorScenarios.Run(name);Console.WriteLine("PASS "+name);}
+            catch(Exception ex){failed++;Console.WriteLine("FAIL "+name+": "+ex.Message);}
+        }
         foreach(var name in CompactEarlyMachineScenarios.Names)
         {
             total++;

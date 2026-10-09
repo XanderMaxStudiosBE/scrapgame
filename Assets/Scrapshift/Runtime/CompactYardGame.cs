@@ -41,6 +41,8 @@ namespace Scrapshift.Compact
         static readonly ProfilerMarker SaveMarker=new ProfilerMarker("Scrapshift.Compact.Save");
         bool saveFailed;
         readonly ProgressCheckpoint workCheckpoint=new ProgressCheckpoint();
+        readonly ProgressCheckpoint passiveCheckpoint=new ProgressCheckpoint();
+        bool refreshingPassiveCareer;
         float messageUntil,nextSave,nextStroke,nextHud,nextViews,nextPower;
         readonly Dictionary<int,CompactPowerStatus> powerCache=new Dictionary<int,CompactPowerStatus>();
         bool hudDirty=true,previewHit,previewClear;
@@ -68,7 +70,7 @@ namespace Scrapshift.Compact
             Automation=new AutomationModel(Model,Construction);
             RebuildPower();Model.HasPower=id=>PowerStatus(id).powered;
             Model.Career.RefreshProgress();completionPresented=false;
-            lastSaveAt=-1;saveFailed=false;saveStatus="Not saved yet";workCheckpoint.RecordAttempt(true);
+            lastSaveAt=-1;saveFailed=false;saveStatus="Not saved yet";workCheckpoint.RecordAttempt(true);passiveCheckpoint.RecordAttempt(true);
             build=new CompactBuildMode(Construction);
         }
         void RestorePlayer()
@@ -79,7 +81,7 @@ namespace Scrapshift.Compact
         }
         void Pause(bool value)
         {
-            if(value&&!paused)SavePendingWork();
+            if(value&&!paused&&!refreshingPassiveCareer)SavePendingWork();
             paused=value;Time.timeScale=value?0:1;
             if(!value){pageHistory.Clear();ResetIndustryReview();}
             if(sounds!=null)sounds.Pause(value);
@@ -132,16 +134,17 @@ namespace Scrapshift.Compact
             player.Step();
             if(Time.unscaledTime>=nextPower){RebuildPower();nextPower=Time.unscaledTime+1;}
             int previousMoney=Model.State.money,previousXp=Model.State.experience,previousNextId=Model.State.nextId,previousLevel=Model.Level;
-            Model.Tick(Time.deltaTime);
-            Industry.Tick(Time.deltaTime);
-            Automation.Tick(Time.deltaTime);UpdateTransportViews();
+            bool passiveChanged=Model.Tick(Time.deltaTime);
+            passiveChanged=Industry.Tick(Time.deltaTime)||passiveChanged;
+            passiveChanged=Automation.Tick(Time.deltaTime)||passiveChanged;UpdateTransportViews();
+            if(passiveChanged)QueuePassiveProgress();
             if(Model.State.money!=previousMoney||Model.State.experience!=previousXp||Model.State.nextId!=previousNextId)
-            {SyncViews();NoticeLevel(previousLevel);RefreshCareer();Save();hudDirty=true;}
+            {SyncViews();NoticeLevel(previousLevel);RefreshPassiveCareer();hudDirty=true;}
             if(paused)return;
             UpdateWorkCheckpoint();
             StepWorkViews();
             if(Time.unscaledTime>=nextCareer)
-            {if(RefreshCareer())Save();nextCareer=Time.unscaledTime+.5f;if(paused)return;}
+            {RefreshPassiveCareer();nextCareer=Time.unscaledTime+.5f;if(paused)return;}
             if(Time.unscaledTime>=nextViews){RefreshProcessingViews();nextViews=Time.unscaledTime+.2f;}
             StepSound();
             fpsTime+=Time.unscaledDeltaTime;fpsFrames++;
@@ -188,6 +191,8 @@ namespace Scrapshift.Compact
                     Show(Page.LargeScrap,id);break;
                 case CompactTargetKind.Equipment:
                     var inspected=Model.FindEquipment(id);
+                    if(inspected!=null&&Model.State.carriedId==0&&aimedPort!=null&&aimedPort.output)
+                    {BeginBelt(id,aimedPort.index);break;}
                     if(inspected!=null&&(inspected.kind==EquipmentKind.PrimaryScrapper||inspected.kind==EquipmentKind.Generator)){Show(Page.Equipment,id);break;}
                     if(Model.State.carriedId!=0)
                     {
@@ -233,8 +238,29 @@ namespace Scrapshift.Compact
             }
             hudDirty=true;
         }
-        void UpdateWorkCheckpoint(){if(workCheckpoint.Due(Time.unscaledTime))Save();}
-        void SavePendingWork(){if(workCheckpoint.Pending)Save();}
+        void QueuePassiveProgress()
+        {
+            // Ongoing conveyors and automatic sales must not rearm a failed write.
+            // The live state remains available for an explicit save or lifecycle boundary.
+            if(!saveFailed)passiveCheckpoint.Queue(Time.unscaledTime);
+        }
+        void RefreshPassiveCareer()
+        {
+            // Completion can open the journal and pause inside RefreshCareer. Flush
+            // that boundary once after its changes join the same pending snapshot.
+            bool changed;refreshingPassiveCareer=true;
+            try{changed=RefreshCareer();}
+            finally{refreshingPassiveCareer=false;}
+            if(changed)QueuePassiveProgress();
+            if(paused&&!saveFailed)SavePendingWork();
+        }
+        void UpdateWorkCheckpoint()
+        {
+            // A new manual stroke retains its established retry window. Background
+            // work waits after failure until an explicit or manual save succeeds.
+            if(workCheckpoint.Due(Time.unscaledTime)||!saveFailed&&passiveCheckpoint.Due(Time.unscaledTime))Save();
+        }
+        void SavePendingWork(){if(workCheckpoint.Pending||passiveCheckpoint.Pending)Save();}
         void NoticeLevel(int oldLevel)
         {
             if(Model.Level<=oldLevel)return;
@@ -278,8 +304,8 @@ namespace Scrapshift.Compact
         {
             if(Model==null||saveBlocked||(!sessionStarted&&!hasSave))return false;
             CapturePlayer();
-            try{CompactSaveStore.Write(SavePath,Model.State,Model.Rules);workCheckpoint.RecordAttempt(true);hasSave=true;lastSaveAt=Time.unscaledTime;saveFailed=false;saveStatus="Saved just now";return true;}
-            catch(Exception ex){workCheckpoint.RecordAttempt(false);saveFailed=true;saveStatus="Save failed / retry from Pause";Tell("SAVE FAILED: "+ex.Message);Debug.LogWarning(ex);return false;}
+            try{CompactSaveStore.Write(SavePath,Model.State,Model.Rules);workCheckpoint.RecordAttempt(true);passiveCheckpoint.RecordAttempt(true);hasSave=true;lastSaveAt=Time.unscaledTime;nextSave=Time.unscaledTime+15;saveFailed=false;saveStatus="Saved just now";return true;}
+            catch(Exception ex){workCheckpoint.RecordAttempt(false);passiveCheckpoint.RecordAttempt(false);saveFailed=true;saveStatus="Save failed / retry from Pause";Tell("SAVE FAILED: "+ex.Message);Debug.LogWarning(ex);return false;}
         }
         void OnApplicationFocus(bool focused)
         {
@@ -288,7 +314,9 @@ namespace Scrapshift.Compact
             if(IsBuilding)CancelBuild();settings.Close();
             pageHistory.Clear();selectedId=0;menuScroll=Vector2.zero;confirmNew=false;confirmRemove=false;ResetRequestReview();ResetIndustryReview();
             if(controls!=null)controls.FlushPending();if(presentation!=null)presentation.FlushPending();
-            page=welcoming?Page.Welcome:sessionStarted?Page.Pause:Page.Title;Pause(true);Save();
+            bool checkpointOnPause=!paused&&!refreshingPassiveCareer&&(workCheckpoint.Pending||passiveCheckpoint.Pending);
+            page=welcoming?Page.Welcome:sessionStarted?Page.Pause:Page.Title;Pause(true);
+            if(!checkpointOnPause)Save();
         }
         void OnApplicationQuit(){if(controls!=null)controls.FlushPending();if(presentation!=null)presentation.FlushPending();Save();}
         void OnDestroy()

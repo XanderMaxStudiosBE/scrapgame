@@ -168,5 +168,77 @@ namespace Scrapshift.Tests
             Call("Interact");Assert.IsNull(Model.Carried);Assert.IsNull(bench.job);Assert.AreEqual(10,Model.StoredUnits(bench.id));
             Model.Tick(.1f);Assert.IsNotNull(bench.job);Assert.AreEqual(1,bench.job.inputQuantity);Assert.AreEqual(0,bench.job.strokes);
         }
+        CompactConveyorPortTarget AimAtOutput(EquipmentState equipment)
+        {
+            var owner=new GameObject("Direct OUT connection target");owner.transform.SetParent(root.transform,false);
+            var target=owner.AddComponent<CompactInteractionTarget>();target.kind=CompactTargetKind.Equipment;target.id=equipment.id;
+            var mouth=owner.AddComponent<CompactConveyorPortTarget>();mouth.output=true;mouth.index=0;
+            Set("target",target);Set("aimedPort",mouth);return mouth;
+        }
+        [Test] public void EmptyHandOutputStartsPhysicalBeltAndCancellationPreservesYard()
+        {
+            var bench=Model.State.equipment[0];AimAtOutput(bench);
+            int money=Model.State.money,next=Model.State.nextId,xp=Model.State.experience;
+            Call("Interact");
+            Assert.AreEqual(2,Get("beltStage"));Assert.AreEqual(bench.id,Get("beltFrom"));Assert.AreEqual(0,Get("beltFromPort"));
+            Assert.IsFalse(game.IsPaused);Assert.IsFalse(input.GameplayReady);
+            Call("CancelBuild");
+            Assert.IsFalse(game.IsBuilding);Assert.AreEqual(money,Model.State.money);Assert.AreEqual(next,Model.State.nextId);
+            Assert.AreEqual(xp,Model.State.experience);Assert.IsEmpty(Model.State.belts);Assert.IsNull(bench.job);
+        }
+        [Test] public void ConnectedOutputRejectsDirectStartAndBodyStillOpensManagement()
+        {
+            var bench=Model.State.equipment[0];var storage=Add(EquipmentKind.Storage,bench.x,bench.z+8);
+            Model.State.money=1000; // Fixture cash pays for a real belt before testing the occupied mouth.
+            Assert.IsTrue(game.Automation.Connect(bench.id,0,storage.id,0,true),game.Automation.LastMessage);
+            int money=Model.State.money,next=Model.State.nextId;AimAtOutput(bench);Call("Interact");
+            Assert.AreEqual(0,Get("beltStage"));Assert.AreEqual(1,Model.State.belts.Count);
+            Assert.AreEqual(money,Model.State.money);Assert.AreEqual(next,Model.State.nextId);
+            Set("aimedPort",null);Call("Interact");
+            Assert.AreEqual("Equipment",Get("page").ToString());Assert.IsTrue(game.IsPaused);
+        }
+        [Test] public void ConnectedMouthHintReportsFullDestinationAndPreservesInventory()
+        {
+            var bench=Model.State.equipment[0];var storage=Add(EquipmentKind.Storage,bench.x,bench.z+8);
+            Model.State.money=1000;Assert.IsTrue(game.Automation.Connect(bench.id,0,storage.id,0,true));
+            var belt=Model.State.belts[0];belt.items.Add(new ConveyorItem{id=Model.State.nextId++,kind=PartKind.Copper,progress=1,xpEligible=true});
+            storage.contents.Add(new CompactStack{id=Model.State.nextId++,kind=PartKind.Copper,quantity=Model.Rules.Equipment(storage.kind).outputCapacity});
+            AimAtOutput(bench);string before=JsonUtility.ToJson(Model.State),notice=game.Automation.LastMessage;
+            string hint=(string)Call("Hint");
+            Assert.That(hint,Does.Contain("#"+bench.id+" OUT 1").And.Contain("#"+storage.id+" IN 1").And.Contain("IN full"));
+            Assert.AreEqual(before,JsonUtility.ToJson(Model.State));Assert.AreEqual(notice,game.Automation.LastMessage);
+        }
+        [Test] public void BodyHintReportsIndependentProcessorBaysAndIdleBlocker()
+        {
+            var bench=Model.State.equipment[0];bench.filterKind=(int)PartKind.Motor;
+            int capacity=Model.Rules.Equipment(bench.kind).outputCapacity;
+            bench.contents.Add(new CompactStack{id=Model.State.nextId++,kind=PartKind.Wire,quantity=capacity});
+            AimAtOutput(bench);Set("aimedPort",null);
+            string before=JsonUtility.ToJson(Model.State),hint=(string)Call("Hint");
+            Assert.That(hint,Does.Contain("IN "+capacity+" / "+capacity+" (full)").And.Contain("OUT 0 / "+capacity+" (empty)").And.Contain("IN recipe / "));
+            Assert.That(hint,Does.Contain(Model.ProcessingBlockReason(bench.id)));Assert.AreEqual(before,JsonUtility.ToJson(Model.State));
+        }
+        [Test] public void OutHintUsesActualBindingAndCarriedInputCannotStartABelt()
+        {
+            var bench=Model.State.equipment[0];AimAtOutput(bench);
+            input.Preferences.SetBinding(ControlAction.Interact,"F",false);
+            Assert.That((string)Call("Hint"),Does.Contain("[F]").And.Contain("Start conveyor"));
+            Assert.IsTrue(Model.AcquireWire());var held=Model.Carried;Call("Interact");
+            Assert.AreSame(held,Model.Carried);Assert.IsNull(bench.job);Assert.IsEmpty(bench.contents);
+            Assert.AreEqual(0,Get("beltStage"));Assert.IsEmpty(Model.State.belts);
+        }
+        [Test] public void EditableMachineDimensionsRefreshCablesAtTheScaledPhysicalSockets()
+        {
+            var machine=PoweredMachine();var link=Model.State.powerLinks[0];var generator=Model.FindEquipment(link.a);
+            machine.yaw=90;generator.yaw=270;Call("SyncCables");var previous=(GameObject)Get("cables");
+            Model.Rules.Equipment(EquipmentKind.Generator).width*=.8f;
+            Model.Rules.Equipment(EquipmentKind.Tier1Scrapper).depth*=1.2f;
+            Call("SyncCables");var refreshed=(GameObject)Get("cables");Assert.AreNotSame(previous,refreshed);
+            var cable=refreshed.GetComponentsInChildren<LineRenderer>()[0];
+            var start=new Vector3(generator.x,0,generator.z)+Quaternion.Euler(0,generator.yaw,0)*CompactEquipmentVisuals.GeneratorPowerSocket(Model.Rules);
+            var end=new Vector3(machine.x,0,machine.z)+Quaternion.Euler(0,machine.yaw,0)*CompactEquipmentVisuals.Tier1PowerSocket(Model.Rules);
+            Assert.That(Vector3.Distance(start,cable.GetPosition(0)),Is.LessThan(.0001f));
+            Assert.That(Vector3.Distance(end,cable.GetPosition(cable.positionCount-1)),Is.LessThan(.0001f));
+        }
     }
 }
