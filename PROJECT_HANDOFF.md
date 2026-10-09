@@ -1,5 +1,9 @@
 # Scrapshift project handoff
 
+## Creator map rejection and redesign request (2026-10-09)
+
+The creator rejects the current map after local play; three actual Unity screenshots are preserved in Design/MapRedesign-2026-10-09. Read its README.md, layout-plan.svg and CLOUD_PROMPT.md before further environment work. Proposed direction: one distinctive perimeter workshop with open canopy, clear arrival/office/receiving, grouped edge stock, differentiated ground and contiguous player-buildable production floor. This is a design request, not an implemented layout or visual acceptance. Preserve the latest live line feedback, construction, bounded checkpoints, saved equipment/ports and freely placed machinery. Sound dissatisfaction was also reported; audio is deferred until after the map. The earlier visual targets remain atmosphere references; this brief supersedes their repeated background-building composition. No runtime changes or Unity tests occurred while preparing this pack.
+
 ## Current milestone: live line feedback and bounded saves (2026-10-09)
 
 Continued the existing reference-yard work with separate core-feedback and checkpoint owners, plus independent runtime reviews. Read Design/COMPACT_LIVE_FEEDBACK_VERIFICATION.md. The previous world/machinery/physical-construction changes are preserved; no catalogue, balance, asset, scene, package, progression or durable schema is changed. Unity remains unavailable; native compilation, tests, gameplay, rendering, profiler evidence and desktop build are unverified.

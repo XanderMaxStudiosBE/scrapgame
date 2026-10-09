@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="920" viewBox="0 0 1100 920">
+<rect width="1100" height="920" fill="#182320"/>
+<g font-family="Arial,sans-serif" fill="#f1ead7">
+<text x="60" y="48" font-size="29" font-weight="bold">SCRAPSHIFT / PROPOSED MAP COMPOSITION</text>
+<text x="60" y="78" font-size="16">Design plan, not gameplay. Equipment remains freely placed. Approximately 48 x 36m.</text>
+<rect x="60" y="140" width="960" height="720" fill="#938b72" stroke="#e2d8bc" stroke-width="4"/>
+<text x="435" y="120" font-size="18">48m / opposite entrance</text>
+<g fill="#3f5843"><circle cx="95" cy="170" r="20"/><circle cx="450" cy="171" r="23"/><circle cx="825" cy="170" r="18"/><circle cx="985" cy="190" r="22"/></g>
+<rect x="95" y="208" width="195" height="262" fill="#665247" stroke="#e2d8bc" stroke-width="2"/>
+<text x="114" y="246" font-size="19" font-weight="bold">ONE WORKSHOP</text>
+<text x="114" y="271" font-size="15">Distinct roof / doorway</text>
+<text x="114" y="296" font-size="15">Perimeter landmark</text>
+<rect x="95" y="475" width="230" height="155" fill="#b5a48a" stroke="#e2d8bc" stroke-dasharray="8 5" stroke-width="2"/>
+<text x="110" y="509" font-size="19" fill="#202a25" font-weight="bold">OPEN CANOPY</text>
+<text x="110" y="536" font-size="15" fill="#202a25">Concrete / manual work</text>
+<text x="110" y="561" font-size="15" fill="#202a25">Moveable equipment</text>
+<text x="110" y="586" font-size="15" fill="#202a25">No compulsory pads</text>
+<rect x="370" y="204" width="395" height="72" fill="#705a46"/>
+<text x="393" y="233" font-size="18">GROUPED EDGE STOCK</text>
+<text x="393" y="257" font-size="15">Shelves / tyres / appliance bays</text>
+<rect x="374" y="310" width="575" height="427" rx="9" fill="#9da47e" stroke="#e2d8bc" stroke-width="2" stroke-dasharray="12 7"/>
+<text x="417" y="415" font-size="25" fill="#202a25" font-weight="bold">OPEN PRODUCTION FLOOR</text>
+<text x="417" y="450" font-size="18" fill="#202a25">Player places machines, belts and storage</text>
+<text x="417" y="480" font-size="18" fill="#202a25">Contiguous gravel / clear circulation</text>
+<text x="417" y="510" font-size="18" fill="#202a25">Keep at least half the starter floor usable</text>
+<text x="417" y="552" font-size="16" fill="#202a25">No preset production line or granted machinery</text>
+<path d="M555 860 L555 785 L355 785 L355 695 L245 695" fill="none" stroke="#605b4a" stroke-width="74"/>
+<path d="M555 855 L555 785 L355 785 L355 695 L250 695" fill="none" stroke="#b8af94" stroke-width="3" stroke-dasharray="12 10"/>
+<rect x="94" y="644" width="204" height="98" fill="#736c58" stroke="#e2d8bc"/>
+<text x="110" y="675" font-size="18">RECEIVING</text><text x="110" y="702" font-size="15">Car / fridge approach</text>
+<rect x="94" y="770" width="200" height="67" fill="#89583f" stroke="#e2d8bc"/>
+<text x="108" y="799" font-size="18">OFFICE / SALES</text><text x="108" y="824" font-size="14">Near gate / recognizable sign</text>
+<text x="658" y="812" font-size="17">Worn delivery lane</text>
+<path d="M510 860 L610 860" stroke="#182320" stroke-width="9"/>
+<text x="512" y="893" font-size="18">GATE</text>
+<g fill="#e9bf65" stroke="#182320" stroke-width="2"><circle cx="565" cy="830" r="15"/><circle cx="344" cy="592" r="15"/><circle cx="361" cy="695" r="15"/></g>
+<g fill="#182320" font-size="16" font-weight="bold"><text x="559" y="836">1</text><text x="338" y="598">2</text><text x="355" y="701">3</text></g>
+<text x="60" y="911" font-size="14">Capture views: 1 entrance toward workshop · 2 manual area · 3 receiving. Rotate proposal to actual services.</text>
+</g></svg>
