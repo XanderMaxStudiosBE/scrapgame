@@ -9,6 +9,10 @@ namespace Scrapshift.Compact
         int beltStage,beltFrom,beltFromPort;
         bool beltXFirst=true;
         LineRenderer beltPreview;
+        GameObject beltPreviewRoot;
+        LineRenderer beltSourcePreview,beltDestinationPreview;
+        readonly List<LineRenderer> beltDirectionPreviews=new List<LineRenderer>();
+        readonly List<LineRenderer> beltCorridorPreviews=new List<LineRenderer>();
         string beltViewKey="";
         GameObject beltViews;
         sealed class TransitView {public PartKind kind;public GameObject root;}
@@ -25,10 +29,12 @@ namespace Scrapshift.Compact
             var definition=Model.Rules.Equipment(EquipmentKind.Conveyor);
             if(!definition.available||Model.Level<definition.unlockLevel){Tell("Conveyors unlock at level "+definition.unlockLevel+".");return;}
             if(Model.Carried!=null){Tell("Put down your carried item before connecting conveyors.");return;}
+            if(fromId!=0&&!CompactPortSelection.CanSelectOutput(Model.State,Model.Rules,fromId,fromPort,out string reason))
+            {Tell(reason);return;}
             build.Cancel();DestroyGhost();DestroyBeltPreview();
             beltFrom=fromId;beltFromPort=fromPort;beltStage=fromId==0?1:2;
             beltXFirst=true;page=Page.None;Pause(false);controls.SuppressUntilRelease();hudDirty=true;
-            Tell("Choose an output, then an input. Confirm with ["+controls.Label(ControlAction.Interact)+"]. Escape cancels without spending.");
+            Tell((fromId==0?"Choose an output, then an input.":"#"+fromId+" OUT "+(fromPort+1)+" selected. Aim at an amber IN mouth.")+" Confirm with ["+controls.Label(ControlAction.Interact)+"]. Escape cancels without spending.");
         }
         void UpdateBeltBuild()
         {
@@ -40,9 +46,10 @@ namespace Scrapshift.Compact
             var gear=owner!=null&&owner.kind==CompactTargetKind.Equipment?Model.FindEquipment(owner.id):null;
             var mouth=hit?result.collider.GetComponentInParent<CompactConveyorPortTarget>():null;
             bool selectingOutput=beltStage==1;
+            var localAim=hit?transform.InverseTransformPoint(result.point):Vector3.zero;
             int port=gear==null?-1:mouth!=null?
                 (mouth.output==selectingOutput&&mouth.index>=0&&mouth.index<AutomationModel.PortCount(gear.kind,selectingOutput)?mouth.index:-1):
-                NearestPort(gear,selectingOutput,result.point);
+                NearestPort(gear,selectingOutput,localAim);
             previewClear=false;
             buildReason=beltStage==1?"Aim at a green OUT mouth to start.":"Aim at an amber IN mouth on another machine.";
             if(mouth!=null&&mouth.output!=selectingOutput)buildReason=selectingOutput?"That is an IN mouth. Start at a green OUT mouth.":"That is an OUT mouth. Finish at an amber IN mouth.";
@@ -50,46 +57,102 @@ namespace Scrapshift.Compact
             {
                 if(port<0){DestroyBeltPreview();return;}
                 var socket=AutomationModel.Port(gear,Model.Rules,true,port);
-                PreviewBelt(new[]{new Vector3(socket.x,.72f,socket.z),new Vector3(socket.x,.99f,socket.z)},true);
-                buildReason=Model.Rules.Equipment(gear.kind).name+" #"+gear.id+" / output "+(port+1)+" / select start";
+                previewClear=CompactPortSelection.CanSelectOutput(Model.State,Model.Rules,gear.id,port,out string selectionReason);
+                PreviewBelt(new[]{new Vector3(socket.x,CompactAutomationVisuals.ItemHeight+.08f,socket.z)},previewClear);
+                buildReason=selectionReason;
                 if(controls.Pressed(ControlAction.Interact))
-                {beltFrom=gear.id;beltFromPort=port;beltStage=2;controls.SuppressUntilRelease();hudDirty=true;}
+                {
+                    if(!previewClear){Tell(buildReason);return;}
+                    beltFrom=gear.id;beltFromPort=port;beltStage=2;controls.SuppressUntilRelease();hudDirty=true;
+                }
                 return;
             }
+            if(!CompactPortSelection.CanSelectOutput(Model.State,Model.Rules,beltFrom,beltFromPort,out string sourceReason))
+            {CancelBuild();Tell(sourceReason);return;}
             if(port<0)
             {
                 var source=Model.FindEquipment(beltFrom);
                 if(source==null){CancelBuild();return;}
                 var socket=AutomationModel.Port(source,Model.Rules,true,beltFromPort);
-                var end=hit?result.point:ray.GetPoint(6);
-                PreviewBelt(new[]{new Vector3(socket.x,.75f,socket.z),new Vector3(end.x,.75f,end.z)},false);
+                var end=hit?localAim:transform.InverseTransformPoint(ray.GetPoint(6));
+                PreviewBelt(new[]{new Vector3(socket.x,CompactAutomationVisuals.ItemHeight+.08f,socket.z),new Vector3(end.x,CompactAutomationVisuals.ItemHeight+.08f,end.z)},false);
                 return;
             }
             var link=new ConveyorLink{fromId=beltFrom,fromPort=beltFromPort,toId=gear.id,toPort=port,bendXFirst=beltXFirst};
             previewClear=Automation.CanConnect(beltFrom,beltFromPort,gear.id,port,beltXFirst,out string reason);
             var path=AutomationModel.Path(link,Model.State,Model.Rules);
             if(previewClear&&!BeltAvoidsWorld(path,beltFrom,gear.id)){previewClear=false;reason="Conveyor path is blocked by fixed scenery or loose scrap.";}
-            int cost=(int)Math.Ceiling(AutomationModel.Length(path)/2)*Model.Rules.Equipment(EquipmentKind.Conveyor).price;
-            buildReason=previewClear?"OUT → IN / €"+cost+" / "+AutomationModel.Length(path).ToString("0.0")+"m":reason;
-            var points=new Vector3[path.Length];for(int i=0;i<points.Length;i++)points[i]=new Vector3(path[i].x,.75f,path[i].z);
-            PreviewBelt(points,previewClear);
+            float length=AutomationModel.Length(path);
+            long cost=(long)Math.Ceiling(length/2)*Model.Rules.Equipment(EquipmentKind.Conveyor).price;
+            string routeQuote="#"+beltFrom+" OUT "+(beltFromPort+1)+" → #"+gear.id+" IN "+(port+1)+" / €"+cost+" / "+length.ToString("0.0")+"m";
+            buildReason=routeQuote+(previewClear?" / clear":"\n"+reason);
+            var points=new Vector3[path.Length];for(int i=0;i<points.Length;i++)points[i]=new Vector3(path[i].x,CompactAutomationVisuals.ItemHeight+.08f,path[i].z);
+            PreviewBelt(points,previewClear,true);
             if(controls.Pressed(ControlAction.Interact))
             {
                 if(!previewClear){Tell(buildReason);return;}
+                // Native obstacles can change after the displayed preview. The purchase
+                // also revalidates the authoritative model inside Automation.Connect.
+                if(!BeltAvoidsWorld(path,beltFrom,gear.id))
+                {
+                    previewClear=false;buildReason=routeQuote+"\nConveyor path is blocked by fixed scenery or loose scrap.";
+                    PreviewBelt(points,false,true);Tell(buildReason);return;
+                }
                 if(AutomationAct(()=>Automation.Connect(beltFrom,beltFromPort,gear.id,port,beltXFirst)))
                 {beltStage=0;DestroyBeltPreview();controls.SuppressUntilRelease();hudDirty=true;}
             }
         }
-        void PreviewBelt(Vector3[] points,bool valid)
+        LineRenderer CreateBeltPreviewLine(string name,float width,Color color)
+        {
+            var line=new GameObject(name).AddComponent<LineRenderer>();line.transform.SetParent(beltPreviewRoot.transform,false);
+            line.useWorldSpace=false;line.widthMultiplier=width;line.shadowCastingMode=ShadowCastingMode.Off;line.receiveShadows=false;
+            line.sharedMaterial=YardGeometry.PaletteMaterial(color);return line;
+        }
+        void PreviewBelt(Vector3[] points,bool valid,bool snapped=false)
         {
             if(beltPreview==null)
             {
-                beltPreview=new GameObject("Conveyor port preview").AddComponent<LineRenderer>();beltPreview.transform.SetParent(transform,false);
-                beltPreview.useWorldSpace=false;beltPreview.widthMultiplier=.14f;beltPreview.shadowCastingMode=ShadowCastingMode.Off;beltPreview.receiveShadows=false;
+                beltPreviewRoot=new GameObject("Conveyor port preview");beltPreviewRoot.transform.SetParent(transform,false);
+                beltPreview=CreateBeltPreviewLine("OUT to IN route",.10f,new Color(.2f,.7f,.65f));
+                beltSourcePreview=CreateBeltPreviewLine("Selected OUT mouth",.045f,new Color(.34f,.72f,.52f));
+                beltDestinationPreview=CreateBeltPreviewLine("Snapped IN mouth",.045f,new Color(.95f,.62f,.20f));
             }
             beltPreview.gameObject.SetActive(true);
-            beltPreview.sharedMaterial=YardGeometry.PaletteMaterial(valid?new Color(.2f,.7f,.65f):YardGeometry.Rust);
+            var routeColor=valid?new Color(.2f,.7f,.65f):YardGeometry.Rust;
+            beltPreview.sharedMaterial=YardGeometry.PaletteMaterial(routeColor);
             beltPreview.positionCount=points.Length;beltPreview.SetPositions(points);
+            beltSourcePreview.sharedMaterial=YardGeometry.PaletteMaterial(beltStage==1&&!valid?YardGeometry.Rust:new Color(.34f,.72f,.52f));
+            PreviewBeltSocket(beltSourcePreview,points[0]);
+            beltDestinationPreview.gameObject.SetActive(snapped);
+            if(snapped)PreviewBeltSocket(beltDestinationPreview,points[points.Length-1]);
+            int used=0;
+            if(snapped)for(int i=1;i<points.Length;i++)
+            {
+                var direction=points[i]-points[i-1];float length=direction.magnitude;
+                if(length<.0001f)continue;direction/=length;
+                var side=Vector3.Cross(Vector3.up,direction);
+                if(used==beltDirectionPreviews.Count)
+                {
+                    beltDirectionPreviews.Add(CreateBeltPreviewLine("Travel direction",.045f,routeColor));
+                    beltCorridorPreviews.Add(CreateBeltPreviewLine("Required route clearance",.025f,routeColor));
+                }
+                var arrow=beltDirectionPreviews[used];arrow.gameObject.SetActive(true);arrow.sharedMaterial=beltPreview.sharedMaterial;
+                float arrowSize=Mathf.Min(.20f,length*.30f);var centre=(points[i-1]+points[i])*.5f+Vector3.up*.025f;
+                arrow.positionCount=3;arrow.SetPositions(new[]{centre-direction*arrowSize+side*arrowSize*.65f,centre+direction*arrowSize,centre-direction*arrowSize-side*arrowSize*.65f});
+                var corridor=beltCorridorPreviews[used];corridor.gameObject.SetActive(true);corridor.sharedMaterial=beltPreview.sharedMaterial;
+                float radius=AutomationModel.CorridorWidth*.5f;
+                var a=points[i-1]-direction*radius;var b=points[i]+direction*radius;
+                corridor.positionCount=5;corridor.SetPositions(new[]{a-side*radius,b-side*radius,b+side*radius,a+side*radius,a-side*radius});
+                used++;
+            }
+            for(int i=used;i<beltDirectionPreviews.Count;i++)
+            {beltDirectionPreviews[i].gameObject.SetActive(false);beltCorridorPreviews[i].gameObject.SetActive(false);}
+        }
+        static void PreviewBeltSocket(LineRenderer line,Vector3 point)
+        {
+            const float radius=.43f;
+            line.positionCount=5;line.SetPositions(new[]{point+new Vector3(-radius,0,-radius),point+new Vector3(radius,0,-radius),
+                point+new Vector3(radius,0,radius),point+new Vector3(-radius,0,radius),point+new Vector3(-radius,0,-radius)});
         }
         int NearestPort(EquipmentState gear,bool output,Vector3 aim)
         {
@@ -99,10 +162,14 @@ namespace Scrapshift.Compact
         {
             for(int i=1;i<path.Length;i++)
             {
-                var a=new Vector3(path[i-1].x,.7f,path[i-1].z);var b=new Vector3(path[i].x,.7f,path[i].z);
+                var a=transform.TransformPoint(new Vector3(path[i-1].x,CompactAutomationVisuals.ItemHeight,path[i-1].z));
+                var b=transform.TransformPoint(new Vector3(path[i].x,CompactAutomationVisuals.ItemHeight,path[i].z));
                 if((b-a).sqrMagnitude<.0001f)continue;
-                int count=Physics.OverlapBoxNonAlloc((a+b)*.5f,new Vector3(.36f,.28f,(b-a).magnitude*.5f),placementHits,
-                    Quaternion.LookRotation(b-a),~(1<<2),QueryTriggerInteraction.Ignore);
+                float radius=AutomationModel.CorridorWidth*.5f;
+                var scale=transform.lossyScale;
+                float worldRadius=radius*Mathf.Max(Mathf.Abs(scale.x),Mathf.Abs(scale.z));
+                int count=Physics.OverlapBoxNonAlloc((a+b)*.5f,new Vector3(worldRadius,.28f*Mathf.Abs(scale.y),(b-a).magnitude*.5f+worldRadius),placementHits,
+                    Quaternion.LookRotation(b-a,transform.up),~(1<<2),QueryTriggerInteraction.Ignore);
                 if(count==placementHits.Length)return false;
                 for(int j=0;j<count;j++)
                 {
@@ -113,7 +180,11 @@ namespace Scrapshift.Compact
             }
             return true;
         }
-        void DestroyBeltPreview(){if(beltPreview!=null)DestroyOwnedView(beltPreview.gameObject);beltPreview=null;}
+        void DestroyBeltPreview()
+        {
+            DestroyOwnedView(beltPreviewRoot);beltPreviewRoot=null;beltPreview=null;beltSourcePreview=null;beltDestinationPreview=null;
+            beltDirectionPreviews.Clear();beltCorridorPreviews.Clear();
+        }
         bool AutomationAct(Func<bool> action)
         {
             bool changed=action();Tell(Automation.LastMessage);
@@ -154,12 +225,18 @@ namespace Scrapshift.Compact
             }
             Text("CONVEYOR PORTS / "+inputs+" in / "+outputs+" out. Select an output then aim at an input. ["+controls.Label(ControlAction.BuildRotate)+"] changes the elbow; Escape cancels. Belts keep blocked items and cannot be dismantled while loaded.");
             for(int port=0;port<outputs;port++)
-            {int chosen=port;var definition=Model.Rules.Equipment(EquipmentKind.Conveyor);if(Button("Connect output "+(port+1)+" conveyor / level "+definition.unlockLevel,Model.Carried==null&&definition.available&&Model.Level>=definition.unlockLevel))BeginBelt(gear.id,chosen);}
+            {
+                int chosen=port;var definition=Model.Rules.Equipment(EquipmentKind.Conveyor);
+                bool outputFree=CompactPortSelection.CanSelectOutput(Model.State,Model.Rules,gear.id,chosen,out string outputReason);
+                if(!outputFree)Text(outputReason);
+                if(Button("Connect output "+(port+1)+" conveyor / level "+definition.unlockLevel,outputFree&&Model.Carried==null&&definition.available&&Model.Level>=definition.unlockLevel))BeginBelt(gear.id,chosen);
+            }
             foreach(var link in Model.State.belts.ToArray())
             {
                 if(link.fromId!=gear.id&&link.toId!=gear.id)continue;
                 bool allowed=Automation.CanRemove(link.id,out string reason);int id=link.id;
-                Text("Belt #"+link.id+" / #"+link.fromId+" → #"+link.toId+" / "+link.items.Count+" moving items / "+reason);
+                Text("Belt #"+link.id+" / "+ConveyorRouteLabel(link)+"\n"+Automation.FlowStatus(link.id));
+                if(!allowed)Text(reason);
                 if(Button("Dismantle empty belt #"+link.id+" / refund €"+(link.paidPrice/2),allowed))AutomationAct(()=>Automation.Remove(id));
             }
         }
@@ -178,7 +255,7 @@ namespace Scrapshift.Compact
             {
                 CompactAutomationVisuals.BuildBelt(link,Model.State,Model.Rules,beltViews.transform);
                 var path=AutomationModel.Path(link,Model.State,Model.Rules);var points=new Vector3[path.Length];
-                for(int i=0;i<path.Length;i++)points[i]=new Vector3(path[i].x,.7f,path[i].z);
+                for(int i=0;i<path.Length;i++)points[i]=new Vector3(path[i].x,CompactAutomationVisuals.ItemHeight,path[i].z);
                 transitPaths[link.id]=points;transitLengths[link.id]=AutomationModel.Length(path);
             }
         }

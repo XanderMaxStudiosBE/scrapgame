@@ -242,24 +242,98 @@ namespace Scrapshift.Compact
             destination.contents.Add(new CompactStack{id=item.id,kind=item.kind,quantity=1,x=destination.x,z=destination.z,xpEligible=item.xpEligible});
             link.items.RemoveAt(0);return true;
         }
-        bool Launch(EquipmentState source,ConveyorLink link,float length)
+        bool BeltReadyToLaunch(ConveyorLink link,float length,out string reason)
         {
-            if(link.launchRemaining>0 || link.items.Count>=Math.Min(MaximumItemsPerBelt,Rules.beltCapacity) ||
-                (link.items.Count>0 && link.items[link.items.Count-1].progress*length<Rules.beltSpacing-.00001f))return false;
-            var destination=construction.Find(link.toId);if(destination==null)return false;
-            CompactStack stack=null;PartAmount output=null;
+            if(link.launchRemaining>0)return Reject("OUT waiting for belt spacing",out reason);
+            if(link.items.Count>=Math.Min(MaximumItemsPerBelt,Rules.beltCapacity))return Reject("OUT waiting for room on the belt",out reason);
+            if(link.items.Count>0 && link.items[link.items.Count-1].progress*length<Rules.beltSpacing-.00001f)
+                return Reject("OUT waiting for belt spacing",out reason);
+            reason="";return true;
+        }
+        bool SelectLaunchOutput(EquipmentState source,EquipmentState destination,out CompactStack stack,out PartAmount output,out string reason)
+        {
+            stack=null;output=null;
             if(ScrappingModel.IsComponentProcessor(source.kind))
             {
-                if(source.job==null || !source.job.ready)return false;
+                if(source.job==null)return Reject("OUT awaiting a processed batch",out reason);
+                if(!source.job.ready)return Reject(source.kind==EquipmentKind.Workbench?"OUT waiting for manual work":"OUT waiting for processing",out reason);
                 // Machine recipe filters select inputs, never suppress the resulting materials.
                 foreach(var amount in source.job.yields)if(amount.quantity>0 && DestinationSupports(destination,Rules,amount.kind)){output=amount;break;}
+                if(output==null)return Reject("IN cannot accept the remaining recovered output; review its filter or input role",out reason);
             }
-            else foreach(var candidate in source.contents)if((source.filterKind<0 || source.filterKind==(int)candidate.kind) && DestinationSupports(destination,Rules,candidate.kind)){stack=candidate;break;}
-            if(stack==null && output==null)return false;
-            bool reuse=stack!=null && stack.quantity==1;
+            else
+            {
+                bool matching=false;
+                foreach(var candidate in source.contents)
+                {
+                    if(source.filterKind>=0 && source.filterKind!=(int)candidate.kind)continue;
+                    matching=true;
+                    if(DestinationSupports(destination,Rules,candidate.kind)){stack=candidate;break;}
+                }
+                if(stack==null)
+                {
+                    if(source.contents.Count==0)return Reject("OUT empty",out reason);
+                    return Reject(matching?"IN cannot accept the selected stock; review its filter or input role":"OUT filter holds the stored items",out reason);
+                }
+            }
+            reason="";return true;
+        }
+        bool CanAllocateTransit(CompactStack stack,PartAmount output,out string reason)
+        {
             int additional=stack!=null?(stack.quantity==1?0:1):(output.quantity==1?0:1);
-            if(additional>0 && (model.OccupiedSlots+additional>Rules.maxStacks || model.OccupiedSlots+additional>512))return false;
-            if(!reuse && (State.nextId<=0 || State.nextId==int.MaxValue))return false;
+            if(additional>0 && (model.OccupiedSlots+additional>Rules.maxStacks || model.OccupiedSlots+additional>512))
+                return Reject("OUT waiting for inventory space; collect and sell existing stock",out reason);
+            if(!(stack!=null && stack.quantity==1) && (State.nextId<=0 || State.nextId==int.MaxValue))
+                return Reject("OUT waiting for safe item identities; stock retained",out reason);
+            reason="";return true;
+        }
+        /// <summary>Read-only operating feedback. Queries neither advance cargo nor change action
+        /// notices, saved state or the simulation's layout cache.</summary>
+        public string FlowStatus(int beltId)
+        {
+            var link=FindLink(beltId);if(link==null)return "Conveyor unavailable.";
+            var source=construction.Find(link.fromId);var destination=construction.Find(link.toId);
+            if(source==null || destination==null)return "Conveyor endpoint unavailable; cargo retained.";
+            if(link.fromPort<0 || link.fromPort>=PortCount(source.kind,true) || link.toPort<0 || link.toPort>=PortCount(destination.kind,false))
+                return "Conveyor endpoint port unavailable; cargo retained.";
+            if(link.items==null)return "Conveyor contents unavailable.";
+            var head=link.items.Count>0?link.items[0]:null;
+            if(link.items.Count>0 && head==null)return "Conveyor cargo unavailable.";
+            if(head!=null)
+            {
+                string intake=null;
+                if(!DestinationSupports(destination,Rules,head.kind))intake="IN cannot accept "+Rules.Part(head.kind).name+"; review its filter or input role";
+                else if(model.IntakeCapacityUnits(destination.id)>=Rules.Equipment(destination.kind).outputCapacity)intake="IN full";
+                if(intake!=null)return head.progress>=1?"Stopped at IN / "+intake+". Cargo retained.":"Items travelling / "+intake+"; will wait at IN.";
+                if(head.progress>=1)return "Ready at IN / "+link.items.Count+" item(s) on belt.";
+            }
+            string moving=head==null?"":"Items travelling / ";
+            CompactStack stack;PartAmount output;string reason;
+            if(!SelectLaunchOutput(source,destination,out stack,out output,out reason))
+            {
+                if((source.kind==EquipmentKind.Tier1Scrapper || source.kind==EquipmentKind.Tier2Scrapper) && source.job!=null && !source.job.ready)
+                {
+                    string processing=model.ProcessingBlockReason(source.id);
+                    if(processing!="Processing")return moving+"OUT waiting / "+processing+".";
+                }
+                if(source.kind==EquipmentKind.PrimaryScrapper && source.contents.Count==0 && source.industry!=null && source.industry.primary!=null)
+                    return moving+"OUT waiting / "+model.Industry.Status(source.id);
+                return moving+reason+".";
+            }
+            float length=Length(Path(link,State,Rules));
+            if(!BeltReadyToLaunch(link,length,out reason))return moving+reason+".";
+            if(!CanAllocateTransit(stack,output,out reason))return moving+reason+".";
+            if(model.IntakeCapacityUnits(destination.id)>=Rules.Equipment(destination.kind).outputCapacity)
+                return "IN full / incoming items will wait at IN.";
+            return head==null?"OUT ready to feed IN.":"Items travelling / OUT ready to feed IN.";
+        }
+        bool Launch(EquipmentState source,ConveyorLink link,float length)
+        {
+            string reason;if(!BeltReadyToLaunch(link,length,out reason))return false;
+            var destination=construction.Find(link.toId);if(destination==null)return false;
+            CompactStack stack;PartAmount output;
+            if(!SelectLaunchOutput(source,destination,out stack,out output,out reason) || !CanAllocateTransit(stack,output,out reason))return false;
+            bool reuse=stack!=null && stack.quantity==1;
             var transit=new ConveyorItem{id=reuse?stack.id:State.nextId,kind=stack!=null?stack.kind:output.kind,quantity=1,
                 xpEligible=stack!=null?stack.xpEligible:source.job.xpEligible,progress=0};
             if(!reuse)State.nextId++;

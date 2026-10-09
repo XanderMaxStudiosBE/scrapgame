@@ -75,7 +75,8 @@ namespace Scrapshift.Compact
                 {
                     Color status=equipment.job!=null&&equipment.job.ready?new Color(.35f,.67f,.42f):power.overloaded?YardGeometry.Rust:
                         !power.powered?YardGeometry.Charcoal:equipment.job==null?new Color(.35f,.67f,.42f):new Color(.83f,.62f,.24f);
-                    Vector3 indicator=equipment.kind==EquipmentKind.Tier2Scrapper?CompactAutomationVisuals.Tier2PowerSocket(Model.Rules)+Vector3.up*.25f:new Vector3(-.9f,1.25f,-.28f);
+                    Vector3 indicator=equipment.kind==EquipmentKind.Tier2Scrapper?CompactAutomationVisuals.Tier2PowerSocket(Model.Rules)+Vector3.up*.25f:
+                        CompactEquipmentVisuals.Tier1PowerSocket(Model.Rules)+Vector3.up*.35f+Vector3.forward*(.01f*definition.depth/2.3f);
                     YardGeometry.Box("Power and work indicator",details.transform,indicator,new Vector3(.075f,.06f,.025f),status,false);
                 }
                 if(equipment.job!=null)
@@ -156,7 +157,9 @@ namespace Scrapshift.Compact
             foreach(var link in Model.State.powerLinks)
             {
                 var a=Model.FindEquipment(link.a);var b=Model.FindEquipment(link.b);
-                key+=link.a+":"+link.b+":"+a.x+":"+a.z+":"+a.yaw+":"+b.x+":"+b.z+":"+b.yaw+";";
+                var aDefinition=Model.Rules.Equipment(a.kind);var bDefinition=Model.Rules.Equipment(b.kind);
+                key+=link.a+":"+link.b+":"+a.x+":"+a.z+":"+a.yaw+":"+b.x+":"+b.z+":"+b.yaw+":"+
+                    aDefinition.width+":"+aDefinition.depth+":"+bDefinition.width+":"+bDefinition.depth+";";
             }
             if(key==cableKey)return; cableKey=key;
             if(cables!=null)DestroyOwnedView(cables);cables=new GameObject("Player-built power cables");cables.transform.SetParent(transform,false);
@@ -172,10 +175,10 @@ namespace Scrapshift.Compact
         }
         Vector3 PowerPort(EquipmentState item)
         {
-            Vector3 socket=item.kind==EquipmentKind.Generator?new Vector3(.45f,.75f,-.55f):
+            Vector3 socket=item.kind==EquipmentKind.Generator?CompactEquipmentVisuals.GeneratorPowerSocket(Model.Rules):
                 item.kind==EquipmentKind.PrimaryScrapper?CompactIndustryVisuals.PrimaryPowerSocket(Model.Rules):
                 item.kind==EquipmentKind.ExportStation?CompactIndustryVisuals.ExportPowerSocket(Model.Rules):
-                item.kind==EquipmentKind.Tier2Scrapper?CompactAutomationVisuals.Tier2PowerSocket(Model.Rules):new Vector3(-.9f,.9f,-.29f);
+                item.kind==EquipmentKind.Tier2Scrapper?CompactAutomationVisuals.Tier2PowerSocket(Model.Rules):CompactEquipmentVisuals.Tier1PowerSocket(Model.Rules);
             return new Vector3(item.x,0,item.z)+Quaternion.Euler(0,item.yaw,0)*socket;
         }
         bool IsWorkingMachine(EquipmentState equipment)
@@ -308,9 +311,21 @@ namespace Scrapshift.Compact
                     return scrap.strokes<scrap.requiredStrokes?work+ScrapStage(scrap)+" / "+scrap.strokes+" of "+scrap.requiredStrokes+" • "+interact+"details":interact+"Collect dismantled components";
                 case CompactTargetKind.Equipment:
                     var gear=Model.FindEquipment(target.id);if(gear==null)return "";
-                    if(gear.kind==EquipmentKind.PrimaryScrapper)return interact+"Whole-object intake / "+Industry.Status(gear.id);
+                    string portStatus=Model.State.carriedId==0?ConnectedPortStatus(gear):"";
+                    if(portStatus.Length>0)return portStatus;
+                    if(Model.State.carriedId==0&&aimedPort!=null&&aimedPort.output)
+                    {
+                        string output="OUT "+(aimedPort.index+1)+" / ";
+                        var conveyor=Model.Rules.Equipment(EquipmentKind.Conveyor);
+                        if(!conveyor.available||Model.Level<conveyor.unlockLevel)return output+"Conveyors unlock at level "+conveyor.unlockLevel;
+                        if(!CompactPortSelection.CanSelectOutput(Model.State,Model.Rules,gear.id,aimedPort.index,out string reason))return output+reason;
+                        return output+interact+"Start conveyor • aim at the body to manage";
+                    }
+                    string bays=EquipmentBayStatus(gear);
+                    string context=bays.Length>0?"\n"+bays:"";
+                    if(gear.kind==EquipmentKind.PrimaryScrapper)return interact+"Whole-object intake / "+Industry.Status(gear.id)+context;
                     if(gear.kind==EquipmentKind.Generator)return interact+"Generator / power connections";
-                    if(gear.kind==EquipmentKind.ExportStation&&Model.State.carriedId==0)return interact+"Material dispatch / "+Industry.Status(gear.id);
+                    if(gear.kind==EquipmentKind.ExportStation&&Model.State.carriedId==0)return interact+"Material dispatch / "+Industry.Status(gear.id)+context;
                     if(Model.State.carriedId!=0)
                     {
                         if(aimedPort!=null&&aimedPort.output)return "OUT mouth / take your bundle to the amber IN mouth";
@@ -318,10 +333,48 @@ namespace Scrapshift.Compact
                         if(Model.CanDeposit(gear.id,out string inputReason))return interact+"Queue IN / "+Model.Rules.Equipment(gear.kind).name;
                         return inputReason;
                     }
-                    if(gear.job==null)return interact+Model.Rules.Equipment(gear.kind).name+" / manage";
-                    if(gear.job.ready)return interact+"Collect output / manage";
-                    if(gear.kind==EquipmentKind.Workbench)return work+"Process component / "+gear.job.strokes+" of "+gear.job.requiredStrokes;
-                    return PowerStatus(gear.id).powered?Model.ProcessingBlockReason(gear.id)+" / "+gear.job.remaining.ToString("0.0")+"s • "+interact+"details":PowerStatus(gear.id).reason+" • "+interact+"connections";
+                    if(gear.job==null)return interact+Model.Rules.Equipment(gear.kind).name+" / manage"+context+
+                        (ScrappingModel.IsComponentProcessor(gear.kind)?"\n"+Model.ProcessingBlockReason(gear.id):"");
+                    if(gear.job.ready)return interact+"Collect output / manage"+context;
+                    if(gear.kind==EquipmentKind.Workbench)return work+"Process component / "+gear.job.strokes+" of "+gear.job.requiredStrokes+context;
+                    return (PowerStatus(gear.id).powered?Model.ProcessingBlockReason(gear.id)+" / "+gear.job.remaining.ToString("0.0")+"s • "+interact+"details":PowerStatus(gear.id).reason+" • "+interact+"connections")+context;
+            }
+            return "";
+        }
+        string EquipmentBayStatus(EquipmentState gear)
+        {
+            if(!ScrappingModel.HasBuffer(gear.kind))return "";
+            int capacity=Model.Rules.Equipment(gear.kind).outputCapacity;
+            int intake=Model.IntakeCapacityUnits(gear.id);
+            string status;
+            if(ScrappingModel.IsComponentProcessor(gear.kind))
+                status="IN "+Model.QueueUnits(gear.id)+" / "+capacity+(intake>=capacity?" (full)":"")+
+                    " • OUT "+Model.OutputQuantity(gear.id)+" / "+capacity+
+                    (gear.job==null?" (empty)":gear.job.ready?" (ready)":" (reserved)");
+            else status="BUFFER "+intake+" / "+capacity+(intake>=capacity?" (full)":"")+
+                (Model.ReservedOutputUnits(gear.id)>0?" • "+Model.ReservedOutputUnits(gear.id)+" reserved":"");
+            if(gear.filterKind>=0)status+="\n"+(ScrappingModel.IsComponentProcessor(gear.kind)?"IN recipe":
+                gear.kind==EquipmentKind.ExportStation?"IN filter":"OUT filter")+" / "+Model.Rules.Part((PartKind)gear.filterKind).name;
+            return status;
+        }
+        string ConveyorEndpointLabel(int equipmentId,bool output,int port)
+        {
+            var equipment=Model.FindEquipment(equipmentId);
+            string name=equipment==null?"Missing equipment":Model.Rules.Equipment(equipment.kind).name;
+            return name+" #"+equipmentId+" "+(output?"OUT ":"IN ")+(port+1);
+        }
+        string ConveyorRouteLabel(ConveyorLink link)
+        {return ConveyorEndpointLabel(link.fromId,true,link.fromPort)+" → "+ConveyorEndpointLabel(link.toId,false,link.toPort);}
+        string ConnectedPortStatus(EquipmentState gear)
+        {
+            if(aimedPort==null)return "";
+            foreach(var link in Model.State.belts)
+            {
+                bool matches=aimedPort.output?link.fromId==gear.id&&link.fromPort==aimedPort.index:
+                    link.toId==gear.id&&link.toPort==aimedPort.index;
+                if(!matches)continue;
+                return ConveyorRouteLabel(link)+"\n"+Automation.FlowStatus(link.id)+"\n"+
+                    (aimedPort.output?"Aim at the body to manage":"["+controls.Label(ControlAction.Interact)+"] Manage input");
             }
             return "";
         }

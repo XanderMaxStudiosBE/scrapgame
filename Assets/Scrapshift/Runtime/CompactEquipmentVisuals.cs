@@ -5,6 +5,18 @@ namespace Scrapshift.Compact
     /// <summary>Original, metre-sized views. Inventory and work progress remain in the core model.</summary>
     public static class CompactEquipmentVisuals
     {
+        public static Vector3 GeneratorPowerSocket(CompactRules rules)
+        {
+            var definition=rules.Equipment(EquipmentKind.Generator);
+            return new Vector3(.45f*definition.width/1.75f,.75f,-.55f*definition.depth/1.25f);
+        }
+
+        public static Vector3 Tier1PowerSocket(CompactRules rules)
+        {
+            var definition=rules.Equipment(EquipmentKind.Tier1Scrapper);
+            return new Vector3(-.9f*definition.width/2.4f,.9f,-.29f*definition.depth/2.3f);
+        }
+
         public static GameObject Build(EquipmentKind kind, Transform parent, Vector3 position, float yaw = 0, bool colliders = true, CompactRules rules = null)
         {
             if(kind==EquipmentKind.PrimaryScrapper || kind==EquipmentKind.ExportStation)
@@ -38,23 +50,42 @@ namespace Scrapshift.Compact
                 if(definition!=null)
                 {
                     foreach(var box in root.GetComponents<BoxCollider>())box.size=new Vector3(definition.width,box.size.y,definition.depth);
-                    if(kind==EquipmentKind.Tier1Scrapper)
+                    string model=kind==EquipmentKind.Workbench?"Workbench":kind==EquipmentKind.Generator?"CompactGenerator":"CompactTier1Scrapper";
+                    float width=kind==EquipmentKind.Workbench?2.55f:kind==EquipmentKind.Generator?1.75f:2.4f;
+                    float depth=kind==EquipmentKind.Workbench?1.35f:kind==EquipmentKind.Generator?1.25f:2.3f;
+                    var body=root.transform.Find(model);
+                    if(body!=null)body.localScale=new Vector3(definition.width/width,1,definition.depth/depth);
+                    if(kind==EquipmentKind.Workbench)
                     {
-                        var body=root.transform.Find("CompactTier1Scrapper");
-                        if(body!=null)body.localScale=new Vector3(definition.width/2.4f,1,definition.depth/2.3f);
+                        var tools=root.transform.Find("RepairTools");
+                        if(tools!=null)
+                        {
+                            tools.localScale=new Vector3(definition.width/width,1,definition.depth/depth);
+                            tools.localPosition=new Vector3(.35f*definition.width/width,1.14f,.1f*definition.depth/depth);
+                        }
                     }
                 }
             }
             if(kind==EquipmentKind.Workbench || kind==EquipmentKind.Tier1Scrapper)
                 CompactAutomationVisuals.BuildPorts(kind,root.transform,rules ?? new CompactRules(),colliders);
+            if(kind==EquipmentKind.Workbench || kind==EquipmentKind.Generator || kind==EquipmentKind.Tier1Scrapper)
+                CompactAutomationVisuals.BuildMachineDetails(kind,root.transform,rules ?? new CompactRules());
             if(colliders)
             {
-                if(kind==EquipmentKind.Workbench)YardSignText.Plate(root.transform,"MANUAL WORKBENCH",new Vector3(0,.94f,-.70f),1.55f,.24f);
-                else if(kind==EquipmentKind.Generator)YardSignText.Plate(root.transform,"GENERATOR",new Vector3(0,.83f,-.65f),1.12f,.23f);
+                if(kind==EquipmentKind.Workbench)
+                {
+                    var definition=(rules ?? new CompactRules()).Equipment(kind);
+                    YardSignText.Plate(root.transform,"MANUAL WORKBENCH",new Vector3(0,.94f,-definition.depth*.5f-.025f),Mathf.Min(1.55f,definition.width*.65f),.24f);
+                }
+                else if(kind==EquipmentKind.Generator)
+                {
+                    var definition=(rules ?? new CompactRules()).Equipment(kind);
+                    YardSignText.Plate(root.transform,"GENERATOR",new Vector3(-.29f*definition.width/1.75f,1.04f,-.285f*definition.depth/1.25f),Mathf.Min(.72f,definition.width*.42f),.15f);
+                }
                 else if(kind==EquipmentKind.Tier1Scrapper)
                 {
-                    float depth=rules!=null?rules.Equipment(kind).depth:2.3f;
-                    YardSignText.Plate(root.transform,"SCRAPPER / TIER 1",new Vector3(0,1.39f,-depth*.5f-.035f),1.65f,.28f);
+                    var definition=(rules ?? new CompactRules()).Equipment(kind);
+                    YardSignText.Plate(root.transform,"SCRAPPER / TIER 1",new Vector3(0,1.68f,-.47f*definition.depth/2.3f),Mathf.Min(1.30f,definition.width*.54f),.22f);
                 }
             }
             return root;

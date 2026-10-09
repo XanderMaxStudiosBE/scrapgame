@@ -46,7 +46,7 @@ namespace Scrapshift.Compact
             var south=Sector(parent,"Compact entrance");
             foreach(float x in new[]{-13f,13f})Fence(south,new Vector3(x,1.05f,-18),new Vector3(22,2.1f,.18f));
             // Gate is closed scenery; the clear approach remains protected for future deliveries.
-            Fence(south,new Vector3(0,1,-18),new Vector3(4,2,.12f));
+            Fence(south,new Vector3(0,1,-18),new Vector3(4,2,.12f),false);
             foreach(float x in new[]{-2.15f,2.15f})
                 YardGeometry.SurfaceBox("Entry gate upright",south,new Vector3(x,1.5f,-18),new Vector3(.18f,3,.18f),RetroSurface.DarkMetal);
             Label(south,"SCRAPSHIFT",new Vector3(0,2.75f,-18.16f),0,3.6f,.48f);
@@ -61,10 +61,10 @@ namespace Scrapshift.Compact
             var body=officeCollision.AddComponent<BoxCollider>();body.center=new Vector3(0,1.5f,0);body.size=new Vector3(8,3,6);
             if(YardWorldDressing.TryPlace("OfficeDetails",office,OfficeAnchor,out GameObject trim))trim.transform.localRotation=Quaternion.Euler(0,180,0);
             Label(office,"SCRAPSHIFT / SALVAGE YARD",OfficeAnchor+new Vector3(0,2.65f,3.19f),180,4.1f,.35f);
-            // Shallow covered counter lamps reuse the existing four-light lighting budget.
+            OfficeRainCover(office);
+            // Covered counter fixtures reuse the existing four-light lighting budget.
             foreach(float x in new[]{-19f,-15f})
             {
-                YardGeometry.SurfaceBox("Counter rain hood",office,new Vector3(x,3.34f,-10.75f),new Vector3(2.3f,.075f,1.1f),RetroSurface.CorrugatedMetal,false);
                 Fixture(office,new Vector3(x,2.69f,-10.6f));
             }
             var handles=new CompactWorldHandles();
@@ -125,6 +125,34 @@ namespace Scrapshift.Compact
             return root;
         }
 
+        static void OfficeRainCover(Transform parent)
+        {
+            // A single practical service awning gives the office a readable working frontage.
+            // All supports attach above the existing body/counters. No ground posts, collision
+            // or construction reservations are added to a restored player's building floor.
+            var cover=Sector(parent,"Office service rain cover");
+            var roof=YardGeometry.SurfaceBox("Office patched corrugated awning",cover,new Vector3(-17,3.08f,-10.63f),new Vector3(8.15f,.065f,1.10f),RetroSurface.CorrugatedMetal,false);
+            roof.transform.localRotation=Quaternion.Euler(6,0,0);
+            YardGeometry.SurfaceBox("Office rain cover wall beam",cover,new Vector3(-17,3.08f,-11),new Vector3(8.15f,.105f,.085f),RetroSurface.DarkMetal,false);
+            YardGeometry.SurfaceBox("Office rain cover front beam",cover,new Vector3(-17,2.98f,-10.10f),new Vector3(8.15f,.095f,.085f),RetroSurface.DarkMetal,false);
+            YardGeometry.SurfaceBox("Office rain gutter",cover,new Vector3(-17,2.96f,-10.065f),new Vector3(8.25f,.085f,.11f),RetroSurface.DarkMetal,false);
+            foreach(float x in new[]{-20.75f,-18.85f,-16.95f,-15.05f,-13.15f})
+            {
+                var rafter=YardGeometry.SurfaceBox("Office rain cover rafter",cover,new Vector3(x,3.005f,-10.63f),new Vector3(.060f,.085f,1.03f),RetroSurface.DarkMetal,false);
+                rafter.transform.localRotation=Quaternion.Euler(6,0,0);
+                var seam=YardGeometry.SurfaceBox("Office awning raised seam",cover,new Vector3(x,3.125f,-10.63f),new Vector3(.025f,.025f,1.10f),RetroSurface.DarkMetal,false);
+                seam.transform.localRotation=Quaternion.Euler(6,0,0);
+                // Braces rise behind the existing nameplate, leaving its player-facing text clear.
+                var brace=YardGeometry.SurfaceBox("Office wall mounted awning brace",cover,new Vector3(x,2.80f,-10.90f),new Vector3(.055f,.66f,.055f),RetroSurface.DarkMetal,false);
+                brace.transform.localRotation=Quaternion.Euler(42,0,0);
+            }
+            // The downpipe remains against the existing office, away from both counter faces.
+            YardGeometry.SurfaceBox("Office gutter downpipe",cover,new Vector3(-20.84f,1.43f,-10.985f),new Vector3(.065f,2.83f,.065f),RetroSurface.DarkMetal,false);
+            YardGeometry.SurfaceBox("Office awning old sheet patch",cover,new Vector3(-14.2f,3.135f,-10.60f),new Vector3(.62f,.012f,.62f),RetroSurface.WeatheredWood,false).transform.localRotation=Quaternion.Euler(6,0,0);
+            foreach(var renderer in cover.GetComponentsInChildren<MeshRenderer>())
+                if(renderer.gameObject!=roof)renderer.shadowCastingMode=ShadowCastingMode.Off;
+        }
+
         static void OfficeUtilityDetails(Transform parent)
         {
             // Shallow fixtures stay against the existing protected office body, leaving both
@@ -169,12 +197,31 @@ namespace Scrapshift.Compact
         }
         static void Label(Transform parent,string text,Vector3 p,float yaw,float width,float height)
         {YardSignText.Plate(parent,text,p,width,height,yaw);}
-        static void Fence(Transform parent,Vector3 p,Vector3 size)
+        static void Fence(Transform parent,Vector3 p,Vector3 size,bool backed=true)
         {
             var boundary=YardGeometry.SurfaceBox("Fixed fence",parent,p,size,RetroSurface.CorrugatedMetal);
             YardWorldDressing.FenceVisual(boundary,size);
             bool alongX=size.x>size.z;
             YardGeometry.SurfaceBox("Weathered lower fence sheets",parent,new Vector3(p.x,.31f,p.z),alongX ? new Vector3(size.x,.62f,.09f) : new Vector3(.09f,.62f,size.z),RetroSurface.CorrugatedMetal,false);
+            if(!backed)return; // The entry gate retains its visible open chain-link silhouette.
+            float length=alongX ? size.x : size.z;
+            int spans=Mathf.CeilToInt(length/3.8f);
+            float span=length/spans;
+            for(int i=0;i<spans;i++)
+            {
+                // Occasional chain-link gaps keep the nearby stock/tree silhouettes visible.
+                // Readable large panels establish enclosure without hundreds of tiny ribs.
+                if(i%5==2)continue;
+                float offset=-length*.5f+span*(i+.5f),height=i%3==0 ? 1.30f : 1.12f;
+                var center=alongX ? new Vector3(p.x+offset,.58f+height*.5f,p.z) : new Vector3(p.x,.58f+height*.5f,p.z+offset);
+                var panelSize=alongX ? new Vector3(span-.10f,height,.065f) : new Vector3(.065f,height,span-.10f);
+                YardGeometry.SurfaceBox("Boundary salvaged screen panel",parent,center,panelSize,i%4==1 ? RetroSurface.WeatheredWood : RetroSurface.CorrugatedMetal,false);
+                var brace=alongX ? new Vector3(span-.18f,.055f,.085f) : new Vector3(.085f,.055f,span-.18f);
+                var fixing=YardGeometry.SurfaceBox("Boundary screen fixing rail",parent,new Vector3(center.x,1.48f,center.z),brace,RetroSurface.DarkMetal,false);
+                fixing.GetComponent<MeshRenderer>().shadowCastingMode=ShadowCastingMode.Off;
+            }
+            var top=YardGeometry.SurfaceBox("Boundary top support rail",parent,new Vector3(p.x,1.98f,p.z),alongX ? new Vector3(length,.045f,.075f) : new Vector3(.075f,.045f,length),RetroSurface.DarkMetal,false);
+            top.GetComponent<MeshRenderer>().shadowCastingMode=ShadowCastingMode.Off;
         }
         static void BoundaryDress(Transform parent,bool north,float edge)
         {
@@ -245,8 +292,7 @@ namespace Scrapshift.Compact
             readonly List<int> triangles=new List<int>();
             public void Lane(Vector3[] points,float width)
             {
-                int start=vertices.Count;float length=0,travel=0;
-                for(int i=1;i<points.Length;i++)length+=Vector3.Distance(points[i-1],points[i]);
+                int start=vertices.Count;float travel=0;
                 for(int i=0;i<points.Length;i++)
                 {
                     var before=(points[i]-points[Mathf.Max(0,i-1)]).normalized;
@@ -256,7 +302,10 @@ namespace Scrapshift.Compact
                     var p=points[i]+Vector3.up*.009f;
                     if(i>0)travel+=Vector3.Distance(points[i-1],points[i]);
                     vertices.Add(p-side);vertices.Add(p+side);
-                    uv.Add(new Vector2(0,travel/length));uv.Add(new Vector2(1,travel/length));
+                    // Tile along travelled metres instead of stretching one tiny tyre pattern
+                    // over a whole route. Shoulder alpha and paired tracks still come from
+                    // the unchanged authored lane map; the strip has no collision.
+                    uv.Add(new Vector2(0,travel/2.5f));uv.Add(new Vector2(1,travel/2.5f));
                     if(i==0)continue;
                     int a=start+(i-1)*2,b=a+2;
                     triangles.Add(a);triangles.Add(b+1);triangles.Add(a+1);

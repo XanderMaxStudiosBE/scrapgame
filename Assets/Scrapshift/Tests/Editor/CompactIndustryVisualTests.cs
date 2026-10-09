@@ -103,6 +103,14 @@ namespace Scrapshift.Tests
                     yields=new[]{new PartAmount(PartKind.Wire,3),new PartAmount(PartKind.BodyMetal,2)}}}};
         }
 
+        static Transform DirectChild(Transform parent,string name)
+        {
+            // Loaded view names contain a literal slash, which Transform.Find treats as a path.
+            for(int i=0;i<parent.childCount;i++)
+                if(parent.GetChild(i).name==name)return parent.GetChild(i);
+            return null;
+        }
+
         [TestCase(ScrapObjectKind.Car)] [TestCase(ScrapObjectKind.Refrigerator)]
         public void DurableLoadedObjectHasOneCachedViewNoPhysicsAndNoGameplayMutations(ScrapObjectKind kind)
         {
@@ -114,10 +122,10 @@ namespace Scrapshift.Tests
                 var root=CompactIndustryVisuals.BuildEquipment(EquipmentKind.PrimaryScrapper,owner.transform,Vector3.zero,0,true,rules);
                 var equipment=Loaded(kind);string before=JsonUtility.ToJson(equipment);
                 CompactIndustryVisuals.SyncJob(root,equipment,rules);
-                var loaded=root.transform.Find("Loaded whole scrap / 17");Assert.NotNull(loaded);
+                var loaded=DirectChild(root.transform,"Loaded whole scrap / 17");Assert.NotNull(loaded);
                 int meshCount=root.GetComponentsInChildren<MeshFilter>().Length;
                 for(int i=0;i<12;i++)CompactIndustryVisuals.SyncJob(root,equipment,rules);
-                Assert.AreSame(loaded,root.transform.Find("Loaded whole scrap / 17"));
+                Assert.AreSame(loaded,DirectChild(root.transform,"Loaded whole scrap / 17"));
                 Assert.AreEqual(meshCount,root.GetComponentsInChildren<MeshFilter>().Length);
                 Assert.IsEmpty(loaded.GetComponentsInChildren<Collider>());Assert.IsEmpty(loaded.GetComponentsInChildren<Rigidbody>());
                 foreach(var filter in loaded.GetComponentsInChildren<MeshFilter>())
@@ -129,7 +137,7 @@ namespace Scrapshift.Tests
                     }
                 Assert.AreEqual(before,JsonUtility.ToJson(equipment));
                 equipment.industry.primary=null;CompactIndustryVisuals.SyncJob(root,equipment,rules);
-                Assert.IsNull(root.transform.Find("Loaded whole scrap / 17"));
+                Assert.IsNull(DirectChild(root.transform,"Loaded whole scrap / 17"));
                 Assert.IsEmpty(equipment.contents);Assert.AreEqual(0,equipment.industry.objectsProcessed);
             }
             finally{UnityEngine.Object.DestroyImmediate(owner);}
